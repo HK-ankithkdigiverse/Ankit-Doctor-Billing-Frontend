@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+:root {
+  font-family: "Segoe UI", "Inter", "Roboto", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #eef2f6 0%, #e8eff5 100%);
+  color: #1f2937;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.ant-layout {
+  background: transparent !important;
+}
+
+.ant-card {
+  border: 1px solid #e5eaf1 !important;
+  box-shadow: 0 8px 24px rgba(16, 42, 67, 0.06) !important;
+}
+
+.ant-btn-primary {
+  box-shadow: 0 6px 14px rgba(30, 111, 92, 0.25);
+}
+
+.ant-table-thead > tr > th {
+  font-weight: 600 !important;
+}
+
+@media (max-width: 768px) {
+  .ant-card {
+    border-radius: 10px !important;
+  }
+}
+
+.ant-statistic-title {
+  color: #64748b !important;
+  font-weight: 500;
+}
+
+.ant-statistic-content {
+  color: #0f172a !important;
+  font-weight: 700;
+}
+
+.input {
+  @apply w-full px-4 py-2 border rounded-lg focus:outline-none
+  focus:ring-2 focus:ring-cyan-400;
+}
+
+.medbill-sidebar .medbill-sidebar-menu.ant-menu-dark {
+  background: transparent;
+}
+
+.medbill-sidebar .medbill-sidebar-menu .ant-menu-item {
+  margin: 6px 0 !important;
+  border-radius: 10px !important;
+  height: 42px !important;
+  line-height: 42px !important;
+  color: #d8e4f0 !important;
+  font-weight: 500;
+}
+
+.medbill-sidebar .medbill-sidebar-menu .ant-menu-item .ant-menu-item-icon {
+  font-size: 17px;
+}
+
+.medbill-sidebar .medbill-sidebar-menu .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.medbill-sidebar .medbill-sidebar-menu .ant-menu-item-selected {
+  background: linear-gradient(90deg, rgba(30, 111, 92, 0.95) 0%, rgba(24, 90, 76, 0.95) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(4, 47, 46, 0.3);
+}
+
+.medbill-sidebar .medbill-sidebar-menu .ant-menu-item-selected::after {
+  display: none !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-input-number,
+.ant-picker {
+  border-radius: 10px !important;
+  transition: all 0.2s ease;
+}
+
+.ant-input:focus,
+.ant-input-affix-wrapper-focused,
+.ant-select-focused .ant-select-selector,
+.ant-input-number-focused,
+.ant-picker-focused {
+  box-shadow: 0 0 0 3px rgba(30, 111, 92, 0.15) !important;
+}
+
+.ant-form-item-has-error .ant-input,
+.ant-form-item-has-error .ant-input-affix-wrapper,
+.ant-form-item-has-error .ant-select-selector,
+.ant-form-item-has-error .ant-input-number,
+.ant-form-item-has-error .ant-picker {
+  box-shadow: 0 0 0 2px rgba(194, 65, 12, 0.12) !important;
+}
+
+.ant-input-textarea textarea.ant-input {
+  min-height: 100px;
+}
+
+@media print {
+  body {
+   print-color-adjust: exact;          /* ✅ Standard */
+    -webkit-print-color-adjust: exact; /* ✅ Chrome, Safari */
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    border: 1px solid black;
+    padding: 6px;
+  }
+}
+
