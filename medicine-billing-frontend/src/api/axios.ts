@@ -4,12 +4,15 @@ import { AUTH_API, STORAGE_KEYS } from "../constants";
 
 const fallbackBaseUrl = "https://ankit-doctor-billing-backend.vercel.app/api";
 const rawBaseUrl = (import.meta.env.VITE_API_URL || fallbackBaseUrl).trim();
+const isLocalhostBaseUrl = /^https?:\/\/localhost(?::\d+)?(\/|$)/i.test(rawBaseUrl);
+const effectiveBaseUrl = isLocalhostBaseUrl ? fallbackBaseUrl : rawBaseUrl;
 const normalizedBaseUrl = rawBaseUrl
+  .replace(/^https?:\/\/localhost(?::\d+)?/i, "https://ankit-doctor-billing-backend.vercel.app")
   .replace(/^ttps:\/\//, "https://")
   .replace(/\/+$/, "");
 
 export const api = axios.create({
-  baseURL: normalizedBaseUrl,
+  baseURL: effectiveBaseUrl === rawBaseUrl ? normalizedBaseUrl : fallbackBaseUrl,
 });
 
 api.interceptors.request.use((config) => {

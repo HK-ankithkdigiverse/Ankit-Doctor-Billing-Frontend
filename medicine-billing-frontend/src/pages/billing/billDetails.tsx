@@ -8,7 +8,10 @@ import { useBill } from "../../hooks/useBills";
 const getLogoUrl = (logo?: string) => {
   if (!logo) return "";
   if (logo.startsWith("http")) return logo;
-  const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+  const apiBase = (
+    import.meta.env.VITE_API_URL ||
+    "https://ankit-doctor-billing-backend.vercel.app/api"
+  ).replace(/\/$/, "");
   return `${apiBase}/uploads/${logo}`;
 };
 

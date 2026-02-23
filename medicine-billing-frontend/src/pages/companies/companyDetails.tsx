@@ -14,7 +14,7 @@ const CompanyDetails = () => {
   if (!company) return <p>Company not found</p>;
 
   const logoUrl = company.logo
-    ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/uploads/${company.logo}`
+    ? `${import.meta.env.VITE_API_URL || "https://ankit-doctor-billing-backend.vercel.app/api"}/uploads/${company.logo}`
     : "";
 
   return (
