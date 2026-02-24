@@ -1,0 +1,12 @@
+{
+  "framework": "vite",
+  "installCommand": "cd medicine-billing-frontend && npm install",
+  "buildCommand": "cd medicine-billing-frontend && npm run build",
+  "outputDirectory": "medicine-billing-frontend/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
