@@ -17,7 +17,19 @@ const Login: React.FC = () => {
       message.success("OTP sent to your email");
       navigate(ROUTES.VERIFY_OTP, { state: { email: values.email, otpSent: true } });
     } catch (error: any) {
-      message.error(`Login failed: ${error.message}`);
+      const statusCode = error?.response?.status;
+      const apiStatus = Number(error?.response?.data?.status || 0);
+      const isInactiveAccount =
+        statusCode === 403 ||
+        apiStatus === 403 ||
+        error?.response?.data?.isActive === false;
+
+      if (isInactiveAccount) {
+        message.error("Your account is not active.");
+        return;
+      }
+
+      message.error("Unable to login. Please check your email and password.");
     }
   };
 
@@ -46,7 +58,7 @@ const Login: React.FC = () => {
           Login to continue to MedBill Pro
         </Typography.Paragraph>
 
-        <Form layout="vertical" onFinish={handleSubmit} requiredMark={false}>
+        <Form layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             name="email"
             label="Email"
@@ -84,3 +96,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+

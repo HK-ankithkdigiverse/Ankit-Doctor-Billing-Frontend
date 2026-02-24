@@ -41,7 +41,7 @@ const ForgotPassword: React.FC = () => {
           Enter your email to receive OTP
         </Typography.Paragraph>
 
-        <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item name="email" label="Email" rules={[requiredRule("Email"), emailRule]}>
             <Input placeholder="Enter your email" />
           </Form.Item>
@@ -56,3 +56,4 @@ const ForgotPassword: React.FC = () => {
 };
 
 export default ForgotPassword;
+

@@ -51,7 +51,7 @@ const ResetPassword: React.FC = () => {
           Set a new password for {email || "your account"}
         </Typography.Paragraph>
 
-        <Form form={form} layout="vertical" onFinish={submit} requiredMark={false}>
+        <Form form={form} layout="vertical" onFinish={submit}>
           <Form.Item name="otp" label="OTP" rules={[requiredRule("OTP"), otpRule]}>
             <Input maxLength={6} placeholder="Enter 6-digit OTP" />
           </Form.Item>
@@ -93,3 +93,4 @@ const ResetPassword: React.FC = () => {
 };
 
 export default ResetPassword;
+

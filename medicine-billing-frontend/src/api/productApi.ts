@@ -7,6 +7,7 @@ export const getProductsApi = async (params?: {
   category?: string;
   productType?: string;
   companyId?: string;
+  createdBy?: string;
   search?: string;
 }) => {
   const { data } = await api.get(PRODUCTS_API.ROOT, {

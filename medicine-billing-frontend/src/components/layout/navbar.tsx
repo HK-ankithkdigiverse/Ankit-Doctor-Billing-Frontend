@@ -80,7 +80,7 @@ const Navbar = ({ compact = false }: NavbarProps) => {
       <Space size={compact ? 8 : 12}>
         <div style={{ lineHeight: 1.1, minWidth: 0 }}>
           <Typography.Text strong style={{ display: "block", textAlign: "right" }}>
-            {profile?.name || "User"}
+            {me?.name || profile?.name || "User"}
           </Typography.Text>
           <div>
             <Tag color="green" style={{ marginTop: 4, borderRadius: 999 }}>

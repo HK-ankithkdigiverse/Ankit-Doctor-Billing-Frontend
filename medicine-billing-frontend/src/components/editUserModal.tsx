@@ -1,4 +1,4 @@
-import { Input, Modal, Select, Space, Typography } from "antd";
+import { Input, Modal, Space, Typography } from "antd";
 import { useState } from "react";
 import type { User } from "../types";
 
@@ -10,7 +10,7 @@ interface Props {
     email: string;
     phone?: string;
     address?: string;
-    role: string;
+    isActive?: boolean;
   }) => Promise<void>;
   isLoading?: boolean;
 }
@@ -21,7 +21,6 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
     email: user.email || "",
     phone: user.phone || "",
     address: user.address || "",
-    role: user.role || "USER",
   });
 
   return (
@@ -35,7 +34,6 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
           email: form.email.trim(),
           phone: form.phone.trim() || undefined,
           address: form.address.trim() || undefined,
-          role: form.role,
         })
       }
       okText={isLoading ? "Saving..." : "Save"}
@@ -47,7 +45,7 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
     >
       <Space direction="vertical" style={{ width: "100%" }} size={10}>
         <div>
-          <Typography.Text type="secondary">Name</Typography.Text>
+          <Typography.Text type="secondary">Name <span style={{ color: "#ff4d4f" }}>*</span></Typography.Text>
           <Input
             value={form.name}
             onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
@@ -56,7 +54,7 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
         </div>
 
         <div>
-          <Typography.Text type="secondary">Email</Typography.Text>
+          <Typography.Text type="secondary">Email <span style={{ color: "#ff4d4f" }}>*</span></Typography.Text>
           <Input
             value={form.email}
             onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
@@ -82,19 +80,6 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
           />
         </div>
 
-        <div>
-          <Typography.Text type="secondary">Role</Typography.Text>
-          <Select
-            value={form.role}
-            onChange={(role) => setForm((prev) => ({ ...prev, role }))}
-            style={{ width: "100%" }}
-            options={[
-              { value: "USER", label: "USER" },
-              { value: "ADMIN", label: "ADMIN" },
-            ]}
-            disabled={isLoading}
-          />
-        </div>
       </Space>
     </Modal>
   );

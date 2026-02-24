@@ -36,7 +36,7 @@ const CreateCategory = () => {
         layout="vertical"
         onFinish={handleSubmit}
         style={{ marginTop: 16 }}
-        requiredMark={false}
+       
       >
         <Form.Item
           name="name"
@@ -61,3 +61,4 @@ const CreateCategory = () => {
 };
 
 export default CreateCategory;
+

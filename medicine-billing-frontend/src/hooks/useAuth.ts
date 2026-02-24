@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { loginApi, verifyOtpApi, logoutApi } from "../api/auth.api";
-import { QUERY_KEYS, ROUTES } from "../constants";
+import { QUERY_KEYS, ROUTES, STORAGE_KEYS } from "../constants";
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -17,6 +17,7 @@ export const useAuth = () => {
     onSuccess: (data: any) => {
       if (!data?.token) return;
 
+      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
       localStorage.setItem("token", data.token);
 
       // 🔁 refetch logged-in user
@@ -26,13 +27,23 @@ export const useAuth = () => {
     },
   });
 
+  const clearAuthState = () => {
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem("token");
+
+    queryClient.removeQueries({ queryKey: QUERY_KEYS.ME });
+    queryClient.removeQueries({ queryKey: QUERY_KEYS.PROFILE });
+  };
+
   const logout = useMutation({
     mutationFn: logoutApi,
     onSuccess: () => {
-      localStorage.removeItem("token");
-
-      queryClient.removeQueries({ queryKey: QUERY_KEYS.ME });
-
+      clearAuthState();
+      navigate(ROUTES.LOGIN);
+    },
+    onError: () => {
+      // Even if server logout fails, clear local auth so user is signed out.
+      clearAuthState();
       navigate(ROUTES.LOGIN);
     },
   });

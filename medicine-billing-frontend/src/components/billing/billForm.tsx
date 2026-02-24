@@ -29,6 +29,7 @@ type BillFormProps = {
   submitLoading?: boolean;
   companies: any[];
   initialCompanyId?: string;
+  initialCompanyName?: string;
   initialDiscount?: number;
   initialItems?: BillFormItem[];
   onSubmit: (payload: {
@@ -58,6 +59,7 @@ const BillForm = ({
   submitLoading,
   companies,
   initialCompanyId = "",
+  initialCompanyName = "",
   initialDiscount = 0,
   initialItems,
   onSubmit,
@@ -78,6 +80,23 @@ const BillForm = ({
     setDiscount(Number(initialDiscount || 0));
     setItems(normalizeItems(initialItems));
   }, [initialCompanyId, initialDiscount, initialItems]);
+
+  const companyOptions = useMemo(() => {
+    const options = companies.map((c: any) => ({
+      value: c._id,
+      label: c.companyName || c.name || c.email || c._id,
+    }));
+
+    if (
+      initialCompanyId &&
+      initialCompanyName &&
+      !options.some((opt: any) => opt.value === initialCompanyId)
+    ) {
+      options.push({ value: initialCompanyId, label: initialCompanyName });
+    }
+
+    return options;
+  }, [companies, initialCompanyId, initialCompanyName]);
 
   const getProduct = (id: string) => products.find((p: any) => p._id === id);
 
@@ -186,6 +205,12 @@ const BillForm = ({
 
   const columns = [
     {
+      title: "S.No",
+      key: "serial",
+      width: 80,
+      render: (_: unknown, __: BillFormItem, index: number) => index + 1,
+    },
+    {
       title: "Product",
       key: "product",
       render: (_: unknown, item: BillFormItem, index: number) => (
@@ -270,39 +295,50 @@ const BillForm = ({
   ];
 
   return (
-    <Card>
-      <Typography.Title level={4}>{title}</Typography.Title>
+    <Card className="bill-form-card">
+      <Typography.Title level={4} style={{ marginBottom: 20 }}>{title}</Typography.Title>
 
-      <Form layout="vertical" requiredMark={false}>
-        <Form.Item label="Company">
+      <Form layout="vertical">
+        <Form.Item label="Company" required>
           <Select
             value={companyId || undefined}
             placeholder="Select company"
             onChange={handleCompanyChange}
-            options={companies.map((c: any) => ({ value: c._id, label: c.companyName }))}
+            options={companyOptions}
+            className="bill-company-select"
           />
         </Form.Item>
       </Form>
 
       <Table
+        className="bill-items-table"
         rowKey={(_: BillFormItem, index?: number) => String(index ?? 0)}
         columns={columns}
         dataSource={items}
         pagination={false}
-        scroll={{ x: 1000 }}
+        scroll={{ x: "max-content" }}
       />
 
       <Space style={{ marginTop: 16 }}>
-        <Button icon={<PlusOutlined />} onClick={addRow} disabled={!companyId}>
+        <Button className="bill-add-btn" icon={<PlusOutlined />} onClick={addRow} disabled={!companyId}>
           Add Item
         </Button>
       </Space>
 
-      <Card size="small" style={{ marginTop: 16, maxWidth: 360, marginLeft: "auto" }}>
+      <Card className="bill-summary-card" size="small" style={{ marginTop: 16, maxWidth: 380, marginLeft: "auto" }}>
         <Space direction="vertical" style={{ width: "100%" }}>
-          <Typography.Text>Sub Total: Rs {subTotal.toFixed(2)}</Typography.Text>
-          <Typography.Text>Tax: Rs {totalTax.toFixed(2)}</Typography.Text>
-          <Typography.Text>Total Before Discount: Rs {totalBeforeDiscount.toFixed(2)}</Typography.Text>
+          <div className="bill-summary-row">
+            <Typography.Text className="bill-summary-label">Sub Total</Typography.Text>
+            <Typography.Text className="bill-summary-value">Rs {subTotal.toFixed(2)}</Typography.Text>
+          </div>
+          <div className="bill-summary-row">
+            <Typography.Text className="bill-summary-label">Tax</Typography.Text>
+            <Typography.Text className="bill-summary-value">Rs {totalTax.toFixed(2)}</Typography.Text>
+          </div>
+          <div className="bill-summary-row">
+            <Typography.Text className="bill-summary-label">Total Before Discount</Typography.Text>
+            <Typography.Text className="bill-summary-value">Rs {totalBeforeDiscount.toFixed(2)}</Typography.Text>
+          </div>
           <InputNumber
             style={{ width: "100%" }}
             value={discount}
@@ -311,15 +347,19 @@ const BillForm = ({
             onChange={(value: number | null) => setDiscount(value || 0)}
             addonBefore="Bill Discount"
           />
-          <Typography.Text>Discount Amount: - Rs {discountAmount.toFixed(2)}</Typography.Text>
-          <Typography.Title level={5} style={{ margin: 0 }}>
-            Grand Total: Rs {grandTotal.toFixed(2)}
-          </Typography.Title>
+          <div className="bill-summary-row">
+            <Typography.Text className="bill-summary-label">Discount Amount</Typography.Text>
+            <Typography.Text className="bill-summary-value">- Rs {discountAmount.toFixed(2)}</Typography.Text>
+          </div>
+          <div className="bill-summary-row bill-summary-row-grand">
+            <Typography.Text className="bill-summary-label">Grand Total</Typography.Text>
+            <Typography.Text className="bill-summary-value">Rs {grandTotal.toFixed(2)}</Typography.Text>
+          </div>
         </Space>
       </Card>
 
-      <Space style={{ marginTop: 16 }}>
-        <Button onClick={onCancel}>Cancel</Button>
+      <Space style={{ marginTop: 20 }}>
+        <Button className="bill-cancel-btn" onClick={onCancel}>Cancel</Button>
         <Button type="primary" loading={submitLoading} onClick={submit}>
           {submitText}
         </Button>
@@ -329,3 +369,4 @@ const BillForm = ({
 };
 
 export default BillForm;
+

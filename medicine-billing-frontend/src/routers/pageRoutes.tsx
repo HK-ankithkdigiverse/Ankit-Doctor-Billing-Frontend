@@ -13,11 +13,8 @@ import EditCompany from "../pages/companies/editCompany";
 import CategoriesList from "../pages/categories/categoriesList";
 import CreateCategory from "../pages/categories/createCategory";
 import EditCategory from "../pages/categories/editCategory";
-
-// Profile
 import Profile from "../pages/Profile/profile";
 import EditProfile from "../pages/Profile/editProfile";
-import ChangePassword from "../pages/Profile/changePassword";
 
 // Admin
 import Users from "../pages/admin/users";
@@ -124,7 +121,7 @@ export const PageRoutes = [
             element: <EditCategory />,
           },
 
-          /* PROFILE */
+          /* PROFILE (SELF) */
           {
             path: ROUTES.PROFILE,
             element: <Profile />,
@@ -132,10 +129,6 @@ export const PageRoutes = [
           {
             path: ROUTES.EDITPROFILE,
             element: <EditProfile />,
-          },
-          {
-            path: ROUTES.CHANGE_PASSWORD,
-            element: <ChangePassword />,
           },
 
           /* BILLING */

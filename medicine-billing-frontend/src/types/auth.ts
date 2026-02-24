@@ -47,6 +47,7 @@ export interface User {
   phone?: string;
   address?: string;
   role: string;
+  isActive?: boolean;
   isDeleted?: boolean;
   createdAt?: string;
   updatedAt?: string;

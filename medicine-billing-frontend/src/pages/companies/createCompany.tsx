@@ -30,23 +30,23 @@ const CreateCompany = () => {
   return (
     <Card style={{ maxWidth: 820, margin: "0 auto" }}>
       <Typography.Title level={4}>Create Company</Typography.Title>
-      <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item name="companyName" label="Company Name" rules={[requiredRule("Company name")]}>
           <Input />
         </Form.Item>
         <Form.Item name="gstNumber" label="GST Number" rules={[requiredRule("GST number"), gstRule]}>
           <Input style={{ textTransform: "uppercase" }} />
         </Form.Item>
-        <Form.Item name="email" label="Email" rules={[emailRule]}>
+        <Form.Item name="email" label="Email" rules={[requiredRule("Email"), emailRule]}>
           <Input />
         </Form.Item>
-        <Form.Item name="phone" label="Phone" rules={[phoneRule]}>
+        <Form.Item name="phone" label="Phone" rules={[requiredRule("Phone"), phoneRule]}>
           <Input />
         </Form.Item>
-        <Form.Item name="state" label="State" rules={[{ max: 80, message: "State must be 80 characters or less" }]}>
+        <Form.Item name="state" label="State" rules={[requiredRule("State"), { max: 80, message: "State must be 80 characters or less" }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="address" label="Address" rules={[{ max: 500, message: "Address must be 500 characters or less" }]}>
+        <Form.Item name="address" label="Address" rules={[requiredRule("Address"), { max: 500, message: "Address must be 500 characters or less" }]}>
           <Input.TextArea rows={4} />
         </Form.Item>
         <Form.Item label="Logo">
@@ -68,3 +68,4 @@ const CreateCompany = () => {
 };
 
 export default CreateCompany;
+

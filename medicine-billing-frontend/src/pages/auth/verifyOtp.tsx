@@ -15,11 +15,18 @@ const VerifyOtp: React.FC = () => {
   const emailFromState = location.state?.email || "";
   const otpSent = Boolean(location.state?.otpSent);
 
-  const [form] = Form.useForm<VerifyOtpPayload>();
+  const [form] = Form.useForm<{ otp: string }>();
 
-  const handleSubmit = async (values: VerifyOtpPayload) => {
+  const handleSubmit = async (values: { otp: string }) => {
+    if (!emailFromState) {
+      message.error("Email is missing. Please login again.");
+      navigate(ROUTES.LOGIN);
+      return;
+    }
+
     try {
-      await verifyOtp(values);
+      const payload: VerifyOtpPayload = { email: emailFromState, otp: values.otp };
+      await verifyOtp(payload);
       message.success("OTP verified successfully");
       navigate(ROUTES.DASHBOARD);
     } catch (error: any) {
@@ -66,13 +73,9 @@ const VerifyOtp: React.FC = () => {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          requiredMark={false}
-          initialValues={{ email: emailFromState, otp: "" }}
+         
+          initialValues={{ otp: "" }}
         >
-          <Form.Item name="email" label="Email" rules={[requiredRule("Email")]}>
-            <Input readOnly />
-          </Form.Item>
-
           <Form.Item name="otp" label="OTP" rules={[requiredRule("OTP"), otpRule]}>
             <Input
               prefix={<SafetyOutlined />}
@@ -96,3 +99,4 @@ const VerifyOtp: React.FC = () => {
 };
 
 export default VerifyOtp;
+

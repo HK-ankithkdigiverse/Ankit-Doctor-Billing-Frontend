@@ -2,14 +2,13 @@ import { useNavigate } from "react-router-dom";
 import { Avatar, Button, Card, Descriptions, Space, Tag, Typography } from "antd";
 import { EditOutlined, LockOutlined, LogoutOutlined, UserOutlined } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
-import { useProfile, useDeleteAccount } from "../../hooks/useProfile";
+import { useProfile } from "../../hooks/useProfile";
 import { useAuth } from "../../hooks/useAuth";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { data: user, isLoading } = useProfile();
-  const { mutateAsync: deleteAccount, isPending } = useDeleteAccount();
   const { logout, loading: authLoading } = useAuth();
   const confirmDialog = useConfirmDialog();
 
@@ -39,13 +38,19 @@ const Profile = () => {
       </Descriptions>
 
       <Space style={{ marginTop: 16 }}>
-        <Button icon={<EditOutlined />} onClick={() => navigate(ROUTES.EDITPROFILE)}>
+        <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(ROUTES.EDITPROFILE)}>
           Edit Profile
         </Button>
-        <Button icon={<LockOutlined />} onClick={() => navigate(ROUTES.CHANGE_PASSWORD)}>
+        <Button
+          icon={<LockOutlined />}
+          onClick={() => navigate(ROUTES.CHANGE_PASSWORD)}
+          style={{ borderColor: "#D97706", color: "#D97706" }}
+        >
           Change Password
         </Button>
         <Button
+          type="primary"
+          danger
           icon={<LogoutOutlined />}
           loading={authLoading}
           onClick={() =>
@@ -58,21 +63,6 @@ const Profile = () => {
           }
         >
           Logout
-        </Button>
-        <Button
-          danger
-          loading={isPending}
-          onClick={() =>
-            confirmDialog({
-              title: "Confirm Deletion",
-              message: "This action cannot be undone. Are you sure you want to delete your account?",
-              confirmText: "Delete",
-              danger: true,
-              onConfirm: () => deleteAccount(),
-            })
-          }
-        >
-          Delete Account
         </Button>
       </Space>
     </Card>

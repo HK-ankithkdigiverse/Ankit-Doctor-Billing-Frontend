@@ -1,13 +1,19 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useMe } from "../../hooks/useMe";
 import NotFound from "../../pages/notFound";
-import { ROUTES } from "../../constants";
+import { ROUTES, STORAGE_KEYS } from "../../constants";
 
 const PublicOnlyRoute: React.FC = () => {
   const location = useLocation();
   const { data: me, isLoading } = useMe();
 
   if (isLoading) return null;
+
+  if (me?.isActive === false) {
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem("token");
+    return <Outlet />;
+  }
 
   if (me) {
     if (location.pathname === ROUTES.LOGIN || location.pathname === "/login") {

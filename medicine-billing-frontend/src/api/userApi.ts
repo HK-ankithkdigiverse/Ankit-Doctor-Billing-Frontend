@@ -16,16 +16,19 @@ export const getAllUsersApi = async ({
   page,
   limit,
   search,
+  isActive,
 }: {
   page: number;
   limit: number;
   search?: string;
+  isActive?: boolean;
 }): Promise<GetUsersResponse> => {
   const res = await api.get(USERS_API.ROOT, {
     params: {
       page,
       limit,
       search,
+      ...(typeof isActive === "boolean" ? { isActive } : {}),
     },
   });
 
@@ -37,15 +40,21 @@ export const updateUserApi = async ({
   data,
 }: {
   id: string;
-  data: {
+  data: Partial<{
     name: string;
     email: string;
     phone?: string;
     address?: string;
     role: string;
-  };
+    isActive?: boolean;
+  }>;
 }) => {
   const res = await api.put(USERS_API.BY_ID(id), data);
+  return res.data;
+};
+
+export const deleteUserApi = async (id: string) => {
+  const res = await api.delete(USERS_API.BY_ID(id));
   return res.data;
 };
 

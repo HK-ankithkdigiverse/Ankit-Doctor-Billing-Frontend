@@ -8,7 +8,7 @@ import { useCreateBill } from "../../hooks/useBills";
 const CreateBill = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const { data: companyData } = useCompanies(1, 100, "");
+  const { data: companyData } = useCompanies(1, 1000, "");
   const { mutateAsync, isPending } = useCreateBill();
 
   const companies = companyData?.companies ?? [];

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Space, Typography } from "antd";
 import { EditOutlined, FilePdfOutlined } from "@ant-design/icons";
@@ -33,11 +33,18 @@ const BillView = () => {
   const userEmail = bill?.userId?.email || (bill as any)?.createdBy?.email || "-";
   const userPhone = bill?.userId?.phone || (bill as any)?.createdBy?.phone || "-";
   const userAddress = bill?.userId?.address || (bill as any)?.createdBy?.address || "-";
+  const logoUrl = useMemo(() => getLogoUrl((bill?.companyId as any)?.logo?.trim?.() || bill?.companyId?.logo), [bill?.companyId]);
+  const [isLogoVisible, setIsLogoVisible] = useState(true);
+  const shouldShowLogo = !!logoUrl && isLogoVisible;
   const subTotal = Number(bill?.subTotal || 0);
   const totalTax = Number(bill?.totalTax || 0);
   const discountAmount = Number(bill?.discount || 0);
   const totalBeforeDiscount = subTotal + totalTax;
   const grandTotal = Math.max(0, totalBeforeDiscount - discountAmount);
+
+  useEffect(() => {
+    setIsLogoVisible(true);
+  }, [logoUrl]);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!printRef.current || !bill) return;
@@ -160,11 +167,12 @@ const BillView = () => {
                   </Typography.Text>
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  {bill.companyId?.logo && (
+                  {shouldShowLogo && (
                     <img
-                      src={getLogoUrl(bill.companyId.logo)}
+                      src={logoUrl}
                       alt="Company Logo"
                       style={{ width: 84, height: 84, objectFit: "contain", background: "#fff", padding: 6 }}
+                      onError={() => setIsLogoVisible(false)}
                     />
                   )}
                   <div>

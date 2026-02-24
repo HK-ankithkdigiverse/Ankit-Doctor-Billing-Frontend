@@ -43,7 +43,7 @@ const ChangePassword = () => {
   return (
     <Card style={{ maxWidth: 760, margin: "0 auto" }}>
       <Typography.Title level={4}>Change Password</Typography.Title>
-      <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item name="oldPassword" label="Current Password" rules={[requiredRule("Current password"), passwordMinRule]}>
           <Input.Password />
         </Form.Item>
@@ -82,3 +82,4 @@ const ChangePassword = () => {
 };
 
 export default ChangePassword;
+

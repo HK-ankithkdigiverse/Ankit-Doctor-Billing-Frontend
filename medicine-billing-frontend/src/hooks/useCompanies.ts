@@ -11,7 +11,10 @@ import { QUERY_KEYS } from "../constants";
 export const useCompanies = (
   page: number,
   limit: number,
-  search: string
+  search: string,
+  options?: {
+    enabled?: boolean;
+  }
 ) => {
   return useQuery({
     queryKey: QUERY_KEYS.COMPANIES_LIST({ page, limit, search }),
@@ -27,6 +30,7 @@ export const useCompanies = (
     placeholderData: keepPreviousData,
 
     staleTime: 1000 * 5,
+    enabled: options?.enabled ?? true,
   });
 };
 

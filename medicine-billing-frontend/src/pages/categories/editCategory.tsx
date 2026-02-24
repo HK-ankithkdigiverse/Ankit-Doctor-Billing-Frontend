@@ -54,7 +54,7 @@ const EditCategory = () => {
         layout="vertical"
         onFinish={handleSubmit}
         style={{ marginTop: 16 }}
-        requiredMark={false}
+       
       >
         <Form.Item
           name="name"
@@ -79,3 +79,4 @@ const EditCategory = () => {
 };
 
 export default EditCategory;
+

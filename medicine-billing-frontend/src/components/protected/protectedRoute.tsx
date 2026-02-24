@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useMe } from "../../hooks/useMe";
-import { ROUTES } from "../../constants";
+import { ROUTES, STORAGE_KEYS } from "../../constants";
 
 type ProtectedRouteProps = {
   roles?: string[];
@@ -13,6 +13,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles }) => {
 
   // not logged in
   if (!me) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  // inactive users cannot access protected pages
+  if (me.isActive === false) {
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem("token");
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 

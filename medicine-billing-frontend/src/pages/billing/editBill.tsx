@@ -11,7 +11,7 @@ const EditBill = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: billData, isLoading } = useBill(id);
-  const { data: companyData } = useCompanies(1, 100, "");
+  const { data: companyData } = useCompanies(1, 1000, "");
   const { mutateAsync, isPending } = useUpdateBill();
 
   const companies = companyData?.companies ?? [];
@@ -57,6 +57,7 @@ const EditBill = () => {
       submitLoading={isPending}
       companies={companies}
       initialCompanyId={(billData.bill.companyId as any)?._id || ""}
+      initialCompanyName={(billData.bill.companyId as any)?.companyName || (billData.bill.companyId as any)?.name || ""}
       initialDiscount={Number(billData.bill.discount || 0)}
       initialItems={initialItems}
       onSubmit={handleSubmit}

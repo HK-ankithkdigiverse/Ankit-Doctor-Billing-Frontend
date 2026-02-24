@@ -5,6 +5,7 @@ import {
   Card,
   Input,
   Pagination,
+  Select,
   Space,
   Table,
   Typography,
@@ -13,6 +14,7 @@ import {
 import { DeleteOutlined, EditOutlined, EyeOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { ROLE, ROUTES } from "../../constants";
 import { useCompanies, useDeleteCompany } from "../../hooks/useCompanies";
+import { useUsers } from "../../hooks/useUsers";
 import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Company } from "../../types/company";
@@ -21,18 +23,54 @@ import { useConfirmDialog } from "../../utils/confirmDialog";
 const CompaniesList = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ page: 1, search: "" });
+  const [filters, setFilters] = useState({
+    page: 1,
+    limit: 10,
+    search: "",
+    createdBy: "",
+  });
   const debouncedSearch = useDebouncedValue(filters.search, 500);
-  const limit = 10;
+  const { data: me } = useMe();
+  const isAdmin = me?.role === ROLE.ADMIN;
+  const hasAdminUserFilter = isAdmin && !!filters.createdBy;
+  const queryPage = hasAdminUserFilter ? 1 : filters.page;
+  const queryLimit = hasAdminUserFilter ? 1000 : filters.limit;
 
-  const { data, isLoading, isFetching } = useCompanies(filters.page, limit, debouncedSearch);
+  const { data, isLoading, isFetching } = useCompanies(queryPage, queryLimit, debouncedSearch);
+  const { data: usersFilterData } = useUsers(1, 1000, "", "all");
   const searchLoading = filters.search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteCompany, isPending } = useDeleteCompany();
-  const { data: me } = useMe();
   const confirmDialog = useConfirmDialog();
-  const isAdmin = me?.role === ROLE.ADMIN;
-  const companies: Company[] = data?.companies ?? [];
+  const companiesRaw: Company[] = data?.companies ?? [];
+  const getOwnerId = (company: Company) =>
+    typeof company.userId === "object" ? company.userId?._id : company.userId;
+  const filteredCompanies = isAdmin
+    ? companiesRaw.filter((company) => !filters.createdBy || getOwnerId(company) === filters.createdBy)
+    : companiesRaw;
+  const companies = hasAdminUserFilter
+    ? filteredCompanies.slice((filters.page - 1) * filters.limit, filters.page * filters.limit)
+    : filteredCompanies;
   const pagination = data?.pagination;
+  const totalRecords = hasAdminUserFilter ? filteredCompanies.length : pagination?.total || 0;
+  const pageSizeSelectOptions = [
+    { label: "10 / page", value: 10 },
+    { label: "30 / page", value: 30 },
+    { label: "50 / page", value: 50 },
+    { label: "100 / page", value: 100 },
+    ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
+  ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
+  const formatDate = (value?: string) =>
+    value ? new Date(value).toLocaleDateString() : "-";
+  const oneLineCell = (value?: string) => (
+    <span style={{ whiteSpace: "nowrap" }} title={value || "-"}>
+      {value || "-"}
+    </span>
+  );
+  const userOptions =
+    usersFilterData?.users?.map((user) => ({
+      value: user._id,
+      label: user.name || user.email,
+    })) ?? [];
 
   const handleDelete = async (id: string) => {
     try {
@@ -44,10 +82,37 @@ const CompaniesList = () => {
   };
 
   const columns = [
-    { title: "Company", dataIndex: "companyName", key: "companyName" },
-    { title: "GST", dataIndex: "gstNumber", key: "gstNumber" },
-    { title: "Email", dataIndex: "email", key: "email", render: (v: string) => v || "-" },
-    { title: "Phone", dataIndex: "phone", key: "phone", render: (v: string) => v || "-" },
+    {
+      title: "S.No",
+      key: "serial",
+      width: 80,
+      render: (_: unknown, __: Company, index: number) =>
+        (filters.page - 1) * filters.limit + index + 1,
+    },
+    {
+      title: "Company",
+      dataIndex: "companyName",
+      key: "companyName",
+      render: (v: string) => oneLineCell(v),
+    },
+    {
+      title: "GST",
+      dataIndex: "gstNumber",
+      key: "gstNumber",
+      render: (v: string) => oneLineCell(v),
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      render: (v: string) => oneLineCell(v),
+    },
+    {
+      title: "Phone",
+      dataIndex: "phone",
+      key: "phone",
+      render: (v: string) => oneLineCell(v),
+    },
     ...(isAdmin
       ? [
           {
@@ -56,8 +121,22 @@ const CompaniesList = () => {
             render: (_: unknown, company: Company) => {
               const owner = company.userId;
               if (!owner || typeof owner === "string") return "-";
-              return owner.name || owner.email || "-";
+              return oneLineCell(owner.name || owner.email || "-");
             },
+          },
+        ]
+      : []),
+    {
+      title: "Created Date",
+      key: "createdAt",
+      render: (_: unknown, company: Company) => oneLineCell(formatDate((company as any).createdAt)),
+    },
+    ...(isAdmin
+      ? [
+          {
+            title: "Updated Date",
+            key: "updatedAt",
+            render: (_: unknown, company: Company) => oneLineCell(formatDate((company as any).updatedAt)),
           },
         ]
       : []),
@@ -66,19 +145,24 @@ const CompaniesList = () => {
       key: "action",
       render: (_: unknown, company: Company) => (
         <Space>
-          <Button icon={<EyeOutlined />} onClick={() => navigate(`${ROUTES.COMPANIES}/${company._id}`)}>
-            View
-          </Button>
+          <Button
+            icon={<EyeOutlined />}
+            title="View"
+            aria-label="View"
+            onClick={() => navigate(`${ROUTES.COMPANIES}/${company._id}`)}
+          />
           <Button
             icon={<EditOutlined />}
+            title="Edit"
+            aria-label="Edit"
             onClick={() => navigate(`${ROUTES.COMPANIES}/${company._id}/edit`)}
-          >
-            Edit
-          </Button>
+          />
           <Button
             danger
             icon={<DeleteOutlined />}
             loading={isPending}
+            title="Delete"
+            aria-label="Delete"
             onClick={() =>
               confirmDialog({
                 title: "Confirm Deletion",
@@ -88,9 +172,7 @@ const CompaniesList = () => {
                 onConfirm: () => handleDelete(company._id),
               })
             }
-          >
-            Delete
-          </Button>
+          />
         </Space>
       ),
     },
@@ -110,17 +192,31 @@ const CompaniesList = () => {
       }
     >
       <div style={{ marginBottom: 16 }}>
-        <Input
-          placeholder="Search company..."
-          allowClear
-          prefix={<SearchOutlined />}
-          suffix={searchLoading ? <LoadingOutlined spin /> : null}
-          value={filters.search}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => {
-            setFilters({ page: 1, search: e.target.value });
-          }}
-          style={{ maxWidth: 360 }}
-        />
+        <Space wrap>
+          <Input
+            placeholder="Search company..."
+            allowClear
+            prefix={<SearchOutlined />}
+            suffix={searchLoading ? <LoadingOutlined spin /> : null}
+            value={filters.search}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }));
+            }}
+            style={{ width: 360, maxWidth: "100%" }}
+          />
+          {isAdmin && (
+            <Select
+              allowClear
+              placeholder="Filter by user"
+              value={filters.createdBy || undefined}
+              options={userOptions}
+              onChange={(value) =>
+                setFilters((prev) => ({ ...prev, page: 1, createdBy: value || "" }))
+              }
+              style={{ width: 220 }}
+            />
+          )}
+        </Space>
       </div>
 
       <Table
@@ -129,18 +225,18 @@ const CompaniesList = () => {
         columns={columns}
         dataSource={companies}
         pagination={false}
-        scroll={{ x: 900 }}
+        scroll={{ x: "max-content" }}
       />
 
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
           current={filters.page}
-          pageSize={limit}
-          total={pagination?.total || 0}
-          onChange={(p: number) =>
-            setFilters((prev) => ({ ...prev, page: p }))
+          pageSize={filters.limit}
+          total={totalRecords}
+          onChange={(p: number, pageSize: number) =>
+            setFilters((prev) => ({ ...prev, page: p, limit: pageSize }))
           }
-          showSizeChanger={false}
+          showSizeChanger={{ options: pageSizeSelectOptions }}
         />
       </div>
     </Card>

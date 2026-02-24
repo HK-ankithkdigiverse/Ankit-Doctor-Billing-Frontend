@@ -18,6 +18,7 @@ export const useProducts = (
     category?: string;
     productType?: string;
     companyId?: string;
+    createdBy?: string;
     enabled?: boolean;
   }
 ) => {
@@ -29,6 +30,7 @@ export const useProducts = (
       category: filters?.category,
       productType: filters?.productType,
       companyId: filters?.companyId,
+      createdBy: filters?.createdBy,
     }),
     queryFn: () =>
       getProductsApi({
@@ -38,6 +40,7 @@ export const useProducts = (
         category: filters?.category,
         productType: filters?.productType,
         companyId: filters?.companyId,
+        createdBy: filters?.createdBy,
       }),
     enabled: filters?.enabled ?? true,
 

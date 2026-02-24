@@ -1,13 +1,19 @@
 import { useQuery,useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfileApi, updateProfileApi, deleteAccountApi, changePasswordApi } from "../api/userApi";
-import { QUERY_KEYS } from "../constants";
+import { QUERY_KEYS, STORAGE_KEYS } from "../constants";
 
 
 
 export const useProfile = () => {
+  const token =
+    localStorage.getItem(STORAGE_KEYS.TOKEN) || localStorage.getItem("token");
+
   return useQuery({
     queryKey: QUERY_KEYS.PROFILE,
     queryFn: getProfileApi,
+    enabled: Boolean(token),
+    retry: false,
+    initialData: null,
   });
 };
 
@@ -28,6 +34,7 @@ export const useDeleteAccount = () => {
   return useMutation({
     mutationFn: deleteAccountApi,
     onSuccess: () => {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
       localStorage.removeItem("token");
       queryClient.clear();
       window.location.href = "/";

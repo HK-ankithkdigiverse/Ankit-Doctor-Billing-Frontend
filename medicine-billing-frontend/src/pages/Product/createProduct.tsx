@@ -10,7 +10,7 @@ const CreateProduct = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const { data: companyData, isLoading } = useCompanies(1, 100, "");
+  const { data: companyData, isLoading } = useCompanies(1, 1000, "");
   const { data: categoryData } = useCategoryDropdown();
   const { mutateAsync, isPending } = useCreateProduct();
 
@@ -38,7 +38,7 @@ const CreateProduct = () => {
   return (
     <Card style={{ maxWidth: 820, margin: "0 auto" }}>
       <Typography.Title level={4}>Create Product</Typography.Title>
-      <Form form={form} layout="vertical" onFinish={submit} requiredMark={false}>
+      <Form form={form} layout="vertical" onFinish={submit}>
         <Form.Item name="name" label="Product Name" rules={[requiredRule("Product name"), { min: 2, message: "Product name must be at least 2 characters" }]}>
           <Input placeholder="Enter product name" />
         </Form.Item>
@@ -57,7 +57,10 @@ const CreateProduct = () => {
         <Form.Item name="companyId" label="Company" rules={[requiredRule("Company")]}>
           <Select
             placeholder="Select company"
-            options={companies.map((c: any) => ({ value: c._id, label: c.companyName }))}
+            options={companies.map((c: any) => ({
+              value: c._id,
+              label: c.companyName || c.name || c.email || c._id,
+            }))}
           />
         </Form.Item>
 
@@ -97,3 +100,4 @@ const CreateProduct = () => {
 };
 
 export default CreateProduct;
+

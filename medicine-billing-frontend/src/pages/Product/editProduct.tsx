@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Form, Input, InputNumber, Select, Typography, App } from "antd";
 import { useCompanies } from "../../hooks/useCompanies";
@@ -13,12 +13,31 @@ const UpdateProduct = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const { data: product, isLoading } = useProduct(id!);
-  const { data: companyData } = useCompanies(1, 100, "");
+  const { data: companyData } = useCompanies(1, 1000, "");
   const { data: categoryData } = useCategoryDropdown();
   const { mutateAsync, isPending } = useUpdateProduct();
 
   const companies = companyData?.companies ?? [];
   const categories = categoryData ?? [];
+  const companyOptions = useMemo(() => {
+    const options = companies.map((c: any) => ({
+      value: c._id,
+      label: c.companyName || c.name || c.email || c._id,
+    }));
+
+    const currentCompany = product?.companyId as any;
+    const currentCompanyId = currentCompany?._id;
+    const currentCompanyName = currentCompany?.companyName || currentCompany?.name;
+    if (
+      currentCompanyId &&
+      currentCompanyName &&
+      !options.some((opt) => opt.value === currentCompanyId)
+    ) {
+      options.push({ value: currentCompanyId, label: currentCompanyName });
+    }
+
+    return options;
+  }, [companies, product]);
 
   useEffect(() => {
     if (!product) return;
@@ -59,7 +78,7 @@ const UpdateProduct = () => {
   return (
     <Card style={{ maxWidth: 820, margin: "0 auto" }}>
       <Typography.Title level={4}>Update Product</Typography.Title>
-      <Form form={form} layout="vertical" onFinish={submit} requiredMark={false}>
+      <Form form={form} layout="vertical" onFinish={submit}>
         <Form.Item name="name" label="Product Name" rules={[requiredRule("Product name"), { min: 2, message: "Product name must be at least 2 characters" }]}>
           <Input />
         </Form.Item>
@@ -73,7 +92,7 @@ const UpdateProduct = () => {
         </Form.Item>
 
         <Form.Item name="companyId" label="Company" rules={[requiredRule("Company")]}>
-          <Select options={companies.map((c: any) => ({ value: c._id, label: c.companyName }))} />
+          <Select options={companyOptions} />
         </Form.Item>
 
         <Form.Item label="Pricing" style={{ marginBottom: 0 }}>
@@ -112,3 +131,4 @@ const UpdateProduct = () => {
 };
 
 export default UpdateProduct;
+

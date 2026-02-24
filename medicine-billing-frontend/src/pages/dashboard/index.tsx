@@ -1,6 +1,8 @@
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, Col, Grid, Row, Space, Statistic, Table, Typography } from "antd";
+import { Button, Card, Col, DatePicker, Grid, Row, Select, Space, Statistic, Table, Typography } from "antd";
 import { EyeOutlined, FilePdfOutlined } from "@ant-design/icons";
+import dayjs, { type Dayjs } from "dayjs";
 import { ROLE } from "../../constants";
 import { ROUTES } from "../../constants";
 import { useMe } from "../../hooks/useMe";
@@ -10,18 +12,27 @@ import { useCompanies } from "../../hooks/useCompanies";
 import { useProducts } from "../../hooks/useProducts";
 import { useUsers } from "../../hooks/useUsers";
 
+type DateFilterType = "all" | "today" | "week" | "month" | "custom";
+type SortType = "newest" | "oldest";
+
 const Dashboard = () => {
+  const { RangePicker } = DatePicker;
   const navigate = useNavigate();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
+  const [dateFilter, setDateFilter] = useState<DateFilterType>("all");
+  const [customRange, setCustomRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortType>("newest");
+  const [createdByFilter, setCreatedByFilter] = useState<string>("");
   const { data: user, isLoading } = useMe();
   const isAdmin = user?.role === ROLE.ADMIN;
 
   const companiesQuery = useCompanies(1, 1, "");
   const productsQuery = useProducts(1, 1, "");
   const categoriesQuery = useCategories(1, 1, "");
-  const billsQuery = useBills(1, 5, "");
+  const billsQuery = useBills(1, 1000, "");
   const usersQuery = useUsers(1, 1, "");
+  const usersFilterQuery = useUsers(1, 1000, "", "all");
 
   if (isLoading) return <div>Loading...</div>;
   if (!user) return null;
@@ -31,14 +42,58 @@ const Dashboard = () => {
   const totalCategories = categoriesQuery.data?.pagination?.total ?? 0;
   const totalBills = billsQuery.data?.pagination?.total ?? 0;
   const totalUsers = usersQuery.data?.pagination?.total ?? 0;
-  const recentBills = billsQuery.data?.data ?? [];
+  const recentBillsRaw = billsQuery.data?.data ?? [];
+  const userFilterOptions =
+    usersFilterQuery.data?.users?.map((u) => ({ value: u._id, label: u.name || u.email })) ?? [];
+
+  const recentBills = useMemo(() => {
+    const isInDateFilter = (bill: any) => {
+      if (dateFilter === "all") return true;
+      const createdAt = bill?.createdAt ? dayjs(bill.createdAt) : null;
+      if (!createdAt || !createdAt.isValid()) return false;
+      if (dateFilter === "today") return createdAt.isSame(dayjs(), "day");
+      if (dateFilter === "week") return !createdAt.isBefore(dayjs().startOf("week")) && !createdAt.isAfter(dayjs().endOf("week"));
+      if (dateFilter === "month") return !createdAt.isBefore(dayjs().startOf("month")) && !createdAt.isAfter(dayjs().endOf("month"));
+      if (dateFilter === "custom") {
+        const start = customRange?.[0];
+        const end = customRange?.[1];
+        if (!start || !end) return true;
+        return !createdAt.isBefore(start.startOf("day")) && !createdAt.isAfter(end.endOf("day"));
+      }
+      return true;
+    };
+
+    const getCreatedById = (bill: any) => bill?.userId?._id || bill?.createdBy?._id || "";
+
+    const filtered = recentBillsRaw.filter((bill: any) => {
+      const userOk = !isAdmin || !createdByFilter || getCreatedById(bill) === createdByFilter;
+      const dateOk = isInDateFilter(bill);
+      return userOk && dateOk;
+    });
+
+    const sorted = [...filtered].sort((a: any, b: any) => {
+      const ta = new Date(a?.createdAt || 0).getTime();
+      const tb = new Date(b?.createdAt || 0).getTime();
+      return sortOrder === "newest" ? tb - ta : ta - tb;
+    });
+
+    return sorted.slice(0, 5);
+  }, [recentBillsRaw, dateFilter, customRange, isAdmin, createdByFilter, sortOrder]);
+  const formatDate = (value?: string) =>
+    value ? new Date(value).toLocaleDateString() : "-";
 
   const billColumns = [
+    {
+      title: "S.No",
+      key: "serial",
+      width: 80,
+      render: (_: any, __: any, index: number) => index + 1,
+    },
     { title: "Bill No", dataIndex: "billNo", key: "billNo" },
     {
       title: "Company",
       key: "company",
-      render: (_: any, record: any) => record.companyId?.companyName || "-",
+      render: (_: any, record: any) => record.companyId?.companyName || record.companyId?.name || "-",
     },
     ...(isAdmin
       ? [
@@ -50,11 +105,19 @@ const Dashboard = () => {
         ]
       : []),
     {
-      title: "Date",
-      key: "date",
-      render: (_: any, record: any) =>
-        record.createdAt ? new Date(record.createdAt).toLocaleDateString() : "-",
+      title: "Created Date",
+      key: "createdAt",
+      render: (_: any, record: any) => formatDate(record.createdAt),
     },
+    ...(isAdmin
+      ? [
+          {
+            title: "Updated Date",
+            key: "updatedAt",
+            render: (_: any, record: any) => formatDate(record.updatedAt),
+          },
+        ]
+      : []),
     {
       title: "Total",
       key: "total",
@@ -68,17 +131,17 @@ const Dashboard = () => {
         <Space>
           <Button
             icon={<EyeOutlined />}
+            title="View"
+            aria-label="View"
             onClick={() => navigate(ROUTES.BILL_DETAILS(record._id))}
-          >
-            View
-          </Button>
+          />
           <Button
             type="primary"
             icon={<FilePdfOutlined />}
+            title="Download PDF"
+            aria-label="Download PDF"
             onClick={() => navigate(`${ROUTES.BILL_DETAILS(record._id)}?download=1`)}
-          >
-            Download
-          </Button>
+          />
         </Space>
       ),
     },
@@ -121,7 +184,54 @@ const Dashboard = () => {
         ))}
       </Row>
 
-      <Card style={{ marginTop: 16 }} title="Recent Bills">
+      <Card
+        style={{ marginTop: 16 }}
+        title="Recent Bills"
+        extra={
+          <Space wrap>
+            {isAdmin && (
+              <Select
+                allowClear
+                placeholder="Filter by user"
+                value={createdByFilter || undefined}
+                options={userFilterOptions}
+                onChange={(value) => setCreatedByFilter(value || "")}
+                style={{ width: 200 }}
+              />
+            )}
+            <Select
+              value={dateFilter}
+              onChange={(value: DateFilterType) => {
+                setDateFilter(value);
+                if (value !== "custom") setCustomRange(null);
+              }}
+              style={{ width: 160 }}
+              options={[
+                { value: "all", label: "All Dates" },
+                { value: "today", label: "Today" },
+                { value: "week", label: "This Week" },
+                { value: "month", label: "This Month" },
+                { value: "custom", label: "Custom Range" },
+              ]}
+            />
+            {dateFilter === "custom" && (
+              <RangePicker
+                value={customRange}
+                onChange={(values) => setCustomRange(values as [Dayjs | null, Dayjs | null] | null)}
+              />
+            )}
+            <Select
+              value={sortOrder}
+              onChange={(value: SortType) => setSortOrder(value)}
+              style={{ width: 140 }}
+              options={[
+                { value: "newest", label: "Newest" },
+                { value: "oldest", label: "Oldest" },
+              ]}
+            />
+          </Space>
+        }
+      >
         <Table
           rowKey="_id"
           columns={billColumns}

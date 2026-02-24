@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Button, Card, Form, Input, Select, Typography, App } from "antd";
+import { Button, Card, Form, Input, Typography, App } from "antd";
 import { ROUTES } from "../../constants";
 import { useCreateUser } from "../../hooks/useUsers";
 import { emailRule, passwordMinRule, phoneRule, requiredRule } from "../../utils/formRules";
@@ -12,7 +12,7 @@ const CreateUser: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     try {
-      await createUser(values);
+      await createUser({ ...values, role: "USER" });
       message.success("User created");
       navigate(ROUTES.USERS);
     } catch (err: any) {
@@ -23,7 +23,7 @@ const CreateUser: React.FC = () => {
   return (
     <Card style={{ maxWidth: 720, margin: "0 auto" }}>
       <Typography.Title level={4}>Create User</Typography.Title>
-      <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item name="name" label="Name" rules={[requiredRule("Name"), { min: 2, message: "Name must be at least 2 characters" }]}>
           <Input />
         </Form.Item>
@@ -35,9 +35,6 @@ const CreateUser: React.FC = () => {
         </Form.Item>
         <Form.Item name="phone" label="Phone" rules={[phoneRule]}>
           <Input />
-        </Form.Item>
-        <Form.Item name="role" label="Role" initialValue="USER" rules={[requiredRule("Role")]}>
-          <Select options={[{ value: "USER", label: "USER" }, { value: "ADMIN", label: "ADMIN" }]} />
         </Form.Item>
         <Form.Item style={{ marginBottom: 0 }}>
           <Button onClick={() => navigate(ROUTES.USERS)} style={{ marginRight: 8 }}>
@@ -53,3 +50,4 @@ const CreateUser: React.FC = () => {
 };
 
 export default CreateUser;
+

@@ -37,7 +37,7 @@ const EditProfile = () => {
   return (
     <Card style={{ maxWidth: 760, margin: "0 auto" }}>
       <Typography.Title level={4}>Update Profile</Typography.Title>
-      <Form form={form} layout="vertical" onFinish={handleSave} requiredMark={false}>
+      <Form form={form} layout="vertical" onFinish={handleSave}>
         <Form.Item name="name" label="Name" rules={[requiredRule("Name"), { min: 2, message: "Name must be at least 2 characters" }]}>
           <Input />
         </Form.Item>
@@ -64,3 +64,4 @@ const EditProfile = () => {
 };
 
 export default EditProfile;
+

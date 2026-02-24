@@ -5,6 +5,7 @@ import {
   Card,
   Input,
   Pagination,
+  Select,
   Space,
   Table,
   Typography,
@@ -12,6 +13,7 @@ import {
 } from "antd";
 import { DeleteOutlined, EditOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useDeleteProduct, useProducts } from "../../hooks/useProducts";
+import { useUsers } from "../../hooks/useUsers";
 import { ROLE, ROUTES } from "../../constants";
 import type { Product } from "../../types/product";
 import { useMe } from "../../hooks/useMe";
@@ -21,19 +23,49 @@ import { useConfirmDialog } from "../../utils/confirmDialog";
 const ProductsList = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ page: 1, search: "" });
+  const [filters, setFilters] = useState({
+    page: 1,
+    limit: 10,
+    search: "",
+    createdBy: "",
+  });
   const debouncedSearch = useDebouncedValue(filters.search, 500);
-  const limit = 10;
+  const { data: me } = useMe();
+  const isAdmin = me?.role === ROLE.ADMIN;
+  const hasAdminFilter = isAdmin && !!filters.createdBy;
+  const queryPage = hasAdminFilter ? 1 : filters.page;
+  const queryLimit = hasAdminFilter ? 1000 : filters.limit;
 
-  const { data, isPending, isFetching } = useProducts(filters.page, limit, debouncedSearch);
+  const { data, isPending, isFetching } = useProducts(queryPage, queryLimit, debouncedSearch);
+  const { data: usersFilterData } = useUsers(1, 1000, "", "all");
   const searchLoading = filters.search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteProduct, isPending: deletePending } = useDeleteProduct();
-  const { data: me } = useMe();
   const confirmDialog = useConfirmDialog();
-  const isAdmin = me?.role === ROLE.ADMIN;
-  const products: Product[] = data?.products ?? [];
+  const productsRaw: Product[] = data?.products ?? [];
+  const getCreatedById = (product: Product) =>
+    typeof product.createdBy === "object" ? product.createdBy?._id : (product.createdBy as unknown as string);
+  const matchesAdminFilters = (product: Product) => {
+    const userOk = !filters.createdBy || getCreatedById(product) === filters.createdBy;
+    return userOk;
+  };
+  const filteredProducts: Product[] = isAdmin ? productsRaw.filter(matchesAdminFilters) : productsRaw;
+  const products: Product[] = hasAdminFilter
+    ? filteredProducts.slice((filters.page - 1) * filters.limit, filters.page * filters.limit)
+    : filteredProducts;
   const pagination = data?.pagination;
-
+  const totalRecords = hasAdminFilter ? filteredProducts.length : pagination?.total || 0;
+  const pageSizeSelectOptions = [
+    { label: "10 / page", value: 10 },
+    { label: "30 / page", value: 30 },
+    { label: "50 / page", value: 50 },
+    { label: "100 / page", value: 100 },
+    ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
+  ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
+  const userOptions =
+    usersFilterData?.users?.map((user) => ({
+      value: user._id,
+      label: user.name || user.email,
+    })) ?? [];
   const handleDelete = async (id: string) => {
     try {
       await deleteProduct(id);
@@ -44,13 +76,20 @@ const ProductsList = () => {
   };
 
   const columns = [
+    {
+      title: "S.No",
+      key: "serial",
+      width: 80,
+      render: (_: any, __: Product, index: number) => (filters.page - 1) * filters.limit + index + 1,
+    },
     { title: "Name", dataIndex: "name", key: "name" },
     { title: "Category", dataIndex: "category", key: "category" },
     { title: "Type", dataIndex: "productType", key: "productType" },
     {
       title: "Company",
       key: "company",
-      render: (_: any, product: Product) => product.companyId?.companyName || "-",
+      render: (_: any, product: Product) =>
+        (product.companyId as any)?.companyName || (product.companyId as any)?.name || "-",
     },
     ...(isAdmin
       ? [
@@ -95,14 +134,16 @@ const ProductsList = () => {
         <Space>
           <Button
             icon={<EditOutlined />}
+            title="Edit"
+            aria-label="Edit"
             onClick={() => navigate(`${ROUTES.PRODUCTS}/${product._id}/edit`)}
-          >
-            Edit
-          </Button>
+          />
           <Button
             danger
             icon={<DeleteOutlined />}
             loading={deletePending}
+            title="Delete"
+            aria-label="Delete"
             onClick={() =>
               confirmDialog({
                 title: "Confirm Deletion",
@@ -112,9 +153,7 @@ const ProductsList = () => {
                 onConfirm: () => handleDelete(product._id),
               })
             }
-          >
-            Delete
-          </Button>
+          />
         </Space>
       ),
     },
@@ -134,17 +173,33 @@ const ProductsList = () => {
       }
     >
       <div style={{ marginBottom: 16 }}>
-        <Input
-          placeholder="Search by name, category or type..."
-          allowClear
-          prefix={<SearchOutlined />}
-          suffix={searchLoading ? <LoadingOutlined spin /> : null}
-          value={filters.search}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => {
-            setFilters({ page: 1, search: e.target.value });
-          }}
-          style={{ maxWidth: 360 }}
-        />
+        <Space wrap>
+          <Input
+            placeholder="Search by name, category or type..."
+            allowClear
+            prefix={<SearchOutlined />}
+            suffix={searchLoading ? <LoadingOutlined spin /> : null}
+            value={filters.search}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }));
+            }}
+            style={{ width: 360, maxWidth: "100%" }}
+          />
+          {isAdmin && (
+            <>
+              <Select
+                allowClear
+                placeholder="Filter by user"
+                value={filters.createdBy || undefined}
+                options={userOptions}
+                onChange={(value) =>
+                  setFilters((prev) => ({ ...prev, page: 1, createdBy: value || "" }))
+                }
+                style={{ width: 220 }}
+              />
+            </>
+          )}
+        </Space>
       </div>
 
       <Table
@@ -153,18 +208,18 @@ const ProductsList = () => {
         columns={columns}
         dataSource={products}
         pagination={false}
-        scroll={{ x: 1200 }}
+        scroll={{ x: "max-content" }}
       />
 
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
           current={filters.page}
-          pageSize={limit}
-          total={pagination?.total || 0}
-          onChange={(p: number) =>
-            setFilters((prev) => ({ ...prev, page: p }))
+          pageSize={filters.limit}
+          total={totalRecords}
+          onChange={(p: number, pageSize: number) =>
+            setFilters((prev) => ({ ...prev, page: p, limit: pageSize }))
           }
-          showSizeChanger={false}
+          showSizeChanger={{ options: pageSizeSelectOptions }}
         />
       </div>
     </Card>
