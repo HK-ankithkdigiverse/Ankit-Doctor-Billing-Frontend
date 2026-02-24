@@ -1,6 +1,6 @@
 import { useQuery,useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfileApi, updateProfileApi, deleteAccountApi, changePasswordApi } from "../api/userApi";
-import { QUERY_KEYS, STORAGE_KEYS } from "../constants";
+import { QUERY_KEYS } from "../constants";
 
 
 
@@ -28,7 +28,6 @@ export const useDeleteAccount = () => {
   return useMutation({
     mutationFn: deleteAccountApi,
     onSuccess: () => {
-      localStorage.removeItem(STORAGE_KEYS.TOKEN);
       localStorage.removeItem("token");
       queryClient.clear();
       window.location.href = "/";

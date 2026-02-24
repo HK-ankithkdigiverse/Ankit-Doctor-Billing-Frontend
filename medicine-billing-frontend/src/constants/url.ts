@@ -3,6 +3,19 @@ export const STORAGE_KEYS = {
   USER: "auth_user",
 };
 
+const DEFAULT_API_ORIGIN = "https://ankit-doctor-billing-backend.vercel.app";
+const rawApiUrl = (import.meta.env.VITE_API_URL || `${DEFAULT_API_ORIGIN}/api`).trim();
+const withoutTrailingSlash = rawApiUrl.replace(/\/+$/, "");
+const withoutLocalhost = withoutTrailingSlash.replace(
+  /^https?:\/\/localhost(?::\d+)?/i,
+  DEFAULT_API_ORIGIN
+);
+const fixedProtocol = withoutLocalhost.replace(/^ttps:\/\//, "https://");
+const withoutApiSuffix = fixedProtocol.replace(/\/api$/i, "");
+
+export const API_ORIGIN = withoutApiSuffix;
+export const API_BASE_URL = `${withoutApiSuffix}/api`;
+
 export const AUTH_API = {
   SIGNUP: "/auth/signup",
   LOGIN: "/auth/login",

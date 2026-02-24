@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button, Card, Col, Descriptions, Row, Typography } from "antd";
 import { EditOutlined } from "@ant-design/icons";
-import { ROUTES } from "../../constants";
+import { API_ORIGIN, ROUTES } from "../../constants";
 import { useCompanies } from "../../hooks/useCompanies";
 
 const CompanyDetails = () => {
@@ -14,7 +14,7 @@ const CompanyDetails = () => {
   if (!company) return <p>Company not found</p>;
 
   const logoUrl = company.logo
-    ? `${import.meta.env.VITE_API_URL || "https://ankit-doctor-billing-backend.vercel.app/api"}/uploads/${company.logo}`
+    ? `${API_ORIGIN}/uploads/${company.logo}`
     : "";
 
   return (

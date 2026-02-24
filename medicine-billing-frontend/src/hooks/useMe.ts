@@ -1,11 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/axios";
-import { AUTH_API, QUERY_KEYS, STORAGE_KEYS } from "../constants";
+import { AUTH_API, QUERY_KEYS } from "../constants";
 
 export const useMe = () => {
-  const token =
-    localStorage.getItem(STORAGE_KEYS.TOKEN) || localStorage.getItem("token");
-
   return useQuery({
     queryKey: QUERY_KEYS.ME,
     queryFn: async () => {
@@ -16,7 +13,6 @@ export const useMe = () => {
         return null; 
       }
     },
-    enabled: !!token,
-    retry: false,
+    retry: false
   });
 };

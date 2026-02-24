@@ -2,17 +2,13 @@ import { useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Space, Typography } from "antd";
 import { EditOutlined, FilePdfOutlined } from "@ant-design/icons";
-import { ROUTES } from "../../constants";
+import { API_ORIGIN, ROUTES } from "../../constants";
 import { useBill } from "../../hooks/useBills";
 
 const getLogoUrl = (logo?: string) => {
   if (!logo) return "";
   if (logo.startsWith("http")) return logo;
-  const apiBase = (
-    import.meta.env.VITE_API_URL ||
-    "https://ankit-doctor-billing-backend.vercel.app/api"
-  ).replace(/\/$/, "");
-  return `${apiBase}/uploads/${logo}`;
+  return `${API_ORIGIN}/uploads/${logo}`;
 };
 
 const INVOICE_ACCENT = "#2f3f46";

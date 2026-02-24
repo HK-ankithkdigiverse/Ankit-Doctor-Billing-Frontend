@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { loginApi, verifyOtpApi, logoutApi } from "../api/auth.api";
-import { QUERY_KEYS, ROUTES, STORAGE_KEYS } from "../constants";
+import { QUERY_KEYS, ROUTES } from "../constants";
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -17,7 +17,6 @@ export const useAuth = () => {
     onSuccess: (data: any) => {
       if (!data?.token) return;
 
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
       localStorage.setItem("token", data.token);
 
       // 🔁 refetch logged-in user
@@ -30,7 +29,6 @@ export const useAuth = () => {
   const logout = useMutation({
     mutationFn: logoutApi,
     onSuccess: () => {
-      localStorage.removeItem(STORAGE_KEYS.TOKEN);
       localStorage.removeItem("token");
 
       queryClient.removeQueries({ queryKey: QUERY_KEYS.ME });
