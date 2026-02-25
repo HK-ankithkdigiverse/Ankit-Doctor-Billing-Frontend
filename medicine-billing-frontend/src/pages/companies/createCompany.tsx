@@ -32,7 +32,10 @@ const CreateCompany = () => {
 
   return (
     <PageShell>
-      <SectionCard className="mx-auto max-w-[860px]">
+      <SectionCard
+        className="w-full"
+        style={{ width: "100%", maxWidth: 900, marginInline: "auto" }}
+      >
         <SectionTitle className="!mb-[18px] !mt-0">Create Company</SectionTitle>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item name="companyName" label="Company Name" rules={[requiredRule("Company name")]}>
