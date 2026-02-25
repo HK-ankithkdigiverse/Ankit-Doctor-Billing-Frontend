@@ -139,4 +139,3 @@ export const getAntdThemeConfig = (mode: ThemeMode): ThemeConfig => {
     },
   };
 };
-
