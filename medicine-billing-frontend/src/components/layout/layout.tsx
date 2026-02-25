@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { useState } from "react";
 import { Button, Drawer, Grid, Layout as AntLayout } from "antd";
-import { MenuOutlined } from "@ant-design/icons";
+import { CloseOutlined, MenuOutlined } from "@ant-design/icons";
 import Navbar from "./navbar";
 import Sidebar from "./sidebar";
 import { useThemeMode } from "../../contexts/themeMode";
@@ -47,9 +47,9 @@ const Layout: React.FC = () => {
           {isMobile && (
             <Button
               type="text"
-              icon={<MenuOutlined />}
-              onClick={() => setMobileMenuOpen(true)}
-              aria-label="Open menu"
+              icon={mobileMenuOpen ? <CloseOutlined /> : <MenuOutlined />}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -66,7 +66,9 @@ const Layout: React.FC = () => {
           open={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
           width={250}
+          closable={false}
           styles={{
+            header: { display: "none" },
             body: {
               padding: 0,
               background: isDark
