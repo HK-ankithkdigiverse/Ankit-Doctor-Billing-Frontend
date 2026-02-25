@@ -6,7 +6,9 @@ export const authPageTheme: ThemeConfig = {
   token: {
     colorPrimary: "#1f7a68",
     colorInfo: "#1f7a68",
+    colorBgContainer: "#ffffff",
     colorText: "#102a43",
+    colorTextPlaceholder: "#94a3b8",
     colorBorder: "#b9d1ca",
     borderRadius: 10,
   },
@@ -17,6 +19,8 @@ export const authPageTheme: ThemeConfig = {
     Input: {
       activeBorderColor: "#1f7a68",
       hoverBorderColor: "#2a8f79",
+      colorBgContainer: "#ffffff",
+      colorText: "#102a43",
       colorBorder: "#b9d1ca",
       colorTextPlaceholder: "#94a3b8",
     },
@@ -41,4 +45,3 @@ export const authPageCardBase: CSSProperties = {
   background: "#ffffff",
   boxShadow: "0 20px 45px rgba(12, 52, 57, 0.28)",
 };
-
