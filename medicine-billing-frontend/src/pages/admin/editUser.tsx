@@ -1,9 +1,11 @@
-import { Col, Form, Input, Modal, Row, Select } from "antd";
-import { useMemo } from "react";
-import type { UpdateUserPayload } from "../api/userApi";
-import { ROLE } from "../constants";
-import type { User } from "../types";
-import { emailRule, gstRule, phoneRule, requiredRule } from "../utils/formRules";
+import { useEffect, useMemo } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { App, Button, Card, Col, Form, Input, Row, Typography } from "antd";
+import { useUpdateUser, useUsers } from "../../hooks/useUsers";
+import type { UpdateUserPayload } from "../../api/userApi";
+import { ROUTES } from "../../constants";
+import type { User } from "../../types";
+import { emailRule, gstRule, phoneRule, requiredRule } from "../../utils/formRules";
 
 const PINCODE_REGEX = /^[0-9]{6}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -36,7 +38,7 @@ const trimIfString = (value?: string) => {
 
 interface EditUserFormValues {
   name: string;
-  medicalName?: string;
+  medicalName: string;
   email: string;
   phone?: string;
   address?: string;
@@ -45,7 +47,6 @@ interface EditUserFormValues {
   pincode?: string;
   gstNumber?: string;
   panCardNumber?: string;
-  role: string;
 }
 
 interface NormalizedEditUserValues {
@@ -59,7 +60,10 @@ interface NormalizedEditUserValues {
   pincode: string;
   gstNumber: string;
   panCardNumber: string;
-  role: string;
+}
+
+interface EditUserLocationState {
+  user?: User;
 }
 
 const toInitialValues = (user: User): EditUserFormValues => ({
@@ -73,7 +77,6 @@ const toInitialValues = (user: User): EditUserFormValues => ({
   pincode: user.pincode || "",
   gstNumber: user.gstNumber || "",
   panCardNumber: user.panCardNumber || "",
-  role: user.role || ROLE.USER,
 });
 
 const normalizeForCompare = (
@@ -89,12 +92,11 @@ const normalizeForCompare = (
   pincode: trimIfString(values?.pincode) ?? "",
   gstNumber: (trimIfString(values?.gstNumber) ?? "").toUpperCase(),
   panCardNumber: (trimIfString(values?.panCardNumber) ?? "").toUpperCase(),
-  role: values?.role || ROLE.USER,
 });
 
 const buildPayload = (values: EditUserFormValues): UpdateUserPayload => ({
   name: trimIfString(values.name) || "",
-  medicalName: trimIfString(values.medicalName),
+  medicalName: trimIfString(values.medicalName) || "",
   email: (trimIfString(values.email) || "").toLowerCase(),
   phone: trimIfString(values.phone),
   address: trimIfString(values.address),
@@ -103,25 +105,52 @@ const buildPayload = (values: EditUserFormValues): UpdateUserPayload => ({
   pincode: trimIfString(values.pincode),
   gstNumber: trimIfString(values.gstNumber)?.toUpperCase(),
   panCardNumber: trimIfString(values.panCardNumber)?.toUpperCase(),
-  role: values.role || ROLE.USER,
 });
 
-const ROLE_OPTIONS = [
-  { label: "Admin", value: ROLE.ADMIN },
-  { label: "User", value: ROLE.USER },
-];
+const getErrorMessage = (error: any): string => {
+  const responseData = error?.response?.data;
+  if (typeof responseData?.message === "string") return responseData.message;
+  if (typeof responseData?.error === "string") return responseData.error;
+  if (typeof error?.message === "string") return error.message;
+  return "";
+};
 
-interface Props {
-  user: User;
-  onClose: () => void;
-  onSave: (data: UpdateUserPayload) => Promise<void>;
-  isLoading?: boolean;
-}
+const isDuplicateEmailError = (error: any) => {
+  const errorText = getErrorMessage(error);
+  return (
+    error?.response?.status === 409 ||
+    (/email/i.test(errorText) && /(already|exists|taken|duplicate)/i.test(errorText))
+  );
+};
 
-const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
+const EditUser: React.FC = () => {
+  const { message } = App.useApp();
+  const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [form] = Form.useForm<EditUserFormValues>();
-  const initialValues = useMemo(() => toInitialValues(user), [user]);
   const watchedValues = Form.useWatch([], form);
+  const { data, isLoading } = useUsers(1, 1000, "", "all");
+  const { mutateAsync: updateUser, isPending } = useUpdateUser();
+
+  const routeState = location.state as EditUserLocationState | null;
+  const users = data?.users ?? [];
+
+  const user = useMemo(() => {
+    if (!id) return undefined;
+    if (routeState?.user?._id === id) return routeState.user;
+    return users.find((candidate) => candidate._id === id);
+  }, [id, routeState, users]);
+
+  const initialValues = useMemo(
+    () => (user ? toInitialValues(user) : undefined),
+    [user]
+  );
+
+  useEffect(() => {
+    if (!initialValues) return;
+    form.setFieldsValue(initialValues);
+  }, [form, initialValues]);
 
   const normalizedInitial = useMemo(
     () => normalizeForCompare(initialValues),
@@ -132,39 +161,58 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
     [watchedValues, initialValues]
   );
 
-  const hasChanges = useMemo(
-    () =>
-      (Object.keys(normalizedInitial) as Array<keyof NormalizedEditUserValues>)
-        .some((key) => normalizedInitial[key] !== normalizedCurrent[key]),
-    [normalizedInitial, normalizedCurrent]
-  );
+  const hasChanges = useMemo(() => {
+    if (!initialValues) return false;
+    return (Object.keys(normalizedInitial) as Array<keyof NormalizedEditUserValues>)
+      .some((key) => normalizedInitial[key] !== normalizedCurrent[key]);
+  }, [initialValues, normalizedInitial, normalizedCurrent]);
 
   const hasRequiredValues = Boolean(
     trimIfString(watchedValues?.name) &&
-      trimIfString(watchedValues?.email) &&
-      watchedValues?.role
+      trimIfString(watchedValues?.medicalName) &&
+      trimIfString(watchedValues?.email)
   );
 
+  const handleSubmit = async (values: EditUserFormValues) => {
+    if (!id) return;
+
+    try {
+      await updateUser({
+        id,
+        data: buildPayload(values),
+      });
+      message.success("User updated");
+      navigate(ROUTES.USERS);
+    } catch (error: any) {
+      if (isDuplicateEmailError(error)) {
+        form.setFields([{ name: "email", errors: ["Email already exists"] }]);
+        message.error("Email already exists");
+        return;
+      }
+      message.error(getErrorMessage(error) || "Failed to update user");
+    }
+  };
+
+  if (isLoading && !user) return <p>Loading...</p>;
+
+  if (!id || !user) {
+    return (
+      <Card style={{ maxWidth: 900, margin: "0 auto" }}>
+        <Typography.Title level={4}>Edit User</Typography.Title>
+        <Typography.Paragraph>User not found.</Typography.Paragraph>
+        <Button onClick={() => navigate(ROUTES.USERS)}>Back to Users</Button>
+      </Card>
+    );
+  }
+
   return (
-    <Modal
-      open
-      title="Edit User"
-      onCancel={onClose}
-      width={900}
-      styles={{ body: { maxHeight: "68vh", overflowY: "auto", paddingRight: 8 } }}
-      onOk={() => form.submit()}
-      okText={isLoading ? "Saving..." : "Save"}
-      okButtonProps={{
-        loading: isLoading,
-        disabled: !hasRequiredValues || !hasChanges,
-      }}
-      destroyOnHidden
-    >
+    <Card style={{ maxWidth: 900, margin: "0 auto" }}>
+      <Typography.Title level={4}>Edit User</Typography.Title>
       <Form
         key={user._id}
         form={form}
         layout="vertical"
-        onFinish={async (values) => onSave(buildPayload(values))}
+        onFinish={handleSubmit}
         initialValues={initialValues}
       >
         <Row gutter={16}>
@@ -178,37 +226,40 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
                 { min: 2, message: "Name must be at least 2 characters" },
               ]}
             >
-              <Input disabled={isLoading} />
+              <Input disabled={isPending} />
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
-            <Form.Item name="medicalName" label="Medical Name">
-              <Input disabled={isLoading} />
+            <Form.Item
+              name="medicalName"
+              label="Medical Name"
+              rules={[
+                requiredRule("Medical Name"),
+                nonWhitespaceRule("Medical Name"),
+                { min: 2, message: "Medical Name must be at least 2 characters" },
+              ]}
+            >
+              <Input disabled={isPending} />
             </Form.Item>
           </Col>
         </Row>
 
         <Row gutter={16}>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={24}>
             <Form.Item
               name="email"
               label="Email"
               rules={[requiredRule("Email"), nonWhitespaceRule("Email"), emailRule]}
             >
-              <Input disabled={isLoading} />
+              <Input disabled={isPending} />
             </Form.Item>
           </Col>
         </Row>
 
         <Row gutter={16}>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={24}>
             <Form.Item name="phone" label="Phone" rules={[phoneRule]}>
-              <Input disabled={isLoading} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item name="role" label="Role" rules={[requiredRule("Role")]}>
-              <Select options={ROLE_OPTIONS} disabled={isLoading} />
+              <Input disabled={isPending} />
             </Form.Item>
           </Col>
         </Row>
@@ -218,23 +269,23 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
           label="Address"
           rules={[{ max: 500, message: "Address must be 500 characters or less" }]}
         >
-          <Input.TextArea rows={3} disabled={isLoading} />
+          <Input.TextArea rows={3} disabled={isPending} />
         </Form.Item>
 
         <Row gutter={16}>
           <Col xs={24} md={8}>
             <Form.Item name="state" label="State">
-              <Input disabled={isLoading} />
+              <Input disabled={isPending} />
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
             <Form.Item name="city" label="City">
-              <Input disabled={isLoading} />
+              <Input disabled={isPending} />
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
             <Form.Item name="pincode" label="Pincode" rules={[pincodeRule]}>
-              <Input maxLength={6} disabled={isLoading} />
+              <Input maxLength={6} disabled={isPending} />
             </Form.Item>
           </Col>
         </Row>
@@ -250,7 +301,7 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
               <Input
                 style={{ textTransform: "uppercase" }}
                 maxLength={15}
-                disabled={isLoading}
+                disabled={isPending}
               />
             </Form.Item>
           </Col>
@@ -264,14 +315,28 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
               <Input
                 style={{ textTransform: "uppercase" }}
                 maxLength={10}
-                disabled={isLoading}
+                disabled={isPending}
               />
             </Form.Item>
           </Col>
         </Row>
+
+        <Form.Item style={{ marginBottom: 0 }}>
+          <Button onClick={() => navigate(ROUTES.USERS)} style={{ marginRight: 8 }}>
+            Cancel
+          </Button>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={isPending}
+            disabled={!hasRequiredValues || !hasChanges}
+          >
+            Save
+          </Button>
+        </Form.Item>
       </Form>
-    </Modal>
+    </Card>
   );
 };
 
-export default EditUserModal;
+export default EditUser;

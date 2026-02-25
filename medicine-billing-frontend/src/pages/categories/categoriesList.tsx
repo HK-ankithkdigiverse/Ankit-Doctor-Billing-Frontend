@@ -114,27 +114,26 @@ const CategoriesList = () => {
             render: (_: unknown, category: Category) => {
               const createdBy = category.createdBy;
               if (!createdBy || typeof createdBy === "string") return "-";
-              return createdBy.name || createdBy.email || "-";
+              const createdByName = createdBy.name?.trim() || "-";
+              const createdByEmail = createdBy.email?.trim();
+              return createdByEmail ? `${createdByName} (${createdByEmail})` : createdByName;
             },
           },
         ]
       : []),
     {
-      title: "Created Date & Time",
-      key: "createdAt",
-      sorter: (a: Category, b: Category) => sortDateTime(a.createdAt, b.createdAt),
-      render: (_: unknown, category: Category) => formatDateTime(category.createdAt),
+      title: "Date (Created Date, Updated Date)",
+      key: "createdUpdatedAt",
+      sorter: (a: Category, b: Category) =>
+        sortDateTime(a.updatedAt || a.createdAt, b.updatedAt || b.createdAt),
+      render: (_: unknown, category: Category) => (
+        <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
+          {formatDateTime(category.createdAt)}
+          <br />
+          {formatDateTime(category.updatedAt)}
+        </span>
+      ),
     },
-    ...(me?.role === "ADMIN"
-      ? [
-          {
-            title: "Updated Date & Time",
-            key: "updatedAt",
-            sorter: (a: Category, b: Category) => sortDateTime(a.updatedAt, b.updatedAt),
-            render: (_: unknown, category: Category) => formatDateTime(category.updatedAt),
-          },
-        ]
-      : []),
     {
       title: "Action",
       key: "action",

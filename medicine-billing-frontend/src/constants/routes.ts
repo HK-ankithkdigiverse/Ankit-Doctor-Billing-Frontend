@@ -30,4 +30,5 @@ export const ROUTES = {
 
   USERS: "/users",
   CREATE_USER: "/users/create",
+  USER_EDIT: "/users/:id/edit",
 };

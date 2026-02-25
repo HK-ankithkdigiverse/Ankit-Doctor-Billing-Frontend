@@ -11,7 +11,6 @@ import {
   StopOutlined,
 } from "@ant-design/icons";
 import { useUsers, useUpdateUser, useDeleteUser } from "../../hooks/useUsers";
-import EditUserModal from "../../components/editUserModal";
 import { ROUTES } from "../../constants";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { User } from "../../types";
@@ -35,7 +34,6 @@ const Users = () => {
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   if (isLoading) return <p>Loading users...</p>;
   if (!data) return <p>No access</p>;
@@ -118,23 +116,31 @@ const Users = () => {
       render: (v: string) => v || "-",
     },
     {
-      title: "Created Date & Time",
-      key: "createdAt",
-      sorter: (a: User, b: User) => sortDateTime(a.createdAt, b.createdAt),
-      render: (_: any, user: User) => formatDateTime(user.createdAt),
-    },
-    {
-      title: "Updated Date & Time",
-      key: "updatedAt",
-      sorter: (a: User, b: User) => sortDateTime(a.updatedAt, b.updatedAt),
-      render: (_: any, user: User) => formatDateTime(user.updatedAt),
+      title: "Date (Created Date, Updated Date)",
+      key: "createdUpdatedAt",
+      sorter: (a: User, b: User) =>
+        sortDateTime(a.updatedAt || a.createdAt, b.updatedAt || b.createdAt),
+      render: (_: any, user: User) => (
+        <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
+          {formatDateTime(user.createdAt)}
+          <br />
+          {formatDateTime(user.updatedAt)}
+        </span>
+      ),
     },
     {
       title: "Action",
       key: "action",
       render: (_: any, user: User) => (
         <Space>
-          <Button icon={<EditOutlined />} title="Edit" aria-label="Edit" onClick={() => setSelectedUser(user)} />
+          <Button
+            icon={<EditOutlined />}
+            title="Edit"
+            aria-label="Edit"
+            onClick={() =>
+              navigate(ROUTES.USER_EDIT.replace(":id", user._id), { state: { user } })
+            }
+          />
           <Button
             icon={(user.isActive ?? true) ? <CheckCircleOutlined /> : <StopOutlined />}
             loading={isPending}
@@ -180,23 +186,6 @@ const Users = () => {
     },
   ];
 
-  const handleSave = async (data: {
-    name: string;
-    email: string;
-    phone?: string;
-    address?: string;
-    isActive?: boolean;
-  }) => {
-    if (!selectedUser) return;
-    try {
-      await updateUser({ id: selectedUser._id, data });
-      message.success("User updated");
-      setSelectedUser(null);
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || "Failed to update user");
-    }
-  };
-
   return (
     <Card
       title={<Typography.Title level={4} style={{ margin: 0 }}>Users</Typography.Title>}
@@ -206,7 +195,7 @@ const Users = () => {
           icon={<PlusOutlined />}
           onClick={() => navigate(ROUTES.CREATE_USER)}
         >
-          Create User
+          Add User
         </Button>
       }
     >
@@ -283,15 +272,6 @@ const Users = () => {
           showSizeChanger={{ options: pageSizeSelectOptions }}
         />
       </div>
-
-      {selectedUser && (
-        <EditUserModal
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          onSave={handleSave}
-          isLoading={isPending}
-        />
-      )}
     </Card>
   );
 };

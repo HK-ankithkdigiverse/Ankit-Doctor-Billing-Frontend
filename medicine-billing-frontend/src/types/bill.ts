@@ -36,9 +36,12 @@ export interface BillCompany {
 export interface BillUser {
   _id?: string;
   name?: string;
+  medicalName?: string;
   email?: string;
   phone?: string;
   address?: string;
+  gstNumber?: string;
+  panCardNumber?: string;
   role?: string;
 }
 

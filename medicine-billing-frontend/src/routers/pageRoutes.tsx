@@ -19,6 +19,7 @@ import EditProfile from "../pages/Profile/editProfile";
 // Admin
 import Users from "../pages/admin/users";
 import CreateUser from "../pages/admin/createUser";
+import EditUser from "../pages/admin/editUser";
 
 // Auth
 import Login from "../pages/auth/login";
@@ -160,6 +161,10 @@ export const PageRoutes = [
               {
                 path: ROUTES.CREATE_USER,
                 element: <CreateUser />,
+              },
+              {
+                path: ROUTES.USER_EDIT,
+                element: <EditUser />,
               },
             ],
           },

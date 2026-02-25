@@ -32,12 +32,16 @@ type BillFormProps = {
   title: string;
   submitText: string;
   submitLoading?: boolean;
+  isAdmin?: boolean;
+  users?: Array<{ value: string; label: string }>;
+  initialUserId?: string;
   companies: any[];
   initialCompanyId?: string;
   initialCompanyName?: string;
   initialDiscount?: number;
   initialItems?: BillFormItem[];
   onSubmit: (payload: {
+    userId?: string;
     companyId: string;
     discount: number;
     items: BillFormItem[];
@@ -70,6 +74,9 @@ const BillForm = ({
   title,
   submitText,
   submitLoading,
+  isAdmin = false,
+  users = [],
+  initialUserId = "",
   companies,
   initialCompanyId = "",
   initialCompanyName = "",
@@ -79,6 +86,7 @@ const BillForm = ({
   onCancel,
 }: BillFormProps) => {
   const { message } = App.useApp();
+  const [userId, setUserId] = useState(initialUserId);
   const [companyId, setCompanyId] = useState(initialCompanyId);
   const [discount, setDiscount] = useState(initialDiscount);
   const [items, setItems] = useState<BillFormRow[]>(normalizeItems(initialItems));
@@ -89,13 +97,21 @@ const BillForm = ({
   const products = productData?.products ?? [];
 
   useEffect(() => {
+    setUserId(initialUserId || "");
     setCompanyId(initialCompanyId || "");
     setDiscount(Number(initialDiscount || 0));
     setItems(normalizeItems(initialItems));
-  }, [initialCompanyId, initialDiscount, initialItems]);
+  }, [initialUserId, initialCompanyId, initialDiscount, initialItems]);
 
   const companyOptions = useMemo(() => {
-    const options = companies.map((c: any) => ({
+    const isOwnedBySelectedUser = (company: any) => {
+      if (!isAdmin) return true;
+      if (!userId) return false;
+      const ownerId = typeof company?.userId === "object" ? company?.userId?._id : company?.userId;
+      return String(ownerId || "") === String(userId);
+    };
+
+    const options = companies.filter(isOwnedBySelectedUser).map((c: any) => ({
       value: c._id,
       label: c.companyName || c.name || c.email || c._id,
     }));
@@ -109,13 +125,19 @@ const BillForm = ({
     }
 
     return options;
-  }, [companies, initialCompanyId, initialCompanyName]);
+  }, [companies, initialCompanyId, initialCompanyName, isAdmin, userId]);
 
   const getProduct = (id: string) => products.find((p: any) => p._id === id);
   const getProductName = (id: string) => getProduct(id)?.name || "";
 
   const handleCompanyChange = (value: string) => {
     setCompanyId(value);
+    setItems([toBillFormRow()]);
+  };
+
+  const handleUserChange = (value: string) => {
+    setUserId(value);
+    setCompanyId("");
     setItems([toBillFormRow()]);
   };
 
@@ -174,6 +196,11 @@ const BillForm = ({
       return;
     }
 
+    if (isAdmin && !userId) {
+      message.error("User is required");
+      return;
+    }
+
     if (discount < 0) {
       message.error("Bill discount cannot be negative");
       return;
@@ -212,6 +239,7 @@ const BillForm = ({
     }
 
     await onSubmit({
+      userId: isAdmin ? userId : undefined,
       companyId,
       discount: discountAmount,
       items: items.map((item) => {
@@ -332,13 +360,26 @@ const BillForm = ({
       <Typography.Title level={4} style={{ marginBottom: 20 }}>{title}</Typography.Title>
 
       <Form layout="vertical">
+        {isAdmin && (
+          <Form.Item label="User" required>
+            <Select
+              value={userId || undefined}
+              placeholder="Select user"
+              onChange={handleUserChange}
+              options={users}
+              showSearch
+              optionFilterProp="label"
+            />
+          </Form.Item>
+        )}
         <Form.Item label="Company" required>
           <Select
             value={companyId || undefined}
-            placeholder="Select company"
+            placeholder={isAdmin && !userId ? "Select user first" : "Select company"}
             onChange={handleCompanyChange}
             options={companyOptions}
             className="bill-company-select"
+            disabled={isAdmin && !userId}
           />
         </Form.Item>
       </Form>

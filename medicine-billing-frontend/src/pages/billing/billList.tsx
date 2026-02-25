@@ -11,7 +11,7 @@ import {
   Table,
   Typography,
 } from "antd";
-import { DeleteOutlined, EditOutlined, EyeOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, EyeOutlined, FilePdfOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
 import { useBills, useDeleteBill } from "../../hooks/useBills";
 import { ROLE, ROUTES } from "../../constants";
@@ -140,7 +140,7 @@ const BillList = () => {
     ...(isAdmin
       ? [
           {
-            title: "Added By",
+            title: "Created By",
             key: "addedBy",
             sorter: (a: any, b: any) => sortText(getUserLabel(a), getUserLabel(b)),
             render: (_: any, bill: any) => getUserLabel(bill),
@@ -155,21 +155,18 @@ const BillList = () => {
       render: (_: any, bill: any) => `Rs ${Number(bill.grandTotal || 0).toFixed(2)}`,
     },
     {
-      title: "Created Date & Time",
-      key: "createdAt",
-      sorter: (a: any, b: any) => sortDateTime(a?.createdAt, b?.createdAt),
-      render: (_: any, bill: any) => formatDateTime(bill.createdAt),
+      title: "Date (Created Date, Updated Date)",
+      key: "createdUpdatedAt",
+      sorter: (a: any, b: any) =>
+        sortDateTime(a?.updatedAt || a?.createdAt, b?.updatedAt || b?.createdAt),
+      render: (_: any, bill: any) => (
+        <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
+          {formatDateTime(bill.createdAt)}
+          <br />
+          {formatDateTime(bill.updatedAt)}
+        </span>
+      ),
     },
-    ...(isAdmin
-      ? [
-          {
-            title: "Updated Date & Time",
-            key: "updatedAt",
-            sorter: (a: any, b: any) => sortDateTime(a?.updatedAt, b?.updatedAt),
-            render: (_: any, bill: any) => formatDateTime(bill.updatedAt),
-          },
-        ]
-      : []),
     {
       title: "Action",
       key: "action",
@@ -186,6 +183,13 @@ const BillList = () => {
             title="Edit"
             aria-label="Edit"
             onClick={() => navigate(ROUTES.BILL_EDIT.replace(":id", bill._id))}
+          />
+          <Button
+            type="primary"
+            icon={<FilePdfOutlined />}
+            title="Download PDF"
+            aria-label="Download PDF"
+            onClick={() => navigate(`${ROUTES.BILL_DETAILS(bill._id)}?download=1`)}
           />
           <Button
             danger

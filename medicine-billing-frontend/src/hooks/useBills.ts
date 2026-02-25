@@ -68,9 +68,6 @@ export const useCreateBill = () => {
   });
 };
 
-/* ======================
-   DELETE BILL
-====================== */
 export const useDeleteBill = () => {
   const qc = useQueryClient();
 

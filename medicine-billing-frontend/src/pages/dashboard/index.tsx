@@ -94,6 +94,12 @@ const Dashboard = () => {
 
     return sorted.slice(0, 5);
   }, [recentBillsRaw, dateFilter, customRange, isAdmin, createdByFilter, sortOrder]);
+  const getCreatedByLabel = (bill: any) => {
+    const createdByName = bill?.userId?.name || bill?.createdBy?.name || "";
+    const createdByEmail = bill?.userId?.email || bill?.createdBy?.email || "";
+    if (!createdByName) return "-";
+    return createdByEmail ? `${createdByName} (${createdByEmail})` : createdByName;
+  };
   const billColumns = [
     {
       title: "S.No",
@@ -118,27 +124,24 @@ const Dashboard = () => {
           {
             title: "Created By",
             key: "createdBy",
-            sorter: (a: any, b: any) => sortText(a?.userId?.name || a?.createdBy?.name, b?.userId?.name || b?.createdBy?.name),
-            render: (_: any, record: any) => record.userId?.name || "-",
+            sorter: (a: any, b: any) => sortText(getCreatedByLabel(a), getCreatedByLabel(b)),
+            render: (_: any, record: any) => getCreatedByLabel(record),
           },
         ]
       : []),
     {
-      title: "Created Date & Time",
-      key: "createdAt",
-      sorter: (a: any, b: any) => sortDateTime(a?.createdAt, b?.createdAt),
-      render: (_: any, record: any) => formatDateTime(record.createdAt),
+      title: "Date (Created Date, Updated Date)",
+      key: "createdUpdatedAt",
+      sorter: (a: any, b: any) =>
+        sortDateTime(a?.updatedAt || a?.createdAt, b?.updatedAt || b?.createdAt),
+      render: (_: any, record: any) => (
+        <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
+          {formatDateTime(record.createdAt)}
+          <br />
+          {formatDateTime(record.updatedAt)}
+        </span>
+      ),
     },
-    ...(isAdmin
-      ? [
-          {
-            title: "Updated Date & Time",
-            key: "updatedAt",
-            sorter: (a: any, b: any) => sortDateTime(a?.updatedAt, b?.updatedAt),
-            render: (_: any, record: any) => formatDateTime(record.updatedAt),
-          },
-        ]
-      : []),
     {
       title: "Total",
       key: "total",

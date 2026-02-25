@@ -25,6 +25,7 @@ export const getBillByIdApi = async (id: string) => {
    CREATE BILL
 ========================= */
 export const createBillApi = async (payload: {
+  userId?: string;
   companyId: string;
   discount?: number;
   items: {
@@ -71,6 +72,7 @@ export const updateBillApi = async ({
   id: string;
   payload: {
     discount: number;
+    userId?: string;
     companyId?: string;
     items?: {
       productId: string;

@@ -131,27 +131,30 @@ const CompaniesList = () => {
             render: (_: unknown, company: Company) => {
               const owner = company.userId;
               if (!owner || typeof owner === "string") return "-";
-              return oneLineCell(owner.name || owner.email || "-");
+              const ownerName = owner.name?.trim() || "-";
+              const ownerEmail = owner.email?.trim();
+              return oneLineCell(ownerEmail ? `${ownerName} (${ownerEmail})` : ownerName);
             },
           },
         ]
       : []),
     {
-      title: "Created Date & Time",
-      key: "createdAt",
-      sorter: (a: Company, b: Company) => sortDateTime((a as any).createdAt, (b as any).createdAt),
-      render: (_: unknown, company: Company) => oneLineCell(formatDateTime((company as any).createdAt)),
+      title: "Created / Updated",
+      key: "createdUpdatedAt",
+      sorter: (a: Company, b: Company) =>
+        sortDateTime((a as any).updatedAt || (a as any).createdAt, (b as any).updatedAt || (b as any).createdAt),
+      render: (_: unknown, company: Company) => {
+        const created = formatDateTime((company as any).createdAt);
+        const updated = formatDateTime((company as any).updatedAt);
+        return (
+          <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
+            {`Created: ${created}`}
+            <br />
+            {`Updated: ${updated}`}
+          </span>
+        );
+      },
     },
-    ...(isAdmin
-      ? [
-          {
-            title: "Updated Date & Time",
-            key: "updatedAt",
-            sorter: (a: Company, b: Company) => sortDateTime((a as any).updatedAt, (b as any).updatedAt),
-            render: (_: unknown, company: Company) => oneLineCell(formatDateTime((company as any).updatedAt)),
-          },
-        ]
-      : []),
     {
       title: "Action",
       key: "action",

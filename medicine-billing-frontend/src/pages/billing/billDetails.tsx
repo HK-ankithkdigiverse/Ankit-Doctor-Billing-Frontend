@@ -25,10 +25,18 @@ const BillView = () => {
   const companyPhone = bill?.companyId?.phone || "-";
   const companyEmail = bill?.companyId?.email || "-";
   const userName = bill?.userId?.name || (bill as any)?.createdBy?.name || "-";
-
+  const userMedicalName =
+    bill?.userId?.medicalName ||
+    (bill as any)?.createdBy?.medicalName ||
+    companyName ||
+    userName ||
+    "-";
+  const userOwnerName = userName;
   const userEmail = bill?.userId?.email || (bill as any)?.createdBy?.email || "-";
   const userPhone = bill?.userId?.phone || (bill as any)?.createdBy?.phone || "-";
   const userAddress = bill?.userId?.address || (bill as any)?.createdBy?.address || "-";
+  const userGstNumber = bill?.userId?.gstNumber || (bill as any)?.createdBy?.gstNumber || "-";
+  const userPanCardNumber = bill?.userId?.panCardNumber || (bill as any)?.createdBy?.panCardNumber || "-";
   const logoUrl = useMemo(
     () => getCompanyLogoUrl((bill?.companyId as any)?.logo || (bill?.companyId as any)?.logoUrl || (bill?.companyId as any)?.image),
     [bill?.companyId]
@@ -148,9 +156,13 @@ const BillView = () => {
                   INVOICE TO:
                 </Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Name: {userName}</Typography.Text>
+                <Typography.Text style={{ display: "block", color: "#4b5563" }}>Medical Name: {userMedicalName}</Typography.Text>
+                <Typography.Text style={{ display: "block", color: "#4b5563" }}>Owner Name: {userOwnerName}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Email: {userEmail}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Phone: {userPhone}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Address: {userAddress}</Typography.Text>
+                <Typography.Text style={{ display: "block", color: "#4b5563" }}>GST Number: {userGstNumber}</Typography.Text>
+                <Typography.Text style={{ display: "block", color: "#4b5563" }}>PAN Card Number: {userPanCardNumber}</Typography.Text>
               </div>
 
               <div style={{ width: 260 }}>

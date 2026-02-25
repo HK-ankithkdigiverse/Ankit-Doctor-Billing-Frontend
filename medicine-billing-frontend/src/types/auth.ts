@@ -43,9 +43,15 @@ export interface SignupResponse {
 export interface User {
   _id: string;
   name: string;
+  medicalName?: string;
   email: string;
   phone?: string;
   address?: string;
+  state?: string;
+  city?: string;
+  pincode?: string;
+  gstNumber?: string;
+  panCardNumber?: string;
   role: string;
   isActive?: boolean;
   isDeleted?: boolean;
