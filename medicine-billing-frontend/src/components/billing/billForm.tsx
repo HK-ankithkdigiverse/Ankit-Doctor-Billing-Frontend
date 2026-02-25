@@ -12,6 +12,7 @@ import {
 } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useProducts } from "../../hooks/useProducts";
+import { sortNumber, sortText } from "../../utils/tableSort";
 
 type BillFormItem = {
   productId: string;
@@ -21,6 +22,10 @@ type BillFormItem = {
   mrp: number;
   taxPercent: number;
   discount: number;
+};
+
+type BillFormRow = BillFormItem & {
+  rowId: string;
 };
 
 type BillFormProps = {
@@ -50,8 +55,16 @@ const emptyItem: BillFormItem = {
   discount: 0,
 };
 
+const createRowId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+const toBillFormRow = (item?: Partial<BillFormItem>): BillFormRow => ({
+  rowId: createRowId(),
+  ...emptyItem,
+  ...item,
+});
+
 const normalizeItems = (items?: BillFormItem[]) =>
-  items && items.length ? items.map((item) => ({ ...emptyItem, ...item })) : [{ ...emptyItem }];
+  items && items.length ? items.map((item) => toBillFormRow(item)) : [toBillFormRow()];
 
 const BillForm = ({
   title,
@@ -68,7 +81,7 @@ const BillForm = ({
   const { message } = App.useApp();
   const [companyId, setCompanyId] = useState(initialCompanyId);
   const [discount, setDiscount] = useState(initialDiscount);
-  const [items, setItems] = useState<BillFormItem[]>(normalizeItems(initialItems));
+  const [items, setItems] = useState<BillFormRow[]>(normalizeItems(initialItems));
   const { data: productData, isLoading: productsLoading } = useProducts(1, 1000, "", {
     companyId: companyId || undefined,
     enabled: !!companyId,
@@ -99,48 +112,58 @@ const BillForm = ({
   }, [companies, initialCompanyId, initialCompanyName]);
 
   const getProduct = (id: string) => products.find((p: any) => p._id === id);
+  const getProductName = (id: string) => getProduct(id)?.name || "";
 
   const handleCompanyChange = (value: string) => {
     setCompanyId(value);
-    setItems([{ ...emptyItem }]);
+    setItems([toBillFormRow()]);
   };
 
-  const updateItem = (index: number, key: keyof BillFormItem, value: any) => {
+  const updateItem = (rowId: string, key: keyof BillFormItem, value: any) => {
     setItems((prev) => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], [key]: value };
+      return prev.map((row) => {
+        if (row.rowId !== rowId) return row;
 
-      if (key === "productId") {
-        const product = getProduct(value);
-        if (product) {
-          copy[index].rate = Number(product.price || 0);
-          copy[index].mrp = Number(product.mrp || 0);
-          copy[index].taxPercent = Number(product.taxPercent || 0);
+        const nextRow: BillFormRow = { ...row, [key]: value };
+        if (key === "productId") {
+          const product = getProduct(value);
+          if (product) {
+            nextRow.rate = Number(product.price || 0);
+            nextRow.mrp = Number(product.mrp || 0);
+            nextRow.taxPercent = Number(product.taxPercent || 0);
+          }
         }
-      }
 
-      return copy;
+        return nextRow;
+      });
     });
   };
 
-  const addRow = () => setItems((prev) => [...prev, { ...emptyItem }]);
-  const removeRow = (index: number) => setItems((prev) => prev.filter((_, i) => i !== index));
+  const addRow = () => setItems((prev) => [...prev, toBillFormRow()]);
+  const removeRow = (rowId: string) =>
+    setItems((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.rowId !== rowId)));
 
   const rowTotals = useMemo(
-    () =>
-      items.map((item) => {
+    () => {
+      const totalsByRowId: Record<string, { taxable: number; tax: number; total: number }> = {};
+
+      items.forEach((item) => {
         const amount = Number(item.rate || 0) * Number(item.qty || 0);
         const discAmt = (amount * Number(item.discount || 0)) / 100;
         const taxable = amount - discAmt;
         const cgst = (taxable * Number(item.taxPercent || 0)) / 200;
         const sgst = (taxable * Number(item.taxPercent || 0)) / 200;
-        return { taxable, tax: cgst + sgst, total: taxable + cgst + sgst };
-      }),
+        totalsByRowId[item.rowId] = { taxable, tax: cgst + sgst, total: taxable + cgst + sgst };
+      });
+
+      return totalsByRowId;
+    },
     [items]
   );
 
-  const subTotal = rowTotals.reduce((sum, row) => sum + row.taxable, 0);
-  const totalTax = rowTotals.reduce((sum, row) => sum + row.tax, 0);
+  const totals = Object.values(rowTotals);
+  const subTotal = totals.reduce((sum, row) => sum + row.taxable, 0);
+  const totalTax = totals.reduce((sum, row) => sum + row.tax, 0);
   const totalBeforeDiscount = subTotal + totalTax;
   const discountAmount = Math.max(0, Number(discount || 0));
   const grandTotal = Math.max(0, totalBeforeDiscount - discountAmount);
@@ -191,15 +214,18 @@ const BillForm = ({
     await onSubmit({
       companyId,
       discount: discountAmount,
-      items: items.map((it) => ({
-        ...it,
-        qty: Number(it.qty || 0),
-        freeQty: Number(it.freeQty || 0),
-        rate: Number(it.rate || 0),
-        mrp: Number(it.mrp || 0),
-        taxPercent: Number(it.taxPercent || 0),
-        discount: Number(it.discount || 0),
-      })),
+      items: items.map((item) => {
+        const { rowId: _rowId, ...it } = item;
+        return {
+          ...it,
+          qty: Number(it.qty || 0),
+          freeQty: Number(it.freeQty || 0),
+          rate: Number(it.rate || 0),
+          mrp: Number(it.mrp || 0),
+          taxPercent: Number(it.taxPercent || 0),
+          discount: Number(it.discount || 0),
+        };
+      }),
     });
   };
 
@@ -208,17 +234,18 @@ const BillForm = ({
       title: "S.No",
       key: "serial",
       width: 80,
-      render: (_: unknown, __: BillFormItem, index: number) => index + 1,
+      render: (_: unknown, __: BillFormRow, index: number) => index + 1,
     },
     {
       title: "Product",
       key: "product",
-      render: (_: unknown, item: BillFormItem, index: number) => (
+      sorter: (a: BillFormRow, b: BillFormRow) => sortText(getProductName(a.productId), getProductName(b.productId)),
+      render: (_: unknown, item: BillFormRow) => (
         <Select
           value={item.productId || undefined}
           style={{ width: 220 }}
           placeholder={companyId ? "Select product" : "Select company first"}
-          onChange={(value: string) => updateItem(index, "productId", value)}
+          onChange={(value: string) => updateItem(item.rowId, "productId", value)}
           options={products.map((p: any) => ({ value: p._id, label: p.name }))}
           disabled={!companyId}
           loading={productsLoading}
@@ -228,66 +255,72 @@ const BillForm = ({
     {
       title: "Qty",
       key: "qty",
-      render: (_: unknown, item: BillFormItem, index: number) => (
+      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.qty, b.qty),
+      render: (_: unknown, item: BillFormRow) => (
         <InputNumber
           min={1}
           value={item.qty}
-          onChange={(value: number | null) => updateItem(index, "qty", value || 1)}
+          onChange={(value: number | null) => updateItem(item.rowId, "qty", value || 1)}
         />
       ),
     },
     {
       title: "Free",
       key: "freeQty",
-      render: (_: unknown, item: BillFormItem, index: number) => (
+      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.freeQty, b.freeQty),
+      render: (_: unknown, item: BillFormRow) => (
         <InputNumber
           min={0}
           value={item.freeQty}
-          onChange={(value: number | null) => updateItem(index, "freeQty", value || 0)}
+          onChange={(value: number | null) => updateItem(item.rowId, "freeQty", value || 0)}
         />
       ),
     },
     {
       title: "Rate",
       key: "rate",
-      render: (_: unknown, item: BillFormItem) => Number(item.rate || 0).toFixed(2),
+      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.rate, b.rate),
+      render: (_: unknown, item: BillFormRow) => Number(item.rate || 0).toFixed(2),
     },
     {
       title: "MRP",
       key: "mrp",
-      render: (_: unknown, item: BillFormItem) => Number(item.mrp || 0).toFixed(2),
+      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.mrp, b.mrp),
+      render: (_: unknown, item: BillFormRow) => Number(item.mrp || 0).toFixed(2),
     },
     {
       title: "GST %",
       key: "tax",
-      render: (_: unknown, item: BillFormItem) => Number(item.taxPercent || 0),
+      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.taxPercent, b.taxPercent),
+      render: (_: unknown, item: BillFormRow) => Number(item.taxPercent || 0),
     },
     {
       title: "Disc %",
       key: "discount",
-      render: (_: unknown, item: BillFormItem, index: number) => (
+      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.discount, b.discount),
+      render: (_: unknown, item: BillFormRow) => (
         <InputNumber
           min={0}
           max={100}
           value={item.discount}
-          onChange={(value: number | null) => updateItem(index, "discount", value || 0)}
+          onChange={(value: number | null) => updateItem(item.rowId, "discount", value || 0)}
         />
       ),
     },
     {
       title: "Total",
       key: "total",
-      render: (_: unknown, __: BillFormItem, index: number) =>
-        `Rs ${rowTotals[index]?.total.toFixed(2) || "0.00"}`,
+      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(rowTotals[a.rowId]?.total, rowTotals[b.rowId]?.total),
+      render: (_: unknown, item: BillFormRow) => `Rs ${(rowTotals[item.rowId]?.total || 0).toFixed(2)}`,
     },
     {
       title: "",
       key: "remove",
-      render: (_: unknown, __: BillFormItem, index: number) => (
+      render: (_: unknown, item: BillFormRow) => (
         <Button
           danger
           icon={<MinusCircleOutlined />}
-          onClick={() => removeRow(index)}
+          onClick={() => removeRow(item.rowId)}
           disabled={items.length === 1}
         />
       ),
@@ -312,9 +345,10 @@ const BillForm = ({
 
       <Table
         className="bill-items-table"
-        rowKey={(_: BillFormItem, index?: number) => String(index ?? 0)}
+        rowKey="rowId"
         columns={columns}
         dataSource={items}
+        sortDirections={["ascend", "descend"]}
         pagination={false}
         scroll={{ x: "max-content" }}
       />
