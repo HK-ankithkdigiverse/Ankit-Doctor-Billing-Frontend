@@ -23,8 +23,7 @@ const resolveInitialMode = (): ThemeMode => {
     return saved;
   }
 
-  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
-  const initial = prefersDark ? "dark" : "light";
+  const initial: ThemeMode = "light";
   document.documentElement.setAttribute("data-theme", initial);
   return initial;
 };
