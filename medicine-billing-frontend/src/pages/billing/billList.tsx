@@ -19,6 +19,7 @@ import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { useUsers } from "../../hooks/useUsers";
+import { formatDateTime } from "../../utils/dateTime";
 
 type DateFilterType = "all" | "today" | "week" | "month" | "custom";
 
@@ -107,8 +108,6 @@ const BillList = () => {
       value: user._id,
       label: user.name || user.email,
     })) ?? [];
-  const formatDate = (value?: string) =>
-    value ? new Date(value).toLocaleDateString() : "-";
   const getCompanyName = (bill: any) =>
     bill?.companyId?.companyName || bill?.companyId?.name || "-";
   const getUserLabel = (bill: any) => {
@@ -147,16 +146,16 @@ const BillList = () => {
       render: (_: any, bill: any) => `Rs ${Number(bill.grandTotal || 0).toFixed(2)}`,
     },
     {
-      title: "Created Date",
+      title: "Created Date & Time",
       key: "createdAt",
-      render: (_: any, bill: any) => formatDate(bill.createdAt),
+      render: (_: any, bill: any) => formatDateTime(bill.createdAt),
     },
     ...(isAdmin
       ? [
           {
-            title: "Updated Date",
+            title: "Updated Date & Time",
             key: "updatedAt",
-            render: (_: any, bill: any) => formatDate(bill.updatedAt),
+            render: (_: any, bill: any) => formatDateTime(bill.updatedAt),
           },
         ]
       : []),

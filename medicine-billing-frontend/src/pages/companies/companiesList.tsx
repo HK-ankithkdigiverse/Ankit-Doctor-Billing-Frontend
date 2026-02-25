@@ -18,6 +18,7 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Company } from "../../types/company";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { getCompanyDisplayName } from "../../utils/company";
+import { formatDateTime } from "../../utils/dateTime";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -61,8 +62,6 @@ const CompaniesList = () => {
     { label: "100 / page", value: 100 },
     ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
   ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
-  const formatDate = (value?: string) =>
-    value ? new Date(value).toLocaleDateString() : "-";
   const oneLineCell = (value?: string) => (
     <span style={{ whiteSpace: "nowrap" }} title={value || "-"}>
       {value || "-"}
@@ -128,16 +127,16 @@ const CompaniesList = () => {
         ]
       : []),
     {
-      title: "Created Date",
+      title: "Created Date & Time",
       key: "createdAt",
-      render: (_: unknown, company: Company) => oneLineCell(formatDate((company as any).createdAt)),
+      render: (_: unknown, company: Company) => oneLineCell(formatDateTime((company as any).createdAt)),
     },
     ...(isAdmin
       ? [
           {
-            title: "Updated Date",
+            title: "Updated Date & Time",
             key: "updatedAt",
-            render: (_: unknown, company: Company) => oneLineCell(formatDate((company as any).updatedAt)),
+            render: (_: unknown, company: Company) => oneLineCell(formatDateTime((company as any).updatedAt)),
           },
         ]
       : []),

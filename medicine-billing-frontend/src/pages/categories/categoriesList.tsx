@@ -19,6 +19,7 @@ import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Category } from "../../types/category";
 import { useConfirmDialog } from "../../utils/confirmDialog";
+import { formatDateTime } from "../../utils/dateTime";
 
 const CategoriesList = () => {
   const { message } = App.useApp();
@@ -69,9 +70,6 @@ const CategoriesList = () => {
       value: user._id,
       label: user.name || user.email,
     })) ?? [];
-  const formatDate = (value?: string) =>
-    value ? new Date(value).toLocaleDateString() : "-";
-
   const handleDelete = async (id: string) => {
     try {
       await deleteCategory(id);
@@ -110,16 +108,16 @@ const CategoriesList = () => {
         ]
       : []),
     {
-      title: "Created Date",
+      title: "Created Date & Time",
       key: "createdAt",
-      render: (_: unknown, category: Category) => formatDate(category.createdAt),
+      render: (_: unknown, category: Category) => formatDateTime(category.createdAt),
     },
     ...(me?.role === "ADMIN"
       ? [
           {
-            title: "Updated Date",
+            title: "Updated Date & Time",
             key: "updatedAt",
-            render: (_: unknown, category: Category) => formatDate(category.updatedAt),
+            render: (_: unknown, category: Category) => formatDateTime(category.updatedAt),
           },
         ]
       : []),

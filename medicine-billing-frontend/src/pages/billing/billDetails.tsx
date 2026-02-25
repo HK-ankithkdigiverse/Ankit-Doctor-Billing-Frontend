@@ -5,6 +5,7 @@ import { EditOutlined, FilePdfOutlined } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
 import { useBill } from "../../hooks/useBills";
 import { getCompanyDisplayName, getCompanyLogoUrl } from "../../utils/company";
+import { formatDateTime } from "../../utils/dateTime";
 
 const INVOICE_ACCENT = "#2f3f46";
 
@@ -182,7 +183,7 @@ const BillView = () => {
                       Bill No: {bill.billNo || "-"}
                     </Typography.Text>
                     <Typography.Text style={{ display: "block", color: "#4b5563", fontSize: 12 }}>
-                      Date: {bill.createdAt ? new Date(bill.createdAt).toLocaleDateString() : "-"}
+                      Date & Time: {formatDateTime(bill.createdAt)}
                     </Typography.Text>
                   </div>
                 </div>

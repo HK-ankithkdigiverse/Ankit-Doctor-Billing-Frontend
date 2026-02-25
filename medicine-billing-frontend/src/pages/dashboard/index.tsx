@@ -12,6 +12,7 @@ import { useCompanies } from "../../hooks/useCompanies";
 import { useProducts } from "../../hooks/useProducts";
 import { useUsers } from "../../hooks/useUsers";
 import { useThemeMode } from "../../contexts/themeMode";
+import { formatDateTime } from "../../utils/dateTime";
 
 type DateFilterType = "all" | "today" | "week" | "month" | "custom";
 type SortType = "newest" | "oldest";
@@ -92,9 +93,6 @@ const Dashboard = () => {
 
     return sorted.slice(0, 5);
   }, [recentBillsRaw, dateFilter, customRange, isAdmin, createdByFilter, sortOrder]);
-  const formatDate = (value?: string) =>
-    value ? new Date(value).toLocaleDateString() : "-";
-
   const billColumns = [
     {
       title: "S.No",
@@ -118,16 +116,16 @@ const Dashboard = () => {
         ]
       : []),
     {
-      title: "Created Date",
+      title: "Created Date & Time",
       key: "createdAt",
-      render: (_: any, record: any) => formatDate(record.createdAt),
+      render: (_: any, record: any) => formatDateTime(record.createdAt),
     },
     ...(isAdmin
       ? [
           {
-            title: "Updated Date",
+            title: "Updated Date & Time",
             key: "updatedAt",
-            render: (_: any, record: any) => formatDate(record.updatedAt),
+            render: (_: any, record: any) => formatDateTime(record.updatedAt),
           },
         ]
       : []),

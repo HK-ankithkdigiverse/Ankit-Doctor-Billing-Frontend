@@ -17,6 +17,7 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { User } from "../../types";
 import { useMe } from "../../hooks/useMe";
 import { useConfirmDialog } from "../../utils/confirmDialog";
+import { formatDateTime } from "../../utils/dateTime";
 
 const Users = () => {
   const { message } = App.useApp();
@@ -71,9 +72,6 @@ const Users = () => {
     { label: "100 / page", value: 100 },
     ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
   ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
-  const formatDate = (value?: string) =>
-    value ? new Date(value).toLocaleDateString() : "-";
-
   const handleToggleStatus = async (user: User) => {
     const nextIsActive = !(user.isActive ?? true);
     try {
@@ -107,14 +105,14 @@ const Users = () => {
     { title: "Email", dataIndex: "email", key: "email" },
     { title: "Phone", dataIndex: "phone", key: "phone", render: (v: string) => v || "-" },
     {
-      title: "Created Date",
+      title: "Created Date & Time",
       key: "createdAt",
-      render: (_: any, user: User) => formatDate(user.createdAt),
+      render: (_: any, user: User) => formatDateTime(user.createdAt),
     },
     {
-      title: "Updated Date",
+      title: "Updated Date & Time",
       key: "updatedAt",
-      render: (_: any, user: User) => formatDate(user.updatedAt),
+      render: (_: any, user: User) => formatDateTime(user.updatedAt),
     },
     {
       title: "Action",
