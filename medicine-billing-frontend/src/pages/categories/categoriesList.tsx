@@ -192,6 +192,8 @@ const CategoriesList = () => {
           {isAdmin && (
             <Select
               allowClear
+              showSearch
+              optionFilterProp="label"
               placeholder="Filter by user"
               value={filters.createdBy || undefined}
               options={userOptions}

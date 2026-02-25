@@ -209,6 +209,8 @@ const Dashboard = () => {
             {isAdmin && (
               <Select
                 allowClear
+                showSearch
+                optionFilterProp="label"
                 placeholder="Filter by user"
                 value={createdByFilter || undefined}
                 options={userFilterOptions}
