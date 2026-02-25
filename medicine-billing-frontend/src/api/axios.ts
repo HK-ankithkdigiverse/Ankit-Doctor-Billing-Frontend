@@ -1,5 +1,6 @@
 import axios from "axios";
-import { API_BASE_URL, AUTH_API, STORAGE_KEYS } from "../constants";
+import { API_BASE_URL, AUTH_API, ROUTES, STORAGE_KEYS } from "../constants";
+import { isPublicPath, storePostLoginRedirect } from "../utils/authRedirect";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -47,8 +48,14 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error?.response?.status === 401) {
+      const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       localStorage.removeItem(STORAGE_KEYS.TOKEN);
       localStorage.removeItem("token");
+      const pathname = window.location.pathname;
+      if (!isPublicPath(pathname)) {
+        storePostLoginRedirect(currentPath);
+        window.location.replace(`${ROUTES.LOGIN}?reason=session-expired`);
+      }
     }
     return Promise.reject(error);
   }

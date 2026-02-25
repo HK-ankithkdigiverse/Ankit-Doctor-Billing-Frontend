@@ -29,7 +29,7 @@ const ForgotPassword: React.FC = () => {
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        background: "linear-gradient(145deg, #0f2a43 0%, #1e6f5c 50%, #eef2f6 100%)",
+        background: "var(--app-bg)",
         padding: 16,
       }}
     >

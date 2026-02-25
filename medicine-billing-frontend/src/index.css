@@ -2,12 +2,31 @@
 
 :root {
   font-family: "Segoe UI", "Inter", "Roboto", sans-serif;
+  --app-bg: linear-gradient(135deg, #e0f2fe 0%, #eef2ff 45%, #ecfdf5 100%);
+  --app-text: #1f2937;
+  --card-border: #e5eaf1;
+  --card-shadow: 0 8px 24px rgba(16, 42, 67, 0.06);
+  --btn-primary-shadow: 0 8px 18px rgba(8, 145, 178, 0.26);
+  --focus-ring-shadow: 0 0 0 3px rgba(8, 145, 178, 0.15);
+  --stat-title-color: #64748b;
+  --stat-content-color: #0f172a;
+}
+
+:root[data-theme="dark"] {
+  --app-bg: linear-gradient(135deg, #0b1120 0%, #111827 45%, #0f172a 100%);
+  --app-text: #e2e8f0;
+  --card-border: #334155;
+  --card-shadow: 0 14px 30px rgba(2, 6, 23, 0.45);
+  --btn-primary-shadow: 0 8px 18px rgba(37, 99, 235, 0.32);
+  --focus-ring-shadow: 0 0 0 3px rgba(56, 189, 248, 0.24);
+  --stat-title-color: #cbd5e1;
+  --stat-content-color: #f1f5f9;
 }
 
 body {
   margin: 0;
-  background: linear-gradient(135deg, #eef2f6 0%, #e8eff5 100%);
-  color: #1f2937;
+  background: var(--app-bg);
+  color: var(--app-text);
   overflow-x: hidden;
 }
 
@@ -20,12 +39,12 @@ body {
 }
 
 .ant-card {
-  border: 1px solid #e5eaf1 !important;
-  box-shadow: 0 8px 24px rgba(16, 42, 67, 0.06) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: var(--card-shadow) !important;
 }
 
 .ant-btn-primary {
-  box-shadow: 0 6px 14px rgba(30, 111, 92, 0.25);
+  box-shadow: var(--btn-primary-shadow);
 }
 
 .ant-table-thead > tr > th {
@@ -68,12 +87,12 @@ body {
 }
 
 .ant-statistic-title {
-  color: #64748b !important;
+  color: var(--stat-title-color) !important;
   font-weight: 500;
 }
 
 .ant-statistic-content {
-  color: #0f172a !important;
+  color: var(--stat-content-color) !important;
   font-weight: 700;
 }
 
@@ -105,9 +124,9 @@ body {
 }
 
 .medbill-sidebar .medbill-sidebar-menu .ant-menu-item-selected {
-  background: linear-gradient(90deg, rgba(30, 111, 92, 0.95) 0%, rgba(24, 90, 76, 0.95) 100%) !important;
+  background: linear-gradient(90deg, rgba(8, 145, 178, 0.95) 0%, rgba(37, 99, 235, 0.95) 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 8px 20px rgba(4, 47, 46, 0.3);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
 }
 
 .medbill-sidebar .medbill-sidebar-menu .ant-menu-item-selected::after {
@@ -128,7 +147,7 @@ body {
 .ant-select-focused .ant-select-selector,
 .ant-input-number-focused,
 .ant-picker-focused {
-  box-shadow: 0 0 0 3px rgba(30, 111, 92, 0.15) !important;
+  box-shadow: var(--focus-ring-shadow) !important;
 }
 
 .ant-form-item-has-error .ant-input,

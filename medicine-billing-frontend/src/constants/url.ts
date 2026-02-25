@@ -1,6 +1,8 @@
 export const STORAGE_KEYS = {
   TOKEN: "auth_token",
   USER: "auth_user",
+  POST_LOGIN_REDIRECT: "post_login_redirect",
+  THEME_MODE: "theme_mode",
 };
 
 const DEFAULT_API_ORIGIN = "https://ankit-doctor-billing-backend.vercel.app";

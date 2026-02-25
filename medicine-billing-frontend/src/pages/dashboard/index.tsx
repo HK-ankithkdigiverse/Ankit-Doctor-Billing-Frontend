@@ -11,9 +11,17 @@ import { useCategories } from "../../hooks/useCategories";
 import { useCompanies } from "../../hooks/useCompanies";
 import { useProducts } from "../../hooks/useProducts";
 import { useUsers } from "../../hooks/useUsers";
+import { useThemeMode } from "../../contexts/themeMode";
 
 type DateFilterType = "all" | "today" | "week" | "month" | "custom";
 type SortType = "newest" | "oldest";
+
+const getCurrentWeekRange = () => {
+  const today = dayjs();
+  const mondayStart = today.startOf("day").subtract((today.day() + 6) % 7, "day");
+  const sundayEnd = mondayStart.add(6, "day").endOf("day");
+  return { start: mondayStart, end: sundayEnd };
+};
 
 const Dashboard = () => {
   const { RangePicker } = DatePicker;
@@ -25,6 +33,8 @@ const Dashboard = () => {
   const [sortOrder, setSortOrder] = useState<SortType>("newest");
   const [createdByFilter, setCreatedByFilter] = useState<string>("");
   const { data: user, isLoading } = useMe();
+  const { mode } = useThemeMode();
+  const isDark = mode === "dark";
   const isAdmin = user?.role === ROLE.ADMIN;
 
   const companiesQuery = useCompanies(1, 1, "");
@@ -52,7 +62,10 @@ const Dashboard = () => {
       const createdAt = bill?.createdAt ? dayjs(bill.createdAt) : null;
       if (!createdAt || !createdAt.isValid()) return false;
       if (dateFilter === "today") return createdAt.isSame(dayjs(), "day");
-      if (dateFilter === "week") return !createdAt.isBefore(dayjs().startOf("week")) && !createdAt.isAfter(dayjs().endOf("week"));
+      if (dateFilter === "week") {
+        const { start, end } = getCurrentWeekRange();
+        return !createdAt.isBefore(start) && !createdAt.isAfter(end);
+      }
       if (dateFilter === "month") return !createdAt.isBefore(dayjs().startOf("month")) && !createdAt.isAfter(dayjs().endOf("month"));
       if (dateFilter === "custom") {
         const start = customRange?.[0];
@@ -72,8 +85,8 @@ const Dashboard = () => {
     });
 
     const sorted = [...filtered].sort((a: any, b: any) => {
-      const ta = new Date(a?.createdAt || 0).getTime();
-      const tb = new Date(b?.createdAt || 0).getTime();
+      const ta = dayjs(a?.createdAt).isValid() ? dayjs(a.createdAt).valueOf() : 0;
+      const tb = dayjs(b?.createdAt).isValid() ? dayjs(b.createdAt).valueOf() : 0;
       return sortOrder === "newest" ? tb - ta : ta - tb;
     });
 
@@ -173,12 +186,16 @@ const Dashboard = () => {
             <Card
               style={{
                 background:
-                  idx % 2 === 0
-                    ? "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"
-                    : "linear-gradient(135deg, #f8fffc 0%, #edf7f4 100%)",
+                  isDark
+                    ? idx % 2 === 0
+                      ? "linear-gradient(135deg, #111827 0%, #1f2937 100%)"
+                      : "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
+                    : idx % 2 === 0
+                      ? "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"
+                      : "linear-gradient(135deg, #f8fffc 0%, #edf7f4 100%)",
               }}
             >
-              <Statistic title={card.title} value={card.value} valueStyle={{ color: "#102A43" }} />
+              <Statistic title={card.title} value={card.value} valueStyle={{ color: isDark ? "#E2E8F0" : "#102A43" }} />
             </Card>
           </Col>
         ))}

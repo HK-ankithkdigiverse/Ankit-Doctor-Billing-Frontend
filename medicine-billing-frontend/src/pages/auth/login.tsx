@@ -1,21 +1,37 @@
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button, Card, Form, Input, Typography, App } from "antd";
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuth";
 import type { LoginPayload } from "../../types";
 import { ROUTES } from "../../constants";
 import { emailRule, passwordMinRule, requiredRule } from "../../utils/formRules";
+import { readPostLoginRedirect } from "../../utils/authRedirect";
 
 const Login: React.FC = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loading } = useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const reason = params.get("reason");
+    if (reason === "session-expired") {
+      message.warning("Your session expired. Please login again.");
+      navigate(ROUTES.LOGIN, { replace: true });
+    }
+  }, [location.search, message, navigate]);
 
   const handleSubmit = async (values: LoginPayload) => {
     try {
+      const fromPath =
+        `${location.state?.from?.pathname || ""}${location.state?.from?.search || ""}${location.state?.from?.hash || ""}` ||
+        readPostLoginRedirect() ||
+        ROUTES.DASHBOARD;
       await login(values);
       message.success("OTP sent to your email");
-      navigate(ROUTES.VERIFY_OTP, { state: { email: values.email, otpSent: true } });
+      navigate(ROUTES.VERIFY_OTP, { state: { email: values.email, otpSent: true, redirectTo: fromPath } });
     } catch (error: any) {
       const statusCode = error?.response?.status;
       const apiStatus = Number(error?.response?.data?.status || 0);
@@ -39,7 +55,7 @@ const Login: React.FC = () => {
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        background: "linear-gradient(145deg, #0f2a43 0%, #1e6f5c 50%, #eef2f6 100%)",
+        background: "var(--app-bg)",
         padding: 16,
       }}
     >

@@ -2,14 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Space, Typography } from "antd";
 import { EditOutlined, FilePdfOutlined } from "@ant-design/icons";
-import { API_ORIGIN, ROUTES } from "../../constants";
+import { ROUTES } from "../../constants";
 import { useBill } from "../../hooks/useBills";
-
-const getLogoUrl = (logo?: string) => {
-  if (!logo) return "";
-  if (logo.startsWith("http")) return logo;
-  return `${API_ORIGIN}/uploads/${logo}`;
-};
+import { getCompanyDisplayName, getCompanyLogoUrl } from "../../utils/company";
 
 const INVOICE_ACCENT = "#2f3f46";
 
@@ -23,7 +18,7 @@ const BillView = () => {
   const autoDownloadTriggered = useRef(false);
   const bill = data?.bill;
   const items = data?.items ?? [];
-  const companyName = bill?.companyId?.companyName || (bill?.companyId as any)?.name || "Company";
+  const companyName = getCompanyDisplayName(bill?.companyId) || "Company";
   const companyGst = bill?.companyId?.gstNumber || (bill?.companyId as any)?.gstNo || "-";
   const companyAddress = bill?.companyId?.address || "-";
   const companyPhone = bill?.companyId?.phone || "-";
@@ -33,7 +28,10 @@ const BillView = () => {
   const userEmail = bill?.userId?.email || (bill as any)?.createdBy?.email || "-";
   const userPhone = bill?.userId?.phone || (bill as any)?.createdBy?.phone || "-";
   const userAddress = bill?.userId?.address || (bill as any)?.createdBy?.address || "-";
-  const logoUrl = useMemo(() => getLogoUrl((bill?.companyId as any)?.logo?.trim?.() || bill?.companyId?.logo), [bill?.companyId]);
+  const logoUrl = useMemo(
+    () => getCompanyLogoUrl((bill?.companyId as any)?.logo || (bill?.companyId as any)?.logoUrl || (bill?.companyId as any)?.image),
+    [bill?.companyId]
+  );
   const [isLogoVisible, setIsLogoVisible] = useState(true);
   const shouldShowLogo = !!logoUrl && isLogoVisible;
   const subTotal = Number(bill?.subTotal || 0);

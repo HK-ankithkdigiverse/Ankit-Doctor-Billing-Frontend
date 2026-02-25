@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient,keepPreviousData } from "@tanstack/react-query";
 import {
   getCompaniesApi,
+  getCompanyByIdApi,
   createCompanyApi,
   updateCompanyApi,
   deleteCompanyApi,
 } from "../api/companyApi";
 import { QUERY_KEYS } from "../constants";
+
+const isValidObjectId = (id?: string) => !!id && /^[a-fA-F0-9]{24}$/.test(id);
 
 /* -------- GET -------- */
 export const useCompanies = (
@@ -34,6 +37,17 @@ export const useCompanies = (
   });
 };
 
+export const useCompany = (id?: string) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.COMPANY(id || ""),
+    queryFn: async () => {
+      const payload = await getCompanyByIdApi(id as string);
+      return (payload as any)?.company ?? payload;
+    },
+    enabled: isValidObjectId(id),
+  });
+};
+
 /* -------- CREATE -------- */
 export const useCreateCompany = () => {
   const queryClient = useQueryClient();
@@ -52,8 +66,9 @@ export const useUpdateCompany = () => {
 
   return useMutation({
     mutationFn: updateCompanyApi,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.COMPANIES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.COMPANY(variables.id) });
     },
   });
 };
@@ -64,8 +79,9 @@ export const useDeleteCompany = () => {
 
   return useMutation({
     mutationFn: deleteCompanyApi,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.COMPANIES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.COMPANY(id) });
     },
   });
 };

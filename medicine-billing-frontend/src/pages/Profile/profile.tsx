@@ -1,16 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { Avatar, Button, Card, Descriptions, Space, Tag, Typography } from "antd";
-import { EditOutlined, LockOutlined, LogoutOutlined, UserOutlined } from "@ant-design/icons";
+import { EditOutlined, LockOutlined, LogoutOutlined, MoonOutlined, SunOutlined, UserOutlined } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
 import { useProfile } from "../../hooks/useProfile";
 import { useAuth } from "../../hooks/useAuth";
 import { useConfirmDialog } from "../../utils/confirmDialog";
+import { useThemeMode } from "../../contexts/themeMode";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { data: user, isLoading } = useProfile();
   const { logout, loading: authLoading } = useAuth();
   const confirmDialog = useConfirmDialog();
+  const { mode, toggleMode } = useThemeMode();
 
   if (isLoading) return <p>Loading...</p>;
   if (!user) return null;
@@ -38,6 +40,16 @@ const Profile = () => {
       </Descriptions>
 
       <Space style={{ marginTop: 16 }}>
+        <Button
+          icon={mode === "dark" ? <SunOutlined /> : <MoonOutlined />}
+          onClick={toggleMode}
+          style={{
+            borderColor: mode === "dark" ? "#38BDF8" : "#4F46E5",
+            color: mode === "dark" ? "#38BDF8" : "#4F46E5",
+          }}
+        >
+          {mode === "dark" ? "Light Mode" : "Dark Mode"}
+        </Button>
         <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(ROUTES.EDITPROFILE)}>
           Edit Profile
         </Button>

@@ -22,8 +22,6 @@ export const useAuth = () => {
 
       // 🔁 refetch logged-in user
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ME });
-
-      navigate("/dashboard");
     },
   });
 

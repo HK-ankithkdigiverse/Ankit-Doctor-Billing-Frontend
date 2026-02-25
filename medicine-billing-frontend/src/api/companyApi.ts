@@ -32,6 +32,11 @@ export const getCompaniesApi = async (
   return data;
 };
 
+export const getCompanyByIdApi = async (id: string): Promise<{ company: Company } | Company> => {
+  const { data } = await api.get(COMPANIES_API.BY_ID(id));
+  return data;
+};
+
 
 export const createCompanyApi = async (formData: FormData) => {
   const { data } = await api.post(COMPANIES_API.ROOT, formData, {

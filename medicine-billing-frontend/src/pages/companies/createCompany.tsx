@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, Form, Input, Typography, Upload, App } from "antd";
+import { Button, Form, Input, Upload, App } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
 import { useCreateCompany } from "../../hooks/useCompanies";
 import { emailRule, gstRule, phoneRule, requiredRule } from "../../utils/formRules";
+import PageShell from "../../components/ui/PageShell";
+import SectionCard from "../../components/ui/SectionCard";
+import SectionTitle from "../../components/ui/SectionTitle";
 
 const CreateCompany = () => {
   const { message } = App.useApp();
@@ -28,42 +31,44 @@ const CreateCompany = () => {
   };
 
   return (
-    <Card style={{ maxWidth: 820, margin: "0 auto" }}>
-      <Typography.Title level={4}>Create Company</Typography.Title>
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Form.Item name="companyName" label="Company Name" rules={[requiredRule("Company name")]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="gstNumber" label="GST Number" rules={[requiredRule("GST number"), gstRule]}>
-          <Input style={{ textTransform: "uppercase" }} />
-        </Form.Item>
-        <Form.Item name="email" label="Email" rules={[requiredRule("Email"), emailRule]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="phone" label="Phone" rules={[requiredRule("Phone"), phoneRule]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="state" label="State" rules={[requiredRule("State"), { max: 80, message: "State must be 80 characters or less" }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="address" label="Address" rules={[requiredRule("Address"), { max: 500, message: "Address must be 500 characters or less" }]}>
-          <Input.TextArea rows={4} />
-        </Form.Item>
-        <Form.Item label="Logo">
-          <Upload beforeUpload={(file) => { setLogo(file); return false; }} maxCount={1}>
-            <Button icon={<UploadOutlined />}>Select Logo</Button>
-          </Upload>
-        </Form.Item>
-        <Form.Item style={{ marginBottom: 0 }}>
-          <Button onClick={() => navigate(ROUTES.COMPANIES)} style={{ marginRight: 8 }}>
-            Cancel
-          </Button>
-          <Button type="primary" htmlType="submit" loading={isPending}>
-            Create Company
-          </Button>
-        </Form.Item>
-      </Form>
-    </Card>
+    <PageShell>
+      <SectionCard className="mx-auto max-w-[860px]">
+        <SectionTitle className="!mb-[18px] !mt-0">Create Company</SectionTitle>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item name="companyName" label="Company Name" rules={[requiredRule("Company name")]}>
+            <Input style={{ borderRadius: 10 }} />
+          </Form.Item>
+          <Form.Item name="gstNumber" label="GST Number" rules={[requiredRule("GST number"), gstRule]}>
+            <Input style={{ textTransform: "uppercase", borderRadius: 10 }} />
+          </Form.Item>
+          <Form.Item name="email" label="Email" rules={[requiredRule("Email"), emailRule]}>
+            <Input style={{ borderRadius: 10 }} />
+          </Form.Item>
+          <Form.Item name="phone" label="Phone" rules={[requiredRule("Phone"), phoneRule]}>
+            <Input style={{ borderRadius: 10 }} />
+          </Form.Item>
+          <Form.Item name="state" label="State" rules={[requiredRule("State"), { max: 80, message: "State must be 80 characters or less" }]}>
+            <Input style={{ borderRadius: 10 }} />
+          </Form.Item>
+          <Form.Item name="address" label="Address" rules={[requiredRule("Address"), { max: 500, message: "Address must be 500 characters or less" }]}>
+            <Input.TextArea rows={4} style={{ borderRadius: 10 }} />
+          </Form.Item>
+          <Form.Item label="Logo">
+            <Upload beforeUpload={(file) => { setLogo(file); return false; }} maxCount={1}>
+              <Button icon={<UploadOutlined />} style={{ borderRadius: 10 }}>Select Logo</Button>
+            </Upload>
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Button onClick={() => navigate(ROUTES.COMPANIES)} style={{ marginRight: 8, borderRadius: 10 }}>
+              Cancel
+            </Button>
+            <Button type="primary" htmlType="submit" loading={isPending} className="!border-0 !bg-hero-gradient !rounded-[10px]">
+              Create Company
+            </Button>
+          </Form.Item>
+        </Form>
+      </SectionCard>
+    </PageShell>
   );
 };
 

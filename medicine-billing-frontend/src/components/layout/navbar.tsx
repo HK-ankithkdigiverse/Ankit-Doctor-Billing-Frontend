@@ -4,6 +4,7 @@ import { useMe } from "../../hooks/useMe";
 import { useProfile } from "../../hooks/useProfile";
 import { useAuth } from "../../hooks/useAuth";
 import { useConfirmDialog } from "../../utils/confirmDialog";
+import { useThemeMode } from "../../contexts/themeMode";
 
 type NavbarProps = {
   compact?: boolean;
@@ -15,6 +16,8 @@ const Navbar = ({ compact = false }: NavbarProps) => {
   const { data: profile } = useProfile();
   const { logout } = useAuth();
   const confirmDialog = useConfirmDialog();
+  const { mode } = useThemeMode();
+  const isDark = mode === "dark";
 
   const handleLogout = () => {
     confirmDialog({
@@ -66,7 +69,7 @@ const Navbar = ({ compact = false }: NavbarProps) => {
           level={5}
           style={{
             margin: 0,
-            color: "#102A43",
+            color: isDark ? "#E2E8F0" : "#102A43",
             maxWidth: compact ? 120 : "100%",
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -79,7 +82,10 @@ const Navbar = ({ compact = false }: NavbarProps) => {
 
       <Space size={compact ? 8 : 12}>
         <div style={{ lineHeight: 1.1, minWidth: 0 }}>
-          <Typography.Text strong style={{ display: "block", textAlign: "right" }}>
+          <Typography.Text
+            strong
+            style={{ display: "block", textAlign: "right", color: isDark ? "#E2E8F0" : "#0F172A" }}
+          >
             {me?.name || profile?.name || "User"}
           </Typography.Text>
           <div>
@@ -103,9 +109,9 @@ const Navbar = ({ compact = false }: NavbarProps) => {
             style={{
               width: compact ? 36 : 40,
               height: compact ? 36 : 40,
-              border: "1px solid #d9e2ec",
-              color: "#1E6F5C",
-              background: "#fff",
+              border: isDark ? "1px solid #334155" : "1px solid #d9e2ec",
+              color: isDark ? "#38BDF8" : "#1E6F5C",
+              background: isDark ? "#0F172A" : "#fff",
             }}
           />
         </Dropdown>

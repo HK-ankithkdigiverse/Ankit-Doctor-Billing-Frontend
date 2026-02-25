@@ -22,6 +22,13 @@ import { useUsers } from "../../hooks/useUsers";
 
 type DateFilterType = "all" | "today" | "week" | "month" | "custom";
 
+const getCurrentWeekRange = () => {
+  const today = dayjs();
+  const mondayStart = today.startOf("day").subtract((today.day() + 6) % 7, "day");
+  const sundayEnd = mondayStart.add(6, "day").endOf("day");
+  return { start: mondayStart, end: sundayEnd };
+};
+
 const BillList = () => {
   const { RangePicker } = DatePicker;
   const navigate = useNavigate();
@@ -58,8 +65,7 @@ const BillList = () => {
     if (dateFilter === "today") return createdAt.isSame(dayjs(), "day");
 
     if (dateFilter === "week") {
-      const start = dayjs().startOf("week");
-      const end = dayjs().endOf("week");
+      const { start, end } = getCurrentWeekRange();
       return !createdAt.isBefore(start) && !createdAt.isAfter(end);
     }
 

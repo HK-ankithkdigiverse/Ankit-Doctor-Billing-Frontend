@@ -5,6 +5,11 @@ import { useAuth } from "../../hooks/useAuth";
 import type { VerifyOtpPayload } from "../../types";
 import { ROUTES } from "../../constants";
 import { otpRule, requiredRule } from "../../utils/formRules";
+import {
+  clearPostLoginRedirect,
+  readPostLoginRedirect,
+  storePostLoginRedirect,
+} from "../../utils/authRedirect";
 
 const VerifyOtp: React.FC = () => {
   const { message } = App.useApp();
@@ -14,6 +19,7 @@ const VerifyOtp: React.FC = () => {
 
   const emailFromState = location.state?.email || "";
   const otpSent = Boolean(location.state?.otpSent);
+  const redirectToFromState = location.state?.redirectTo || "";
 
   const [form] = Form.useForm<{ otp: string }>();
 
@@ -28,7 +34,9 @@ const VerifyOtp: React.FC = () => {
       const payload: VerifyOtpPayload = { email: emailFromState, otp: values.otp };
       await verifyOtp(payload);
       message.success("OTP verified successfully");
-      navigate(ROUTES.DASHBOARD);
+      const redirectTo = redirectToFromState || readPostLoginRedirect() || ROUTES.DASHBOARD;
+      clearPostLoginRedirect();
+      navigate(redirectTo, { replace: true });
     } catch (error: any) {
       message.error(`OTP verification failed: ${error.message}`);
     }
@@ -40,7 +48,7 @@ const VerifyOtp: React.FC = () => {
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        background: "linear-gradient(145deg, #0f2a43 0%, #1e6f5c 50%, #eef2f6 100%)",
+        background: "var(--app-bg)",
         padding: 16,
       }}
     >
@@ -91,7 +99,15 @@ const VerifyOtp: React.FC = () => {
 
         <Typography.Paragraph style={{ textAlign: "center", marginTop: 16, marginBottom: 0 }}>
           Wrong email?{" "}
-          <Typography.Link onClick={() => navigate(ROUTES.LOGIN)}>Go back to login</Typography.Link>
+          <Typography.Link
+            onClick={() => {
+              const redirectTo = redirectToFromState || readPostLoginRedirect();
+              if (redirectTo) storePostLoginRedirect(redirectTo);
+              navigate(ROUTES.LOGIN);
+            }}
+          >
+            Go back to login
+          </Typography.Link>
         </Typography.Paragraph>
       </Card>
     </div>

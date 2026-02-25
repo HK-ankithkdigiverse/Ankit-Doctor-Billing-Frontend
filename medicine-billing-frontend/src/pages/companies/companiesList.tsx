@@ -2,13 +2,11 @@ import { useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
-  Card,
   Input,
   Pagination,
   Select,
   Space,
   Table,
-  Typography,
   App,
 } from "antd";
 import { DeleteOutlined, EditOutlined, EyeOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
@@ -19,6 +17,10 @@ import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Company } from "../../types/company";
 import { useConfirmDialog } from "../../utils/confirmDialog";
+import { getCompanyDisplayName } from "../../utils/company";
+import PageShell from "../../components/ui/PageShell";
+import SectionCard from "../../components/ui/SectionCard";
+import SectionTitle from "../../components/ui/SectionTitle";
 
 const CompaniesList = () => {
   const { message } = App.useApp();
@@ -91,9 +93,8 @@ const CompaniesList = () => {
     },
     {
       title: "Company",
-      dataIndex: "companyName",
       key: "companyName",
-      render: (v: string) => oneLineCell(v),
+      render: (_: unknown, company: Company) => oneLineCell(getCompanyDisplayName(company)),
     },
     {
       title: "GST",
@@ -179,67 +180,70 @@ const CompaniesList = () => {
   ];
 
   return (
-    <Card
-      title={<Typography.Title level={4} style={{ margin: 0 }}>Companies</Typography.Title>}
-      extra={
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate(ROUTES.CREATE_COMPANY)}
-        >
-          Add Company
-        </Button>
-      }
-    >
-      <div style={{ marginBottom: 16 }}>
-        <Space wrap>
-          <Input
-            placeholder="Search company..."
-            allowClear
-            prefix={<SearchOutlined />}
-            suffix={searchLoading ? <LoadingOutlined spin /> : null}
-            value={filters.search}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }));
-            }}
-            style={{ width: 360, maxWidth: "100%" }}
-          />
-          {isAdmin && (
-            <Select
+    <PageShell>
+      <SectionCard
+        title={<SectionTitle>Companies</SectionTitle>}
+        extra={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate(ROUTES.CREATE_COMPANY)}
+            className="!border-0 !bg-hero-gradient"
+          >
+            Add Company
+          </Button>
+        }
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Space wrap>
+            <Input
+              placeholder="Search company..."
               allowClear
-              placeholder="Filter by user"
-              value={filters.createdBy || undefined}
-              options={userOptions}
-              onChange={(value) =>
-                setFilters((prev) => ({ ...prev, page: 1, createdBy: value || "" }))
-              }
-              style={{ width: 220 }}
+              prefix={<SearchOutlined />}
+              suffix={searchLoading ? <LoadingOutlined spin /> : null}
+              value={filters.search}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }));
+              }}
+              style={{ width: 360, maxWidth: "100%", borderRadius: 10 }}
             />
-          )}
-        </Space>
-      </div>
+            {isAdmin && (
+              <Select
+                allowClear
+                placeholder="Filter by user"
+                value={filters.createdBy || undefined}
+                options={userOptions}
+                onChange={(value) =>
+                  setFilters((prev) => ({ ...prev, page: 1, createdBy: value || "" }))
+                }
+                style={{ width: 220 }}
+              />
+            )}
+          </Space>
+        </div>
 
-      <Table
-        rowKey="_id"
-        loading={isLoading || searchLoading}
-        columns={columns}
-        dataSource={companies}
-        pagination={false}
-        scroll={{ x: "max-content" }}
-      />
-
-      <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
-        <Pagination
-          current={filters.page}
-          pageSize={filters.limit}
-          total={totalRecords}
-          onChange={(p: number, pageSize: number) =>
-            setFilters((prev) => ({ ...prev, page: p, limit: pageSize }))
-          }
-          showSizeChanger={{ options: pageSizeSelectOptions }}
+        <Table
+          rowKey="_id"
+          loading={isLoading || searchLoading}
+          columns={columns}
+          dataSource={companies}
+          pagination={false}
+          scroll={{ x: "max-content" }}
         />
-      </div>
-    </Card>
+
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
+          <Pagination
+            current={filters.page}
+            pageSize={filters.limit}
+            total={totalRecords}
+            onChange={(p: number, pageSize: number) =>
+              setFilters((prev) => ({ ...prev, page: p, limit: pageSize }))
+            }
+            showSizeChanger={{ options: pageSizeSelectOptions }}
+          />
+        </div>
+      </SectionCard>
+    </PageShell>
   );
 };
 

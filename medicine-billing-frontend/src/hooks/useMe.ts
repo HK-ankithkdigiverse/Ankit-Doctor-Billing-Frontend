@@ -20,6 +20,8 @@ export const useMe = () => {
     },
     enabled: Boolean(token),
     retry: false,
-    initialData: null,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
