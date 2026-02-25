@@ -202,8 +202,13 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
 
         <Row gutter={16}>
           <Col xs={24} md={12}>
-            <Form.Item name="phone" label="Phone" rules={[phoneRule]}>
-              <Input disabled={isLoading} />
+            <Form.Item
+              name="phone"
+              label="Phone"
+              rules={[phoneRule]}
+              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
+            >
+              <Input maxLength={10} inputMode="numeric" disabled={isLoading} />
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
@@ -233,8 +238,13 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
             </Form.Item>
           </Col>
           <Col xs={24} md={8}>
-            <Form.Item name="pincode" label="Pincode" rules={[pincodeRule]}>
-              <Input maxLength={6} disabled={isLoading} />
+            <Form.Item
+              name="pincode"
+              label="Pincode"
+              rules={[pincodeRule]}
+              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
+            >
+              <Input maxLength={6} inputMode="numeric" disabled={isLoading} />
             </Form.Item>
           </Col>
         </Row>

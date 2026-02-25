@@ -78,11 +78,17 @@ const VerifyOtp: React.FC = () => {
             onFinish={handleSubmit}
             initialValues={{ otp: "" }}
           >
-            <Form.Item name="otp" label="OTP" rules={[requiredRule("OTP"), otpRule]}>
+            <Form.Item
+              name="otp"
+              label="OTP"
+              rules={[requiredRule("OTP"), otpRule]}
+              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
+            >
               <Input
                 prefix={<SafetyOutlined />}
                 placeholder="Enter 6-digit OTP"
                 maxLength={6}
+                inputMode="numeric"
               />
             </Form.Item>
 

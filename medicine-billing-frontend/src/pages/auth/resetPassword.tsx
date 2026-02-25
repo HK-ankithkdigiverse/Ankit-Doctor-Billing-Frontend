@@ -46,8 +46,13 @@ const ResetPassword: React.FC = () => {
           </Typography.Paragraph>
 
           <Form form={form} layout="vertical" onFinish={submit}>
-            <Form.Item name="otp" label="OTP" rules={[requiredRule("OTP"), otpRule]}>
-              <Input maxLength={6} placeholder="Enter 6-digit OTP" />
+            <Form.Item
+              name="otp"
+              label="OTP"
+              rules={[requiredRule("OTP"), otpRule]}
+              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
+            >
+              <Input maxLength={6} inputMode="numeric" placeholder="Enter 6-digit OTP" />
             </Form.Item>
 
             <Form.Item

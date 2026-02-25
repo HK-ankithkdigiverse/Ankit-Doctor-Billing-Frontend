@@ -31,7 +31,6 @@ const BillView = () => {
     companyName ||
     userName ||
     "-";
-  const userOwnerName = userName;
   const userEmail = bill?.userId?.email || (bill as any)?.createdBy?.email || "-";
   const userPhone = bill?.userId?.phone || (bill as any)?.createdBy?.phone || "-";
   const userAddress = bill?.userId?.address || (bill as any)?.createdBy?.address || "-";
@@ -146,8 +145,15 @@ const BillView = () => {
           />
 
           <div style={{ padding: "24px 24px 0 34px", flex: 1, display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
-              <div style={{ flex: 1 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1.15fr) minmax(0, 0.85fr)",
+                gap: 24,
+                alignItems: "start",
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
                 <Typography.Text style={{ display: "block", fontWeight: 700, fontSize: 24, color: "#1f2a30" }}>
                   INVOICE
                 </Typography.Text>
@@ -155,9 +161,10 @@ const BillView = () => {
                 <Typography.Text style={{ display: "block", fontWeight: 700, fontSize: 14, marginBottom: 8 }}>
                   INVOICE TO:
                 </Typography.Text>
+                <Typography.Text style={{ display: "block", color: "#1f2a30", fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
+                  {userMedicalName}
+                </Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Name: {userName}</Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#4b5563" }}>Medical Name: {userMedicalName}</Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#4b5563" }}>Owner Name: {userOwnerName}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Email: {userEmail}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Phone: {userPhone}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Address: {userAddress}</Typography.Text>
@@ -165,7 +172,7 @@ const BillView = () => {
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>PAN Card Number: {userPanCardNumber}</Typography.Text>
               </div>
 
-              <div style={{ width: 260 }}>
+              <div style={{ width: "100%" }}>
                 <div style={{ background: INVOICE_ACCENT, color: "#fff", padding: "10px 12px", marginBottom: 12 }}>
                   <Typography.Text style={{ display: "block", color: "#fff", fontSize: 12 }}>
                     {companyPhone}

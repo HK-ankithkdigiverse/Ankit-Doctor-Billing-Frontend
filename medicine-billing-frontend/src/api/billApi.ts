@@ -45,12 +45,14 @@ export const createBillApi = async (payload: {
 
     return data;
   } catch (err: any) {
-    // 🔴 IMPORTANT: backend error expose
-    console.error("Create Bill Error:", err.response?.data);
+    const responseData = err?.response?.data;
+    const detailMessage =
+      Array.isArray(responseData?.error) && responseData.error.length
+        ? responseData.error[0]
+        : responseData?.error?.message;
 
-    throw new Error(
-      err.response?.data?.message || "Failed to create bill"
-    );
+    console.error("Create Bill Error:", responseData);
+    throw new Error(detailMessage || responseData?.message || "Failed to create bill");
   }
 };
 
@@ -84,6 +86,15 @@ export const updateBillApi = async ({
     }[];
   };
 }) => {
-  const { data } = await api.put(BILLS_API.BY_ID(id), payload);
-  return data;
+  try {
+    const { data } = await api.put(BILLS_API.BY_ID(id), payload);
+    return data;
+  } catch (err: any) {
+    const responseData = err?.response?.data;
+    const detailMessage =
+      Array.isArray(responseData?.error) && responseData.error.length
+        ? responseData.error[0]
+        : responseData?.error?.message;
+    throw new Error(detailMessage || responseData?.message || "Failed to update bill");
+  }
 };

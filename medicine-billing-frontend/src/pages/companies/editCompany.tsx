@@ -66,8 +66,13 @@ const EditCompany = () => {
           <Form.Item name="email" label="Email" rules={[requiredRule("Email"), emailRule]}>
             <Input style={{ borderRadius: 10 }} />
           </Form.Item>
-          <Form.Item name="phone" label="Phone" rules={[requiredRule("Phone"), phoneRule]}>
-            <Input style={{ borderRadius: 10 }} />
+          <Form.Item
+            name="phone"
+            label="Phone"
+            rules={[requiredRule("Phone"), phoneRule]}
+            normalize={(value?: string) => (value || "").replace(/\D/g, "")}
+          >
+            <Input style={{ borderRadius: 10 }} maxLength={10} inputMode="numeric" />
           </Form.Item>
           <Form.Item name="state" label="State" rules={[requiredRule("State"), { max: 80, message: "State must be 80 characters or less" }]}>
             <Input style={{ borderRadius: 10 }} />
