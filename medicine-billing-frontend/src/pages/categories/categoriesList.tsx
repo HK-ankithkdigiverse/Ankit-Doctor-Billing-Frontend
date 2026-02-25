@@ -20,6 +20,7 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Category } from "../../types/category";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
+import { sortDateTime, sortText } from "../../utils/tableSort";
 
 const CategoriesList = () => {
   const { message } = App.useApp();
@@ -87,11 +88,17 @@ const CategoriesList = () => {
       render: (_: unknown, __: Category, index: number) =>
         (filters.page - 1) * filters.limit + index + 1,
     },
-    { title: "Name", dataIndex: "name", key: "name" },
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      sorter: (a: Category, b: Category) => sortText(a.name, b.name),
+    },
     {
       title: "Description",
       dataIndex: "description",
       key: "description",
+      sorter: (a: Category, b: Category) => sortText(a.description, b.description),
       render: (value: string) => value || "-",
     },
     ...(me?.role === "ADMIN"
@@ -99,6 +106,11 @@ const CategoriesList = () => {
           {
             title: "Created By",
             key: "createdBy",
+            sorter: (a: Category, b: Category) =>
+              sortText(
+                typeof a.createdBy === "object" ? a.createdBy?.name || a.createdBy?.email : "",
+                typeof b.createdBy === "object" ? b.createdBy?.name || b.createdBy?.email : ""
+              ),
             render: (_: unknown, category: Category) => {
               const createdBy = category.createdBy;
               if (!createdBy || typeof createdBy === "string") return "-";
@@ -110,6 +122,7 @@ const CategoriesList = () => {
     {
       title: "Created Date & Time",
       key: "createdAt",
+      sorter: (a: Category, b: Category) => sortDateTime(a.createdAt, b.createdAt),
       render: (_: unknown, category: Category) => formatDateTime(category.createdAt),
     },
     ...(me?.role === "ADMIN"
@@ -117,6 +130,7 @@ const CategoriesList = () => {
           {
             title: "Updated Date & Time",
             key: "updatedAt",
+            sorter: (a: Category, b: Category) => sortDateTime(a.updatedAt, b.updatedAt),
             render: (_: unknown, category: Category) => formatDateTime(category.updatedAt),
           },
         ]
@@ -209,6 +223,7 @@ const CategoriesList = () => {
         loading={isLoading || searchLoading}
         columns={columns}
         dataSource={categories}
+        sortDirections={["ascend", "descend"]}
         pagination={false}
         scroll={{ x: "max-content" }}
       />

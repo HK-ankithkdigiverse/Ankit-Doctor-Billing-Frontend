@@ -13,6 +13,7 @@ import { useProducts } from "../../hooks/useProducts";
 import { useUsers } from "../../hooks/useUsers";
 import { useThemeMode } from "../../contexts/themeMode";
 import { formatDateTime } from "../../utils/dateTime";
+import { sortDateTime, sortNumber, sortText } from "../../utils/tableSort";
 
 type DateFilterType = "all" | "today" | "week" | "month" | "custom";
 type SortType = "newest" | "oldest";
@@ -100,10 +101,16 @@ const Dashboard = () => {
       width: 80,
       render: (_: any, __: any, index: number) => index + 1,
     },
-    { title: "Bill No", dataIndex: "billNo", key: "billNo" },
+    {
+      title: "Bill No",
+      dataIndex: "billNo",
+      key: "billNo",
+      sorter: (a: any, b: any) => sortText(a.billNo, b.billNo),
+    },
     {
       title: "Company",
       key: "company",
+      sorter: (a: any, b: any) => sortText(a?.companyId?.companyName || a?.companyId?.name, b?.companyId?.companyName || b?.companyId?.name),
       render: (_: any, record: any) => record.companyId?.companyName || record.companyId?.name || "-",
     },
     ...(isAdmin
@@ -111,6 +118,7 @@ const Dashboard = () => {
           {
             title: "Created By",
             key: "createdBy",
+            sorter: (a: any, b: any) => sortText(a?.userId?.name || a?.createdBy?.name, b?.userId?.name || b?.createdBy?.name),
             render: (_: any, record: any) => record.userId?.name || "-",
           },
         ]
@@ -118,6 +126,7 @@ const Dashboard = () => {
     {
       title: "Created Date & Time",
       key: "createdAt",
+      sorter: (a: any, b: any) => sortDateTime(a?.createdAt, b?.createdAt),
       render: (_: any, record: any) => formatDateTime(record.createdAt),
     },
     ...(isAdmin
@@ -125,6 +134,7 @@ const Dashboard = () => {
           {
             title: "Updated Date & Time",
             key: "updatedAt",
+            sorter: (a: any, b: any) => sortDateTime(a?.updatedAt, b?.updatedAt),
             render: (_: any, record: any) => formatDateTime(record.updatedAt),
           },
         ]
@@ -133,6 +143,7 @@ const Dashboard = () => {
       title: "Total",
       key: "total",
       align: "right" as const,
+      sorter: (a: any, b: any) => sortNumber(a?.grandTotal, b?.grandTotal),
       render: (_: any, record: any) => `Rs ${Number(record.grandTotal || 0).toFixed(2)}`,
     },
     {
@@ -253,6 +264,7 @@ const Dashboard = () => {
           rowKey="_id"
           columns={billColumns}
           dataSource={recentBills}
+          sortDirections={["ascend", "descend"]}
           size={isMobile ? "small" : "middle"}
           pagination={false}
           scroll={{ x: "max-content" }}

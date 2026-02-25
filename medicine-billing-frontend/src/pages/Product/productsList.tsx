@@ -19,6 +19,7 @@ import type { Product } from "../../types/product";
 import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
+import { sortNumber, sortText } from "../../utils/tableSort";
 
 const ProductsList = () => {
   const { message } = App.useApp();
@@ -82,12 +83,32 @@ const ProductsList = () => {
       width: 80,
       render: (_: any, __: Product, index: number) => (filters.page - 1) * filters.limit + index + 1,
     },
-    { title: "Name", dataIndex: "name", key: "name" },
-    { title: "Category", dataIndex: "category", key: "category" },
-    { title: "Type", dataIndex: "productType", key: "productType" },
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      sorter: (a: Product, b: Product) => sortText(a.name, b.name),
+    },
+    {
+      title: "Category",
+      dataIndex: "category",
+      key: "category",
+      sorter: (a: Product, b: Product) => sortText(a.category, b.category),
+    },
+    {
+      title: "Type",
+      dataIndex: "productType",
+      key: "productType",
+      sorter: (a: Product, b: Product) => sortText(a.productType, b.productType),
+    },
     {
       title: "Company",
       key: "company",
+      sorter: (a: Product, b: Product) =>
+        sortText(
+          (a.companyId as any)?.companyName || (a.companyId as any)?.name || "",
+          (b.companyId as any)?.companyName || (b.companyId as any)?.name || ""
+        ),
       render: (_: any, product: Product) =>
         (product.companyId as any)?.companyName || (product.companyId as any)?.name || "-",
     },
@@ -96,6 +117,11 @@ const ProductsList = () => {
           {
             title: "Created By",
             key: "createdBy",
+            sorter: (a: Product, b: Product) =>
+              sortText(
+                typeof a.createdBy === "object" ? a.createdBy?.name || a.createdBy?.email : "",
+                typeof b.createdBy === "object" ? b.createdBy?.name || b.createdBy?.email : ""
+              ),
             render: (_: any, product: Product) => {
               const createdBy = product.createdBy;
               return createdBy?.name || createdBy?.email || "-";
@@ -107,24 +133,28 @@ const ProductsList = () => {
       title: "Stock",
       key: "stock",
       align: "right" as const,
+      sorter: (a: Product, b: Product) => sortNumber(a.stock, b.stock),
       render: (_: any, product: Product) => product.stock ?? 0,
     },
     {
       title: "MRP",
       key: "mrp",
       align: "right" as const,
+      sorter: (a: Product, b: Product) => sortNumber(a.mrp, b.mrp),
       render: (_: any, product: Product) => `Rs ${Number(product.mrp || 0).toFixed(2)}`,
     },
     {
       title: "GST %",
       key: "tax",
       align: "right" as const,
+      sorter: (a: Product, b: Product) => sortNumber(a.taxPercent, b.taxPercent),
       render: (_: any, product: Product) => `${Number(product.taxPercent || 0)}%`,
     },
     {
       title: "Price",
       key: "price",
       align: "right" as const,
+      sorter: (a: Product, b: Product) => sortNumber(a.price, b.price),
       render: (_: any, product: Product) => `Rs ${Number(product.price || 0).toFixed(2)}`,
     },
     {
@@ -209,6 +239,7 @@ const ProductsList = () => {
         loading={isPending || searchLoading}
         columns={columns}
         dataSource={products}
+        sortDirections={["ascend", "descend"]}
         pagination={false}
         scroll={{ x: "max-content" }}
       />

@@ -20,6 +20,7 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { useUsers } from "../../hooks/useUsers";
 import { formatDateTime } from "../../utils/dateTime";
+import { sortDateTime, sortNumber, sortText } from "../../utils/tableSort";
 
 type DateFilterType = "all" | "today" | "week" | "month" | "custom";
 
@@ -124,10 +125,16 @@ const BillList = () => {
       width: 80,
       render: (_: any, __: any, index: number) => (filters.page - 1) * filters.limit + index + 1,
     },
-    { title: "Bill No", dataIndex: "billNo", key: "billNo" },
+    {
+      title: "Bill No",
+      dataIndex: "billNo",
+      key: "billNo",
+      sorter: (a: any, b: any) => sortText(a.billNo, b.billNo),
+    },
     {
       title: "Company",
       key: "company",
+      sorter: (a: any, b: any) => sortText(getCompanyName(a), getCompanyName(b)),
       render: (_: any, bill: any) => getCompanyName(bill),
     },
     ...(isAdmin
@@ -135,6 +142,7 @@ const BillList = () => {
           {
             title: "Added By",
             key: "addedBy",
+            sorter: (a: any, b: any) => sortText(getUserLabel(a), getUserLabel(b)),
             render: (_: any, bill: any) => getUserLabel(bill),
           },
         ]
@@ -143,11 +151,13 @@ const BillList = () => {
       title: "Total",
       key: "total",
       align: "right" as const,
+      sorter: (a: any, b: any) => sortNumber(a?.grandTotal, b?.grandTotal),
       render: (_: any, bill: any) => `Rs ${Number(bill.grandTotal || 0).toFixed(2)}`,
     },
     {
       title: "Created Date & Time",
       key: "createdAt",
+      sorter: (a: any, b: any) => sortDateTime(a?.createdAt, b?.createdAt),
       render: (_: any, bill: any) => formatDateTime(bill.createdAt),
     },
     ...(isAdmin
@@ -155,6 +165,7 @@ const BillList = () => {
           {
             title: "Updated Date & Time",
             key: "updatedAt",
+            sorter: (a: any, b: any) => sortDateTime(a?.updatedAt, b?.updatedAt),
             render: (_: any, bill: any) => formatDateTime(bill.updatedAt),
           },
         ]
@@ -269,6 +280,7 @@ const BillList = () => {
         loading={isLoading || searchLoading}
         columns={columns}
         dataSource={rows}
+        sortDirections={["ascend", "descend"]}
         pagination={false}
         scroll={{ x: "max-content" }}
       />

@@ -18,6 +18,7 @@ import type { User } from "../../types";
 import { useMe } from "../../hooks/useMe";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
+import { sortDateTime, sortText } from "../../utils/tableSort";
 
 const Users = () => {
   const { message } = App.useApp();
@@ -96,22 +97,36 @@ const Users = () => {
       title: "Name",
       dataIndex: "name",
       key: "name",
+      sorter: (a: User, b: User) => sortText(a.name, b.name),
       render: (value: string, user: User) => (
         <span style={{ color: (user.isActive ?? true) ? undefined : "#94a3b8" }}>
           {value}
         </span>
       ),
     },
-    { title: "Email", dataIndex: "email", key: "email" },
-    { title: "Phone", dataIndex: "phone", key: "phone", render: (v: string) => v || "-" },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      sorter: (a: User, b: User) => sortText(a.email, b.email),
+    },
+    {
+      title: "Phone",
+      dataIndex: "phone",
+      key: "phone",
+      sorter: (a: User, b: User) => sortText(a.phone, b.phone),
+      render: (v: string) => v || "-",
+    },
     {
       title: "Created Date & Time",
       key: "createdAt",
+      sorter: (a: User, b: User) => sortDateTime(a.createdAt, b.createdAt),
       render: (_: any, user: User) => formatDateTime(user.createdAt),
     },
     {
       title: "Updated Date & Time",
       key: "updatedAt",
+      sorter: (a: User, b: User) => sortDateTime(a.updatedAt, b.updatedAt),
       render: (_: any, user: User) => formatDateTime(user.updatedAt),
     },
     {
@@ -250,6 +265,7 @@ const Users = () => {
         loading={searchLoading}
         columns={columns}
         dataSource={filteredUsers}
+        sortDirections={["ascend", "descend"]}
         rowClassName={(record: User) => ((record.isActive ?? true) ? "" : "inactive-user-row")}
         pagination={false}
         scroll={{ x: "max-content" }}

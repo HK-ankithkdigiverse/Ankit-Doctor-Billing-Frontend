@@ -19,6 +19,7 @@ import type { Company } from "../../types/company";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { getCompanyDisplayName } from "../../utils/company";
 import { formatDateTime } from "../../utils/dateTime";
+import { sortDateTime, sortText } from "../../utils/tableSort";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -93,24 +94,28 @@ const CompaniesList = () => {
     {
       title: "Company",
       key: "companyName",
+      sorter: (a: Company, b: Company) => sortText(getCompanyDisplayName(a), getCompanyDisplayName(b)),
       render: (_: unknown, company: Company) => oneLineCell(getCompanyDisplayName(company)),
     },
     {
       title: "GST",
       dataIndex: "gstNumber",
       key: "gstNumber",
+      sorter: (a: Company, b: Company) => sortText(a.gstNumber, b.gstNumber),
       render: (v: string) => oneLineCell(v),
     },
     {
       title: "Email",
       dataIndex: "email",
       key: "email",
+      sorter: (a: Company, b: Company) => sortText(a.email, b.email),
       render: (v: string) => oneLineCell(v),
     },
     {
       title: "Phone",
       dataIndex: "phone",
       key: "phone",
+      sorter: (a: Company, b: Company) => sortText(a.phone, b.phone),
       render: (v: string) => oneLineCell(v),
     },
     ...(isAdmin
@@ -118,6 +123,11 @@ const CompaniesList = () => {
           {
             title: "Created By",
             key: "createdBy",
+            sorter: (a: Company, b: Company) =>
+              sortText(
+                typeof a.userId === "object" ? a.userId?.name || a.userId?.email : "",
+                typeof b.userId === "object" ? b.userId?.name || b.userId?.email : ""
+              ),
             render: (_: unknown, company: Company) => {
               const owner = company.userId;
               if (!owner || typeof owner === "string") return "-";
@@ -129,6 +139,7 @@ const CompaniesList = () => {
     {
       title: "Created Date & Time",
       key: "createdAt",
+      sorter: (a: Company, b: Company) => sortDateTime((a as any).createdAt, (b as any).createdAt),
       render: (_: unknown, company: Company) => oneLineCell(formatDateTime((company as any).createdAt)),
     },
     ...(isAdmin
@@ -136,6 +147,7 @@ const CompaniesList = () => {
           {
             title: "Updated Date & Time",
             key: "updatedAt",
+            sorter: (a: Company, b: Company) => sortDateTime((a as any).updatedAt, (b as any).updatedAt),
             render: (_: unknown, company: Company) => oneLineCell(formatDateTime((company as any).updatedAt)),
           },
         ]
@@ -228,6 +240,7 @@ const CompaniesList = () => {
           loading={isLoading || searchLoading}
           columns={columns}
           dataSource={companies}
+          sortDirections={["ascend", "descend"]}
           pagination={false}
           scroll={{ x: "max-content" }}
         />
