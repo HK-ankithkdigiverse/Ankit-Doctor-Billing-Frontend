@@ -131,9 +131,9 @@ const CompaniesList = () => {
             render: (_: unknown, company: Company) => {
               const owner = company.userId;
               if (!owner || typeof owner === "string") return "-";
-              const ownerName = owner.name?.trim() || "-";
+              const ownerDisplayName = owner.name?.trim() || "-";
               const ownerEmail = owner.email?.trim();
-              return oneLineCell(ownerEmail ? `${ownerName} (${ownerEmail})` : ownerName);
+              return oneLineCell(ownerEmail ? `${ownerDisplayName} (${ownerEmail})` : ownerDisplayName);
             },
           },
         ]
@@ -265,3 +265,4 @@ const CompaniesList = () => {
 };
 
 export default CompaniesList;
+

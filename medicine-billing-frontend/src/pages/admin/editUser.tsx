@@ -279,12 +279,12 @@ const EditUser: React.FC = () => {
 
         <Row gutter={16}>
           <Col xs={24} md={8}>
-            <Form.Item name="state" label="State">
+            <Form.Item name="city" label="City">
               <Input disabled={isPending} />
             </Form.Item>
           </Col>
-          <Col xs={24} md={8}>
-            <Form.Item name="city" label="City">
+           <Col xs={24} md={8}>
+            <Form.Item name="state" label="State">
               <Input disabled={isPending} />
             </Form.Item>
           </Col>
@@ -350,3 +350,4 @@ const EditUser: React.FC = () => {
 };
 
 export default EditUser;
+

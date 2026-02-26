@@ -70,7 +70,7 @@ const buildPayload = (values: CreateUserFormValues): CreateUserPayload => {
   const email = trimIfString(values.email) || "";
   const password = trimIfString(values.password) || "";
 
-  const payload: CreateUserPayload = {
+  const payload: CreateUserPayload = {  
     name,
     medicalName,
     email: email.toLowerCase(),
@@ -185,12 +185,12 @@ const CreateUser: React.FC = () => {
 
         <Row gutter={16}>
           <Col xs={24} md={8}>
-            <Form.Item name="state" label="State">
+            <Form.Item name="city" label="City">
               <Input />
             </Form.Item>
           </Col>
-          <Col xs={24} md={8}>
-            <Form.Item name="city" label="City">
+           <Col xs={24} md={8}>
+            <Form.Item name="state" label="State">
               <Input />
             </Form.Item>
           </Col>
@@ -243,4 +243,5 @@ const CreateUser: React.FC = () => {
 };
 
 export default CreateUser;
+
 

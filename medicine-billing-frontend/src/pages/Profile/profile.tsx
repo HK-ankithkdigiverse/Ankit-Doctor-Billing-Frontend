@@ -17,6 +17,8 @@ const Profile = () => {
   if (isLoading) return <p>Loading...</p>;
   if (!user) return null;
 
+  const isAdmin = String(user.role || "").toUpperCase() === "ADMIN";
+
   return (
     <Card style={{ maxWidth: 760, margin: "0 auto" }}>
       <Space align="start" style={{ width: "100%", justifyContent: "space-between" }}>
@@ -35,14 +37,24 @@ const Profile = () => {
       </Space>
 
       <Descriptions style={{ marginTop: 20 }} column={1} bordered size="small">
-        <Descriptions.Item label="Medical Name">{user.medicalName || "-"}</Descriptions.Item>
-        <Descriptions.Item label="Phone">{user.phone || "-"}</Descriptions.Item>
-        <Descriptions.Item label="Address">{user.address || "-"}</Descriptions.Item>
-        <Descriptions.Item label="State">{user.state || "-"}</Descriptions.Item>
-        <Descriptions.Item label="City">{user.city || "-"}</Descriptions.Item>
-        <Descriptions.Item label="Pincode">{user.pincode || "-"}</Descriptions.Item>
-        <Descriptions.Item label="GST Number">{user.gstNumber || "-"}</Descriptions.Item>
-        <Descriptions.Item label="PAN Card Number">{user.panCardNumber || "-"}</Descriptions.Item>
+        {isAdmin ? (
+          <>
+            <Descriptions.Item label="Name">{user.name || "-"}</Descriptions.Item>
+            <Descriptions.Item label="Email">{user.email || "-"}</Descriptions.Item>
+            <Descriptions.Item label="Phone">{user.phone || "-"}</Descriptions.Item>
+          </>
+        ) : (
+          <>
+            <Descriptions.Item label="Medical Name">{user.medicalName || "-"}</Descriptions.Item>
+            <Descriptions.Item label="Phone">{user.phone || "-"}</Descriptions.Item>
+            <Descriptions.Item label="Address">{user.address || "-"}</Descriptions.Item>
+            <Descriptions.Item label="State">{user.state || "-"}</Descriptions.Item>
+            <Descriptions.Item label="City">{user.city || "-"}</Descriptions.Item>
+            <Descriptions.Item label="Pincode">{user.pincode || "-"}</Descriptions.Item>
+            <Descriptions.Item label="GST Number">{user.gstNumber || "-"}</Descriptions.Item>
+            <Descriptions.Item label="PAN Card Number">{user.panCardNumber || "-"}</Descriptions.Item>
+          </>
+        )}
       </Descriptions>
 
       <Space style={{ marginTop: 16 }}>

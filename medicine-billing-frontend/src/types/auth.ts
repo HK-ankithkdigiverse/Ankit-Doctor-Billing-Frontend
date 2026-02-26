@@ -64,3 +64,4 @@ export interface StatCardProps {
   value: string;
   color?: "blue" | "green" | "yellow" | "red";
 }
+

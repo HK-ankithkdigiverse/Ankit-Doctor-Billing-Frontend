@@ -285,3 +285,4 @@ const EditUserModal = ({ user, onClose, onSave, isLoading }: Props) => {
 };
 
 export default EditUserModal;
+
