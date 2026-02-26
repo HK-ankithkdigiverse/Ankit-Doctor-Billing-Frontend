@@ -242,6 +242,7 @@ const EditUser: React.FC = () => {
               <Input disabled={isPending} />
             </Form.Item>
           </Col>
+          
         </Row>
 
         <Row gutter={16}>
