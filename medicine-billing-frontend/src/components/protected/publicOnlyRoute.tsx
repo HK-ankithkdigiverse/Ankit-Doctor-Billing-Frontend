@@ -5,7 +5,7 @@ import NotFound from "../../pages/notFound";
 import { ROUTES, STORAGE_KEYS } from "../../constants";
 import { clearPostLoginRedirect, readPostLoginRedirect } from "../../utils/authRedirect";
 
-const PublicOnlyRoute: React.FC = () => {
+export default function PublicOnlyRoute() {
   const location = useLocation();
   const { data: me, isLoading } = useMe();
 
@@ -41,6 +41,4 @@ const PublicOnlyRoute: React.FC = () => {
   }
 
   return <Outlet />;
-};
-
-export default PublicOnlyRoute;
+}

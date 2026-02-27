@@ -19,7 +19,7 @@ import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
 import { sortDateTime, sortText } from "../../utils/tableSort";
 
-const Users = () => {
+export default function Users() {
   const { message } = App.useApp();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -274,6 +274,4 @@ const Users = () => {
       </div>
     </Card>
   );
-};
-
-export default Users;
+}

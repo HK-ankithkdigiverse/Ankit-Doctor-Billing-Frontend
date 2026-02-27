@@ -8,7 +8,7 @@ import { useThemeMode } from "../../contexts/themeMode";
 
 const { Header, Sider, Content } = AntLayout;
 
-const Layout: React.FC = () => {
+export default function Layout() {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.lg;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -82,6 +82,4 @@ const Layout: React.FC = () => {
       )}
     </AntLayout>
   );
-};
-
-export default Layout;
+}

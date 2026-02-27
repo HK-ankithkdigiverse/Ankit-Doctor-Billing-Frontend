@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  App,
   Button,
   Card,
   Form,
@@ -8,69 +9,36 @@ import {
   Space,
   Table,
   Typography,
-  App,
 } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useProducts } from "../../hooks/useProducts";
+import type { BillFormItem, BillFormRow, BillPayload, BillUserOption } from "../../types/bill";
+import {
+  getBillSummary,
+  normalizeBillFormRows,
+  toBillFormRow,
+  toBillPayloadItems,
+  validateBillForm,
+} from "../../utils/billing";
 import { sortNumber, sortText } from "../../utils/tableSort";
-
-type BillFormItem = {
-  productId: string;
-  qty: number;
-  freeQty: number;
-  rate: number;
-  mrp: number;
-  taxPercent: number;
-  discount: number;
-};
-
-type BillFormRow = BillFormItem & {
-  rowId: string;
-};
 
 type BillFormProps = {
   title: string;
   submitText: string;
   submitLoading?: boolean;
   isAdmin?: boolean;
-  users?: Array<{ value: string; label: string }>;
+  users?: BillUserOption[];
   initialUserId?: string;
   companies: any[];
   initialCompanyId?: string;
   initialCompanyName?: string;
   initialDiscount?: number;
   initialItems?: BillFormItem[];
-  onSubmit: (payload: {
-    userId?: string;
-    companyId: string;
-    discount: number;
-    items: BillFormItem[];
-  }) => Promise<void>;
+  onSubmit: (payload: BillPayload) => Promise<void>;
   onCancel: () => void;
 };
 
-const emptyItem: BillFormItem = {
-  productId: "",
-  qty: 1,
-  freeQty: 0,
-  rate: 0,
-  mrp: 0,
-  taxPercent: 0,
-  discount: 0,
-};
-
-const createRowId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-const toBillFormRow = (item?: Partial<BillFormItem>): BillFormRow => ({
-  rowId: createRowId(),
-  ...emptyItem,
-  ...item,
-});
-
-const normalizeItems = (items?: BillFormItem[]) =>
-  items && items.length ? items.map((item) => toBillFormRow(item)) : [toBillFormRow()];
-
-const BillForm = ({
+export default function BillForm({
   title,
   submitText,
   submitLoading,
@@ -84,12 +52,13 @@ const BillForm = ({
   initialItems,
   onSubmit,
   onCancel,
-}: BillFormProps) => {
+}: BillFormProps) {
   const { message } = App.useApp();
   const [userId, setUserId] = useState(initialUserId);
   const [companyId, setCompanyId] = useState(initialCompanyId);
   const [discount, setDiscount] = useState(initialDiscount);
-  const [items, setItems] = useState<BillFormRow[]>(normalizeItems(initialItems));
+  const [items, setItems] = useState<BillFormRow[]>(normalizeBillFormRows(initialItems));
+
   const { data: productData, isLoading: productsLoading } = useProducts(1, 1000, "", {
     companyId: companyId || undefined,
     enabled: !!companyId,
@@ -100,7 +69,7 @@ const BillForm = ({
     setUserId(initialUserId || "");
     setCompanyId(initialCompanyId || "");
     setDiscount(Number(initialDiscount || 0));
-    setItems(normalizeItems(initialItems));
+    setItems(normalizeBillFormRows(initialItems));
   }, [initialUserId, initialCompanyId, initialDiscount, initialItems]);
 
   const companyOptions = useMemo(() => {
@@ -111,15 +80,15 @@ const BillForm = ({
       return String(ownerId || "") === String(userId);
     };
 
-    const options = companies.filter(isOwnedBySelectedUser).map((c: any) => ({
-      value: c._id,
-      label: c.companyName || c.name || c.email || c._id,
+    const options = companies.filter(isOwnedBySelectedUser).map((company: any) => ({
+      value: company._id,
+      label: company.companyName || company.name || company.email || company._id,
     }));
 
     if (
       initialCompanyId &&
       initialCompanyName &&
-      !options.some((opt: any) => opt.value === initialCompanyId)
+      !options.some((option: { value: string }) => option.value === initialCompanyId)
     ) {
       options.push({ value: initialCompanyId, label: initialCompanyName });
     }
@@ -127,7 +96,7 @@ const BillForm = ({
     return options;
   }, [companies, initialCompanyId, initialCompanyName, isAdmin, userId]);
 
-  const getProduct = (id: string) => products.find((p: any) => p._id === id);
+  const getProduct = (id: string) => products.find((product: any) => product._id === id);
   const getProductName = (id: string) => getProduct(id)?.name || "";
 
   const handleCompanyChange = (value: string) => {
@@ -141,14 +110,14 @@ const BillForm = ({
     setItems([toBillFormRow()]);
   };
 
-  const updateItem = (rowId: string, key: keyof BillFormItem, value: any) => {
-    setItems((prev) => {
-      return prev.map((row) => {
+  const updateItem = (rowId: string, key: keyof BillFormItem, value: string | number) => {
+    setItems((prev) =>
+      prev.map((row) => {
         if (row.rowId !== rowId) return row;
-
         const nextRow: BillFormRow = { ...row, [key]: value };
+
         if (key === "productId") {
-          const product = getProduct(value);
+          const product = getProduct(String(value));
           if (product) {
             nextRow.rate = Number(product.price || 0);
             nextRow.mrp = Number(product.mrp || 0);
@@ -157,84 +126,31 @@ const BillForm = ({
         }
 
         return nextRow;
-      });
-    });
+      })
+    );
   };
 
   const addRow = () => setItems((prev) => [...prev, toBillFormRow()]);
   const removeRow = (rowId: string) =>
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.rowId !== rowId)));
 
-  const rowTotals = useMemo(
-    () => {
-      const totalsByRowId: Record<string, { taxable: number; tax: number; total: number }> = {};
-
-      items.forEach((item) => {
-        const amount = Number(item.rate || 0) * Number(item.qty || 0);
-        const discAmt = (amount * Number(item.discount || 0)) / 100;
-        const taxable = amount - discAmt;
-        const cgst = (taxable * Number(item.taxPercent || 0)) / 200;
-        const sgst = (taxable * Number(item.taxPercent || 0)) / 200;
-        totalsByRowId[item.rowId] = { taxable, tax: cgst + sgst, total: taxable + cgst + sgst };
-      });
-
-      return totalsByRowId;
-    },
-    [items]
+  const { rowTotals, subTotal, totalTax, totalBeforeDiscount, discountAmount, grandTotal } = useMemo(
+    () => getBillSummary(items, discount),
+    [items, discount]
   );
 
-  const totals = Object.values(rowTotals);
-  const subTotal = totals.reduce((sum, row) => sum + row.taxable, 0);
-  const totalTax = totals.reduce((sum, row) => sum + row.tax, 0);
-  const totalBeforeDiscount = subTotal + totalTax;
-  const discountAmount = Math.max(0, Number(discount || 0));
-  const grandTotal = Math.max(0, totalBeforeDiscount - discountAmount);
-
   const submit = async () => {
-    if (!companyId) {
-      message.error("Company is required");
-      return;
-    }
-
-    if (isAdmin && !userId) {
-      message.error("User is required");
-      return;
-    }
-
-    if (discount < 0) {
-      message.error("Bill discount cannot be negative");
-      return;
-    }
-
-    if (Number(discount || 0) > totalBeforeDiscount) {
-      message.error("Discount amount cannot be greater than total bill amount.");
-      return;
-    }
-
-    if (!items.length) {
-      message.error("At least one bill item is required");
-      return;
-    }
-
-    const invalidItemIndex = items.findIndex((it) => {
-      const qty = Number(it.qty || 0);
-      const rate = Number(it.rate || 0);
-      const tax = Number(it.taxPercent || 0);
-      const lineDiscount = Number(it.discount || 0);
-
-      return (
-        !it.productId ||
-        qty <= 0 ||
-        rate <= 0 ||
-        tax < 0 ||
-        tax > 100 ||
-        lineDiscount < 0 ||
-        lineDiscount > 100
-      );
+    const validationMessage = validateBillForm({
+      isAdmin,
+      userId,
+      companyId,
+      discount,
+      totalBeforeDiscount,
+      items,
     });
 
-    if (invalidItemIndex >= 0) {
-      message.error(`Please fix item #${invalidItemIndex + 1} (product/qty/rate/gst/discount).`);
+    if (validationMessage) {
+      message.error(validationMessage);
       return;
     }
 
@@ -242,18 +158,7 @@ const BillForm = ({
       userId: isAdmin ? userId : undefined,
       companyId,
       discount: discountAmount,
-      items: items.map((item) => {
-        const { rowId: _rowId, ...it } = item;
-        return {
-          ...it,
-          qty: Number(it.qty || 0),
-          freeQty: Number(it.freeQty || 0),
-          rate: Number(it.rate || 0),
-          mrp: Number(it.mrp || 0),
-          taxPercent: Number(it.taxPercent || 0),
-          discount: Number(it.discount || 0),
-        };
-      }),
+      items: toBillPayloadItems(items),
     });
   };
 
@@ -274,7 +179,7 @@ const BillForm = ({
           style={{ width: 220 }}
           placeholder={companyId ? "Select product" : "Select company first"}
           onChange={(value: string) => updateItem(item.rowId, "productId", value)}
-          options={products.map((p: any) => ({ value: p._id, label: p.name }))}
+          options={products.map((product: any) => ({ value: product._id, label: product.name }))}
           disabled={!companyId}
           loading={productsLoading}
         />
@@ -441,7 +346,4 @@ const BillForm = ({
       </Space>
     </Card>
   );
-};
-
-export default BillForm;
-
+}

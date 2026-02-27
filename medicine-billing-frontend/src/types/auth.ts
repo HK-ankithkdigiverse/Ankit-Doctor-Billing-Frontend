@@ -45,6 +45,7 @@ export interface User {
   name: string;
   medicalName?: string;
   email: string;
+  signature?: string;
   phone?: string;
   address?: string;
   state?: string;

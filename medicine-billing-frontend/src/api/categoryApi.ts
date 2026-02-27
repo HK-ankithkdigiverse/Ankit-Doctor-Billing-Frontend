@@ -1,4 +1,5 @@
 import { api } from "./axios";
+import { dataOf } from "./http";
 import { CATEGORIES_API } from "../constants";
 import type {
   Category,
@@ -24,22 +25,15 @@ export interface GetCategoriesResponse {
 
 export const getCategoriesApi = async (
   params: GetCategoriesParams
-): Promise<GetCategoriesResponse> => {
-  const { data } = await api.get(CATEGORIES_API.ROOT, { params });
-  return data;
-};
+): Promise<GetCategoriesResponse> => dataOf(api.get(CATEGORIES_API.ROOT, { params }));
 
-export const getCategoryByIdApi = async (id: string): Promise<Category> => {
-  const { data } = await api.get(CATEGORIES_API.BY_ID(id));
-  return data;
-};
+export const getCategoryByIdApi = (id: string): Promise<Category> =>
+  dataOf(api.get(CATEGORIES_API.BY_ID(id)));
 
 export const createCategoryApi = async (
   payload: CreateCategoryPayload
-): Promise<{ message: string; category: Category }> => {
-  const { data } = await api.post(CATEGORIES_API.ROOT, payload);
-  return data;
-};
+): Promise<{ message: string; category: Category }> =>
+  dataOf(api.post(CATEGORIES_API.ROOT, payload));
 
 export const updateCategoryApi = async ({
   id,
@@ -47,17 +41,13 @@ export const updateCategoryApi = async ({
 }: {
   id: string;
   payload: CreateCategoryPayload;
-}): Promise<{ message: string; category: Category }> => {
-  const { data } = await api.put(CATEGORIES_API.BY_ID(id), payload);
-  return data;
-};
+}): Promise<{ message: string; category: Category }> =>
+  dataOf(api.put(CATEGORIES_API.BY_ID(id), payload));
 
-export const deleteCategoryApi = async (id: string): Promise<{ message: string }> => {
-  const { data } = await api.delete(CATEGORIES_API.BY_ID(id));
-  return data;
-};
+export const deleteCategoryApi = (id: string): Promise<{ message: string }> =>
+  dataOf(api.delete(CATEGORIES_API.BY_ID(id)));
 
 export const getCategoryDropdownApi = async (): Promise<CategoryDropdownItem[]> => {
-  const { data } = await api.get(CATEGORIES_API.DROPDOWN);
-  return data;
+  const data = await dataOf<any>(api.get(CATEGORIES_API.DROPDOWN));
+  return data?.categories ?? data ?? [];
 };

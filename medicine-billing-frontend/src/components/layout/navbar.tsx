@@ -10,7 +10,7 @@ type NavbarProps = {
   compact?: boolean;
 };
 
-const Navbar = ({ compact = false }: NavbarProps) => {
+export default function Navbar({ compact = false }: NavbarProps) {
   const { message } = App.useApp();
   const { data: me } = useMe();
   const { data: profile } = useProfile();
@@ -118,6 +118,4 @@ const Navbar = ({ compact = false }: NavbarProps) => {
       </Space>
     </div>
   );
-};
-
-export default Navbar;
+}

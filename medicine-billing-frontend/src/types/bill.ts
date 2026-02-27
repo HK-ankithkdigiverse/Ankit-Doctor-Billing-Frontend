@@ -1,11 +1,11 @@
-/* =====================
-   BILL TYPES
-===================== */
+export type DateFilterType = "all" | "today" | "week" | "month" | "custom";
+export type BillSortType = "newest" | "oldest";
 
 export interface BillItem {
-  _id: string;
+  _id?: string;
   srNo?: number;
-  productName: string;
+  productId?: string | { _id?: string };
+  productName?: string;
   category?: string;
   hsn?: string;
   batch?: string;
@@ -20,11 +20,14 @@ export interface BillItem {
   discount?: number;
   payment?: string;
   status?: string;
-  total: number;
+  total?: number;
 }
 
 export interface BillCompany {
-  companyName: string;
+  _id?: string;
+  userId?: string | { _id?: string };
+  companyName?: string;
+  name?: string;
   gstNumber?: string;
   logo?: string;
   address?: string;
@@ -38,6 +41,7 @@ export interface BillUser {
   name?: string;
   medicalName?: string;
   email?: string;
+  signature?: string;
   phone?: string;
   address?: string;
   gstNumber?: string;
@@ -50,14 +54,49 @@ export interface Bill {
   billNo: string;
   companyId?: BillCompany;
   userId?: BillUser;
+  createdBy?: BillUser;
   createdAt?: string;
+  updatedAt?: string;
   subTotal?: number;
   totalTax?: number;
   discount?: number;
-  grandTotal: number;
+  grandTotal?: number;
 }
 
 export interface BillResponse {
   bill: Bill;
   items: BillItem[];
+}
+
+export interface BillFormItem {
+  productId: string;
+  qty: number;
+  freeQty: number;
+  rate: number;
+  mrp: number;
+  taxPercent: number;
+  discount: number;
+}
+
+export interface BillFormRow extends BillFormItem {
+  rowId: string;
+}
+
+export interface BillUserOption {
+  value: string;
+  label: string;
+}
+
+export interface BillPayload {
+  userId?: string;
+  companyId: string;
+  discount: number;
+  items: BillFormItem[];
+}
+
+export interface BillUpdatePayload {
+  discount: number;
+  userId?: string;
+  companyId?: string;
+  items?: BillFormItem[];
 }

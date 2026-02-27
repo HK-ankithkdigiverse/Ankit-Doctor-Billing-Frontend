@@ -1,43 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { App, Button, Card, Col, Form, Input, Row, Typography } from "antd";
+import { App, Card, Col, Form, Input, Row, Typography } from "antd";
 import { ROUTES } from "../../constants";
 import { useProfile, useUpdateProfile } from "../../hooks/useProfile";
-import { emailRule, gstRule, phoneRule, requiredRule } from "../../utils/formRules";
-
-const PINCODE_REGEX = /^[0-9]{6}$/;
-const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-
-const pincodeRule = {
-  pattern: PINCODE_REGEX,
-  message: "Pincode must be exactly 6 digits",
-};
-
-const panRule = {
-  pattern: PAN_REGEX,
-  message: "PAN card number must match format ABCDE1234F",
-};
-
-const nonWhitespaceRule = (label: string) => ({
-  validator: (_: unknown, value: string | undefined) => {
-    if (value === undefined || value === null) return Promise.resolve();
-    if (typeof value === "string" && value.trim().length === 0) {
-      return Promise.reject(new Error(`${label} is required`));
-    }
-    return Promise.resolve();
-  },
-});
-
-const trimIfString = (value?: string) => {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed || undefined;
-};
+import { emailRule, phoneRule, requiredRule } from "../../utils/formRules";
+import { uploadSingleFileApi } from "../../api/uploadApi";
+import { getUploadFileUrl } from "../../utils/company";
+import SignatureUploadField from "../../components/forms/SignatureUploadField";
+import UserBusinessFields from "../../components/forms/UserBusinessFields";
+import FormActionButtons from "../../components/forms/FormActionButtons";
+import { nonWhitespaceRule, trimIfString } from "../../utils/userForm";
 
 interface EditProfileFormValues {
   name: string;
   medicalName?: string;
   email: string;
+  signature?: string;
   phone?: string;
   address?: string;
   state?: string;
@@ -47,12 +25,14 @@ interface EditProfileFormValues {
   panCardNumber?: string;
 }
 
-const EditProfile = () => {
+export default function EditProfile() {
   const { message } = App.useApp();
   const { data: user } = useProfile();
   const { mutateAsync, isPending } = useUpdateProfile();
   const navigate = useNavigate();
   const [form] = Form.useForm<EditProfileFormValues>();
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [removeSignature, setRemoveSignature] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -60,6 +40,7 @@ const EditProfile = () => {
       name: user.name,
       medicalName: user.medicalName || "",
       email: user.email,
+      signature: user.signature || "",
       phone: user.phone || "",
       address: user.address || "",
       state: user.state || "",
@@ -71,10 +52,12 @@ const EditProfile = () => {
   }, [user, form]);
 
   if (!user) return null;
+  const existingSignatureUrl =
+    !removeSignature && !signatureFile ? getUploadFileUrl(user.signature) : "";
 
   const handleSave = async (values: EditProfileFormValues) => {
     try {
-      await mutateAsync({
+      const payload: Parameters<typeof mutateAsync>[0] = {
         name: trimIfString(values.name) || "",
         medicalName: trimIfString(values.medicalName),
         email: (trimIfString(values.email) || "").toLowerCase(),
@@ -85,7 +68,15 @@ const EditProfile = () => {
         pincode: trimIfString(values.pincode),
         gstNumber: trimIfString(values.gstNumber)?.toUpperCase(),
         panCardNumber: trimIfString(values.panCardNumber)?.toUpperCase(),
-      });
+      };
+
+      if (signatureFile) {
+        payload.signature = await uploadSingleFileApi(signatureFile);
+      } else if (removeSignature) {
+        payload.signature = "";
+      }
+
+      await mutateAsync(payload);
       message.success("Profile updated");
       navigate(ROUTES.PROFILE);
     } catch {
@@ -136,68 +127,25 @@ const EditProfile = () => {
           </Col>
         </Row>
 
-        <Form.Item name="address" label="Address" rules={[{ max: 500, message: "Address must be 500 characters or less" }]}>
-          <Input.TextArea rows={3} />
-        </Form.Item>
+        <UserBusinessFields disabled={isPending} />
 
-        <Row gutter={16}>
-          <Col xs={24} md={8}>
-            <Form.Item name="state" label="State">
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item name="city" label="City">
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item
-              name="pincode"
-              label="Pincode"
-              rules={[pincodeRule]}
-              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
-            >
-              <Input maxLength={6} inputMode="numeric" />
-            </Form.Item>
-          </Col>
-        </Row>
+        <SignatureUploadField
+          signatureUrl={existingSignatureUrl}
+          disabled={isPending}
+          onSelectFile={(file) => {
+            setSignatureFile(file);
+            setRemoveSignature(false);
+          }}
+          onClearFile={() => setSignatureFile(null)}
+          onRemoveExisting={() => {
+            setSignatureFile(null);
+            setRemoveSignature(true);
+          }}
+        />
 
-        <Row gutter={16}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="gstNumber"
-              label="GST Number"
-              rules={[gstRule]}
-              normalize={(value?: string) => value?.toUpperCase()}
-            >
-              <Input style={{ textTransform: "uppercase" }} maxLength={15} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="panCardNumber"
-              label="PAN Card Number"
-              rules={[panRule]}
-              normalize={(value?: string) => value?.toUpperCase()}
-            >
-              <Input style={{ textTransform: "uppercase" }} maxLength={10} />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item style={{ marginBottom: 0 }}>
-          <Button onClick={() => navigate(ROUTES.PROFILE)} style={{ marginRight: 8 }}>
-            Cancel
-          </Button>
-          <Button type="primary" htmlType="submit" loading={isPending}>
-            Save Changes
-          </Button>
-        </Form.Item>
+        <FormActionButtons submitText="Save Changes" loading={isPending} onCancel={() => navigate(ROUTES.PROFILE)} />
       </Form>
     </Card>
   );
-};
-
-export default EditProfile;
+}
 

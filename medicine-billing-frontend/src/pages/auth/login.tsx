@@ -1,15 +1,15 @@
 import { useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { Button, Card, ConfigProvider, Form, Input, Typography, App } from "antd";
+import { Button, Form, Input, Typography, App } from "antd";
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuth";
 import type { LoginPayload } from "../../types";
 import { ROUTES } from "../../constants";
 import { emailRule, passwordMinRule, requiredRule } from "../../utils/formRules";
 import { readPostLoginRedirect } from "../../utils/authRedirect";
-import { authPageBackground, authPageCardBase, authPageTheme } from "../../theme/authPageTheme";
+import AuthCard from "../../components/auth/AuthCard";
 
-const Login: React.FC = () => {
+export default function Login() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,58 +51,40 @@ const Login: React.FC = () => {
   };
 
   return (
-    <ConfigProvider theme={authPageTheme}>
-      <div style={authPageBackground}>
-        <Card
-          style={{
-            ...authPageCardBase,
-            maxWidth: 420,
-          }}
+    <AuthCard title="Welcome Back" subtitle="Login to continue to MedBill Pro">
+      <Form layout="vertical" onFinish={handleSubmit}>
+        <Form.Item
+          name="email"
+          label="Email"
+          rules={[requiredRule("Email"), emailRule]}
         >
-          <Typography.Title level={3} style={{ textAlign: "center", marginBottom: 4 }}>
-            Welcome Back
-          </Typography.Title>
-          <Typography.Paragraph style={{ textAlign: "center", color: "#64748b", marginBottom: 24 }}>
-            Login to continue to MedBill Pro
-          </Typography.Paragraph>
+          <Input
+            prefix={<MailOutlined />}
+            placeholder="Enter your email"
+          />
+        </Form.Item>
 
-          <Form layout="vertical" onFinish={handleSubmit}>
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[requiredRule("Email"), emailRule]}
-            >
-              <Input
-                prefix={<MailOutlined />}
-                placeholder="Enter your email"
-              />
-            </Form.Item>
+        <Form.Item
+          name="password"
+          label="Password"
+          rules={[requiredRule("Password"), passwordMinRule]}
+        >
+          <Input.Password
+            prefix={<LockOutlined />}
+            placeholder="Enter your password"
+          />
+        </Form.Item>
 
-            <Form.Item
-              name="password"
-              label="Password"
-              rules={[requiredRule("Password"), passwordMinRule]}
-            >
-              <Input.Password
-                prefix={<LockOutlined />}
-                placeholder="Enter your password"
-              />
-            </Form.Item>
+        <Button type="primary" htmlType="submit" loading={loading} block size="large">
+          Login
+        </Button>
+      </Form>
 
-            <Button type="primary" htmlType="submit" loading={loading} block size="large">
-              Login
-            </Button>
-          </Form>
-
-          <Typography.Paragraph style={{ textAlign: "center", marginTop: 16, marginBottom: 0 }}>
-            Forgot your password?{" "}
-            <Link to={ROUTES.FORGOT_PASSWORD}>Reset it here</Link>
-          </Typography.Paragraph>
-        </Card>
-      </div>
-    </ConfigProvider>
+      <Typography.Paragraph style={{ textAlign: "center", marginTop: 16, marginBottom: 0 }}>
+        Forgot your password?{" "}
+        <Link to={ROUTES.FORGOT_PASSWORD}>Reset it here</Link>
+      </Typography.Paragraph>
+    </AuthCard>
   );
-};
-
-export default Login;
+}
 

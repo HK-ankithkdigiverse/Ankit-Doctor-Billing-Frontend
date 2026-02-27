@@ -4,12 +4,13 @@ import { Button, Card, Space, Typography } from "antd";
 import { EditOutlined, FilePdfOutlined } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
 import { useBill } from "../../hooks/useBills";
-import { getCompanyDisplayName, getCompanyLogoUrl } from "../../utils/company";
+import { getCompanyDisplayName, getCompanyLogoUrl, getUploadFileUrl } from "../../utils/company";
+import { getBillUserProfile } from "../../utils/billing";
 import { formatDateTime } from "../../utils/dateTime";
 
 const INVOICE_ACCENT = "#2f3f46";
 
-const BillView = () => {
+export default function BillView() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
@@ -24,24 +25,24 @@ const BillView = () => {
   const companyAddress = bill?.companyId?.address || "-";
   const companyPhone = bill?.companyId?.phone || "-";
   const companyEmail = bill?.companyId?.email || "-";
-  const userName = bill?.userId?.name || (bill as any)?.createdBy?.name || "-";
-  const userMedicalName =
-    bill?.userId?.medicalName ||
-    (bill as any)?.createdBy?.medicalName ||
-    companyName ||
-    userName ||
-    "-";
-  const userEmail = bill?.userId?.email || (bill as any)?.createdBy?.email || "-";
-  const userPhone = bill?.userId?.phone || (bill as any)?.createdBy?.phone || "-";
-  const userAddress = bill?.userId?.address || (bill as any)?.createdBy?.address || "-";
-  const userGstNumber = bill?.userId?.gstNumber || (bill as any)?.createdBy?.gstNumber || "-";
-  const userPanCardNumber = bill?.userId?.panCardNumber || (bill as any)?.createdBy?.panCardNumber || "-";
+  const userProfile = getBillUserProfile(bill);
+  const userName = userProfile.name;
+  const userMedicalName = userProfile.medicalName || companyName || userName || "-";
+  const userEmail = userProfile.email;
+  const userPhone = userProfile.phone;
+  const userAddress = userProfile.address;
+  const userSignature = userProfile.signature;
+  const userGstNumber = userProfile.gstNumber;
+  const userPanCardNumber = userProfile.panCardNumber;
   const logoUrl = useMemo(
     () => getCompanyLogoUrl((bill?.companyId as any)?.logo || (bill?.companyId as any)?.logoUrl || (bill?.companyId as any)?.image),
     [bill?.companyId]
   );
+  const signatureUrl = useMemo(() => getUploadFileUrl(userSignature), [userSignature]);
   const [isLogoVisible, setIsLogoVisible] = useState(true);
+  const [isSignatureVisible, setIsSignatureVisible] = useState(true);
   const shouldShowLogo = !!logoUrl && isLogoVisible;
+  const shouldShowSignature = !!signatureUrl && isSignatureVisible;
   const subTotal = Number(bill?.subTotal || 0);
   const totalTax = Number(bill?.totalTax || 0);
   const discountAmount = Number(bill?.discount || 0);
@@ -51,6 +52,10 @@ const BillView = () => {
   useEffect(() => {
     setIsLogoVisible(true);
   }, [logoUrl]);
+
+  useEffect(() => {
+    setIsSignatureVisible(true);
+  }, [signatureUrl]);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!printRef.current || !bill) return;
@@ -315,6 +320,14 @@ const BillView = () => {
                 </div>
 
                 <div style={{ marginTop: 30, textAlign: "center" }}>
+                  {shouldShowSignature ? (
+                    <img
+                      src={signatureUrl}
+                      alt="Signature"
+                      style={{ maxHeight: 58, maxWidth: "75%", objectFit: "contain", marginBottom: 6 }}
+                      onError={() => setIsSignatureVisible(false)}
+                    />
+                  ) : null}
                   <div style={{ borderTop: "1px solid #9ca3af", width: "80%", margin: "0 auto 6px" }} />
                   <Typography.Text style={{ color: "#6b7280", fontSize: 12 }}>SIGNATURE</Typography.Text>
                 </div>
@@ -334,6 +347,4 @@ const BillView = () => {
       </Card>
     </div>
   );
-};
-
-export default BillView;
+}

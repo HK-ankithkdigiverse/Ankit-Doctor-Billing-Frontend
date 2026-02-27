@@ -7,7 +7,8 @@ export interface User {
 
 export interface Company {
   _id: string;
-  companyName: string;
+  companyName?: string;
+  name?: string;
 }
 
 export interface Product {
@@ -18,9 +19,8 @@ export interface Product {
   price: number;
   stock: number;
   mrp: number;
-  taxPercent: number;
+  taxPercent?: number;
 
   companyId?: Company;
   createdBy?: User;
-  search:string; // for search functionality
 }

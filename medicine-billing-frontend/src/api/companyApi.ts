@@ -1,4 +1,5 @@
 import { api } from "./axios";
+import { dataOf } from "./http";
 import { COMPANIES_API } from "../constants";
 import type { Company } from "../types/company";
 
@@ -18,47 +19,30 @@ export interface GetCompaniesResponse {
   };
 }
 
-export const getCompaniesApi = async (
-  params: GetCompaniesParams
-): Promise<GetCompaniesResponse> => {
-  const { data } = await api.get(COMPANIES_API.ROOT, {
-    params, // 👈 page, limit, search auto attach
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-  });
+export const getCompaniesApi = (params: GetCompaniesParams): Promise<GetCompaniesResponse> =>
+  dataOf(
+    api.get(COMPANIES_API.ROOT, {
+      params,
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+    })
+  );
 
-  return data;
-};
+export const getCompanyByIdApi = (id: string): Promise<{ company: Company } | Company> =>
+  dataOf(api.get(COMPANIES_API.BY_ID(id)));
 
-export const getCompanyByIdApi = async (id: string): Promise<{ company: Company } | Company> => {
-  const { data } = await api.get(COMPANIES_API.BY_ID(id));
-  return data;
-};
+export const createCompanyApi = (formData: FormData) =>
+  dataOf(api.post(COMPANIES_API.ROOT, formData));
 
-
-export const createCompanyApi = async (formData: FormData) => {
-  const { data } = await api.post(COMPANIES_API.ROOT, formData, {
-  });
-
-  return data;
-};
-
-
-
-export const updateCompanyApi = async ({
+export const updateCompanyApi = ({
   id,
   formData,
 }: {
   id: string;
   formData: FormData;
-}) => {
-  const { data } = await api.put(COMPANIES_API.BY_ID(id), formData);
-  return data;
-};
+}) => dataOf(api.put(COMPANIES_API.BY_ID(id), formData));
 
-export const deleteCompanyApi = async (id: string) => {
-  const { data } = await api.delete(COMPANIES_API.BY_ID(id));
-  return data;
-};
+export const deleteCompanyApi = (id: string) =>
+  dataOf(api.delete(COMPANIES_API.BY_ID(id)));

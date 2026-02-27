@@ -12,7 +12,6 @@ import {
   Typography,
 } from "antd";
 import { DeleteOutlined, EditOutlined, EyeOutlined, FilePdfOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import dayjs, { type Dayjs } from "dayjs";
 import { useBills, useDeleteBill } from "../../hooks/useBills";
 import { ROLE, ROUTES } from "../../constants";
 import { useMe } from "../../hooks/useMe";
@@ -21,17 +20,17 @@ import { useConfirmDialog } from "../../utils/confirmDialog";
 import { useUsers } from "../../hooks/useUsers";
 import { formatDateTime } from "../../utils/dateTime";
 import { sortDateTime, sortNumber, sortText } from "../../utils/tableSort";
+import type { DateFilterType } from "../../types/bill";
+import {
+  type BillingDateRange,
+  DATE_FILTER_OPTIONS,
+  filterBills,
+  getBillCompanyName,
+  getBillCreatorLabel,
+  mapUsersToSelectOptions,
+} from "../../utils/billing";
 
-type DateFilterType = "all" | "today" | "week" | "month" | "custom";
-
-const getCurrentWeekRange = () => {
-  const today = dayjs();
-  const mondayStart = today.startOf("day").subtract((today.day() + 6) % 7, "day");
-  const sundayEnd = mondayStart.add(6, "day").endOf("day");
-  return { start: mondayStart, end: sundayEnd };
-};
-
-const BillList = () => {
+export default function BillList() {
   const { RangePicker } = DatePicker;
   const navigate = useNavigate();
   const [filters, setFilters] = useState({
@@ -41,7 +40,7 @@ const BillList = () => {
     createdBy: "",
   });
   const [dateFilter, setDateFilter] = useState<DateFilterType>("all");
-  const [customRange, setCustomRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [customRange, setCustomRange] = useState<BillingDateRange>(null);
   const debouncedSearch = useDebouncedValue(filters.search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
@@ -58,39 +57,11 @@ const BillList = () => {
   const confirmDialog = useConfirmDialog();
 
   const rowsRaw = data?.data ?? [];
-  const getCreatedById = (bill: any) => bill?.userId?._id || bill?.createdBy?._id || "";
-  const isInDateFilter = (bill: any) => {
-    if (dateFilter === "all") return true;
-    const createdAt = bill?.createdAt ? dayjs(bill.createdAt) : null;
-    if (!createdAt || !createdAt.isValid()) return false;
-
-    if (dateFilter === "today") return createdAt.isSame(dayjs(), "day");
-
-    if (dateFilter === "week") {
-      const { start, end } = getCurrentWeekRange();
-      return !createdAt.isBefore(start) && !createdAt.isAfter(end);
-    }
-
-    if (dateFilter === "month") {
-      const start = dayjs().startOf("month");
-      const end = dayjs().endOf("month");
-      return !createdAt.isBefore(start) && !createdAt.isAfter(end);
-    }
-
-    if (dateFilter === "custom") {
-      const start = customRange?.[0];
-      const end = customRange?.[1];
-      if (!start || !end) return true;
-      return !createdAt.isBefore(start.startOf("day")) && !createdAt.isAfter(end.endOf("day"));
-    }
-
-    return true;
-  };
-
-  const filteredRows = rowsRaw.filter((bill: any) => {
-    const userOk = !isAdmin || !filters.createdBy || getCreatedById(bill) === filters.createdBy;
-    const dateOk = isInDateFilter(bill);
-    return userOk && dateOk;
+  const filteredRows = filterBills(rowsRaw, {
+    isAdmin,
+    createdBy: filters.createdBy,
+    dateFilter,
+    customRange,
   });
   const rows = hasLocalFilter
     ? filteredRows.slice((filters.page - 1) * filters.limit, filters.page * filters.limit)
@@ -105,18 +76,7 @@ const BillList = () => {
     ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
   ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
   const userOptions =
-    usersFilterData?.users?.map((user) => ({
-      value: user._id,
-      label: user.name || user.email,
-    })) ?? [];
-  const getCompanyName = (bill: any) =>
-    bill?.companyId?.companyName || bill?.companyId?.name || "-";
-  const getUserLabel = (bill: any) => {
-    const userName = bill?.userId?.name || bill?.createdBy?.name || "";
-    const userEmail = bill?.userId?.email || bill?.createdBy?.email || "";
-    if (!userName) return "-";
-    return userEmail ? `${userName} (${userEmail})` : userName;
-  };
+    mapUsersToSelectOptions(usersFilterData?.users);
 
   const columns = [
     {
@@ -134,16 +94,16 @@ const BillList = () => {
     {
       title: "Company",
       key: "company",
-      sorter: (a: any, b: any) => sortText(getCompanyName(a), getCompanyName(b)),
-      render: (_: any, bill: any) => getCompanyName(bill),
+      sorter: (a: any, b: any) => sortText(getBillCompanyName(a), getBillCompanyName(b)),
+      render: (_: any, bill: any) => getBillCompanyName(bill),
     },
     ...(isAdmin
       ? [
           {
             title: "Created By",
             key: "addedBy",
-            sorter: (a: any, b: any) => sortText(getUserLabel(a), getUserLabel(b)),
-            render: (_: any, bill: any) => getUserLabel(bill),
+            sorter: (a: any, b: any) => sortText(getBillCreatorLabel(a), getBillCreatorLabel(b)),
+            render: (_: any, bill: any) => getBillCreatorLabel(bill),
           },
         ]
       : []),
@@ -259,20 +219,14 @@ const BillList = () => {
               if (value !== "custom") setCustomRange(null);
             }}
             style={{ width: 180 }}
-            options={[
-              { value: "all", label: "All Dates" },
-              { value: "today", label: "Today" },
-              { value: "week", label: "This Week" },
-              { value: "month", label: "This Month" },
-              { value: "custom", label: "Custom Range" },
-            ]}
+            options={DATE_FILTER_OPTIONS}
           />
           {dateFilter === "custom" && (
             <RangePicker
               value={customRange}
               onChange={(values) => {
                 setFilters((prev) => ({ ...prev, page: 1 }));
-                setCustomRange(values as [Dayjs | null, Dayjs | null] | null);
+                setCustomRange(values as BillingDateRange);
               }}
             />
           )}
@@ -302,6 +256,4 @@ const BillList = () => {
       </div>
     </Card>
   );
-};
-
-export default BillList;
+}

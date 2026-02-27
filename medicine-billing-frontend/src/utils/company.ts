@@ -3,18 +3,18 @@ import { API_ORIGIN } from "../constants";
 export const getCompanyDisplayName = (company: any): string =>
   (company?.companyName || company?.name || company?.company || "").trim();
 
-const extractLogoValue = (logo: unknown): string => {
-  if (!logo) return "";
-  if (typeof logo === "string") return logo;
-  if (typeof logo === "object") {
-    const asAny = logo as any;
+const extractAssetValue = (asset: unknown): string => {
+  if (!asset) return "";
+  if (typeof asset === "string") return asset;
+  if (typeof asset === "object") {
+    const asAny = asset as any;
     return asAny.url || asAny.path || asAny.filename || "";
   }
   return "";
 };
 
-export const getCompanyLogoUrl = (logo: unknown): string => {
-  const rawInput = extractLogoValue(logo);
+export const getUploadFileUrl = (asset: unknown): string => {
+  const rawInput = extractAssetValue(asset);
   if (!rawInput) return "";
   const raw = rawInput.trim();
   if (!raw) return "";
@@ -31,3 +31,4 @@ export const getCompanyLogoUrl = (logo: unknown): string => {
   return `${API_ORIGIN}/uploads/${encodedPath}`;
 };
 
+export const getCompanyLogoUrl = (logo: unknown): string => getUploadFileUrl(logo);

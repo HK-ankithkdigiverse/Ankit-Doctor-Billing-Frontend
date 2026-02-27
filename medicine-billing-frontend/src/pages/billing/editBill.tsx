@@ -1,53 +1,26 @@
-import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { App } from "antd";
 import BillForm from "../../components/billing/billForm";
-import { ROLE, ROUTES } from "../../constants";
+import { ROUTES } from "../../constants";
 import { useBill, useUpdateBill } from "../../hooks/useBills";
-import { useCompanies } from "../../hooks/useCompanies";
-import { useUsers } from "../../hooks/useUsers";
-import { useMe } from "../../hooks/useMe";
+import { useBillFormMeta } from "../../hooks/useBillFormMeta";
+import type { BillPayload } from "../../types/bill";
+import { normalizeBillItemsForForm } from "../../utils/billing";
 
-const EditBill = () => {
+export default function EditBill() {
   const { message } = App.useApp();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: me } = useMe();
-  const isAdmin = me?.role === ROLE.ADMIN;
+  const { isAdmin, companies, users } = useBillFormMeta();
   const { data: billData, isLoading } = useBill(id);
-  const { data: companyData } = useCompanies(1, 1000, "");
-  const { data: usersData } = useUsers(1, 1000, "", "all");
   const { mutateAsync, isPending } = useUpdateBill();
 
-  const companies = companyData?.companies ?? [];
-  const users = (usersData?.users ?? []).map((user) => ({
-    value: user._id,
-    label: user.name ? `${user.name} (${user.email})` : user.email,
-  }));
-
-  const initialItems = useMemo(
-    () =>
-      (billData?.items || []).map((item: any) => ({
-        productId: item.productId?._id || item.productId || "",
-        qty: Number(item.qty || 1),
-        freeQty: Number(item.freeQty || 0),
-        rate: Number(item.rate || 0),
-        mrp: Number(item.mrp || 0),
-        taxPercent: Number(item.taxPercent || 0),
-        discount: Number(item.discount || 0),
-      })),
-    [billData]
-  );
+  const initialItems = normalizeBillItemsForForm(billData?.items);
 
   if (isLoading) return <p>Loading...</p>;
   if (!billData || !id) return <p>Bill not found</p>;
 
-  const handleSubmit = async (payload: {
-    userId?: string;
-    companyId: string;
-    discount: number;
-    items: any[];
-  }) => {
+  const handleSubmit = async (payload: BillPayload) => {
     try {
       await mutateAsync({
         id,
@@ -77,6 +50,4 @@ const EditBill = () => {
       onCancel={() => navigate(ROUTES.BILL_DETAILS(id))}
     />
   );
-};
-
-export default EditBill;
+}

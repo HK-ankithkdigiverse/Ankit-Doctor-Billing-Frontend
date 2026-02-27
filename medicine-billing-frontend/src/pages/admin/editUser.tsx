@@ -1,66 +1,18 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { App, Button, Card, Col, Form, Input, Row, Typography } from "antd";
 import { useUpdateUser, useUsers } from "../../hooks/useUsers";
 import type { UpdateUserPayload } from "../../api/userApi";
 import { ROUTES } from "../../constants";
 import type { User } from "../../types";
-import { emailRule, gstRule, phoneRule, requiredRule } from "../../utils/formRules";
-
-const PINCODE_REGEX = /^[0-9]{6}$/;
-const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-
-const pincodeRule = {
-  pattern: PINCODE_REGEX,
-  message: "Pincode must be exactly 6 digits",
-};
-
-const panRule = {
-  pattern: PAN_REGEX,
-  message: "PAN card number must match format ABCDE1234F",
-};
-
-const nonWhitespaceRule = (label: string) => ({
-  validator: (_: unknown, value: string | undefined) => {
-    if (value === undefined || value === null) return Promise.resolve();
-    if (typeof value === "string" && value.trim().length === 0) {
-      return Promise.reject(new Error(`${label} is required`));
-    }
-    return Promise.resolve();
-  },
-});
-
-const trimIfString = (value?: string) => {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed || undefined;
-};
-
-interface EditUserFormValues {
-  name: string;
-  medicalName: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  state?: string;
-  city?: string;
-  pincode?: string;
-  gstNumber?: string;
-  panCardNumber?: string;
-}
-
-interface NormalizedEditUserValues {
-  name: string;
-  medicalName: string;
-  email: string;
-  phone: string;
-  address: string;
-  state: string;
-  city: string;
-  pincode: string;
-  gstNumber: string;
-  panCardNumber: string;
-}
+import { emailRule, phoneRule, requiredRule } from "../../utils/formRules";
+import { uploadSingleFileApi } from "../../api/uploadApi";
+import { getUploadFileUrl } from "../../utils/company";
+import SignatureUploadField from "../../components/forms/SignatureUploadField";
+import UserBusinessFields from "../../components/forms/UserBusinessFields";
+import FormActionButtons from "../../components/forms/FormActionButtons";
+import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../utils/userForm";
+import type { EditUserFormValues, NormalizedEditUserValues } from "../../types/userForm";
 
 interface EditUserLocationState {
   user?: User;
@@ -107,23 +59,10 @@ const buildPayload = (values: EditUserFormValues): UpdateUserPayload => ({
   panCardNumber: trimIfString(values.panCardNumber)?.toUpperCase(),
 });
 
-const getErrorMessage = (error: any): string => {
-  const responseData = error?.response?.data;
-  if (typeof responseData?.message === "string") return responseData.message;
-  if (typeof responseData?.error === "string") return responseData.error;
-  if (typeof error?.message === "string") return error.message;
-  return "";
-};
 
-const isDuplicateEmailError = (error: any) => {
-  const errorText = getErrorMessage(error);
-  return (
-    error?.response?.status === 409 ||
-    (/email/i.test(errorText) && /(already|exists|taken|duplicate)/i.test(errorText))
-  );
-};
 
-const EditUser: React.FC = () => {
+
+export default function EditUser() {
   const { message } = App.useApp();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
@@ -132,6 +71,8 @@ const EditUser: React.FC = () => {
   const watchedValues = Form.useWatch([], form);
   const { data, isLoading } = useUsers(1, 1000, "", "all");
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [removeSignature, setRemoveSignature] = useState(false);
 
   const routeState = location.state as EditUserLocationState | null;
   const users = data?.users ?? [];
@@ -172,14 +113,25 @@ const EditUser: React.FC = () => {
       trimIfString(watchedValues?.medicalName) &&
       trimIfString(watchedValues?.email)
   );
+  const signatureChanged = Boolean(signatureFile) || removeSignature;
+  const existingSignatureUrl =
+    !removeSignature && !signatureFile ? getUploadFileUrl(user?.signature) : "";
 
   const handleSubmit = async (values: EditUserFormValues) => {
     if (!id) return;
 
     try {
+      const payload = buildPayload(values);
+
+      if (signatureFile) {
+        payload.signature = await uploadSingleFileApi(signatureFile);
+      } else if (removeSignature) {
+        payload.signature = "";
+      }
+
       await updateUser({
         id,
-        data: buildPayload(values),
+        data: payload,
       });
       message.success("User updated");
       navigate(ROUTES.USERS);
@@ -270,85 +222,29 @@ const EditUser: React.FC = () => {
           </Col>
         </Row>
 
-        <Form.Item
-          name="address"
-          label="Address"
-          rules={[{ max: 500, message: "Address must be 500 characters or less" }]}
-        >
-          <Input.TextArea rows={3} disabled={isPending} />
-        </Form.Item>
+        <UserBusinessFields disabled={isPending} />
 
-        <Row gutter={16}>
-          <Col xs={24} md={8}>
-            <Form.Item name="city" label="City">
-              <Input disabled={isPending} />
-            </Form.Item>
-          </Col>
-           <Col xs={24} md={8}>
-            <Form.Item name="state" label="State">
-              <Input disabled={isPending} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item
-              name="pincode"
-              label="Pincode"
-              rules={[pincodeRule]}
-              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
-            >
-              <Input maxLength={6} inputMode="numeric" disabled={isPending} />
-            </Form.Item>
-          </Col>
-        </Row>
+        <SignatureUploadField
+          signatureUrl={existingSignatureUrl}
+          disabled={isPending}
+          onSelectFile={(file) => {
+            setSignatureFile(file);
+            setRemoveSignature(false);
+          }}
+          onClearFile={() => setSignatureFile(null)}
+          onRemoveExisting={() => {
+            setSignatureFile(null);
+            setRemoveSignature(true);
+          }}
+        />
 
-        <Row gutter={16}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="gstNumber"
-              label="GST Number"
-              rules={[gstRule]}
-              normalize={(value?: string) => value?.toUpperCase()}
-            >
-              <Input
-                style={{ textTransform: "uppercase" }}
-                maxLength={15}
-                disabled={isPending}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="panCardNumber"
-              label="PAN Card Number"
-              rules={[panRule]}
-              normalize={(value?: string) => value?.toUpperCase()}
-            >
-              <Input
-                style={{ textTransform: "uppercase" }}
-                maxLength={10}
-                disabled={isPending}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item style={{ marginBottom: 0 }}>
-          <Button onClick={() => navigate(ROUTES.USERS)} style={{ marginRight: 8 }}>
-            Cancel
-          </Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={isPending}
-            disabled={!hasRequiredValues || !hasChanges}
-          >
-            Save
-          </Button>
-        </Form.Item>
+        <FormActionButtons
+          submitText="Save"
+          loading={isPending}
+          disabled={!hasRequiredValues || (!hasChanges && !signatureChanged)}
+          onCancel={() => navigate(ROUTES.USERS)}
+        />
       </Form>
     </Card>
   );
-};
-
-export default EditUser;
-
+}

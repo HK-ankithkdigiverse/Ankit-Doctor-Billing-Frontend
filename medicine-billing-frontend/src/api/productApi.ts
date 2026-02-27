@@ -1,7 +1,8 @@
 import { api } from "./axios";
+import { dataOf } from "./http";
 import { PRODUCTS_API } from "../constants";
 
-export const getProductsApi = async (params?: {
+export interface GetProductsParams {
   page?: number;
   limit?: number;
   category?: string;
@@ -9,24 +10,16 @@ export const getProductsApi = async (params?: {
   companyId?: string;
   createdBy?: string;
   search?: string;
-}) => {
-  const { data } = await api.get(PRODUCTS_API.ROOT, {
-    params,
-  });
-  return data;
-};
+}
 
-// ✅ Get single product
-export const getProductByIdApi = async (id: string) => {
-  const { data } = await api.get(PRODUCTS_API.BY_ID(id));
-  return data;
-};
+export const getProductsApi = (params?: GetProductsParams) =>
+  dataOf(api.get(PRODUCTS_API.ROOT, { params }));
 
+export const getProductByIdApi = (id: string) =>
+  dataOf<any>(api.get(PRODUCTS_API.BY_ID(id))).then((data) => data?.product ?? data);
 
-export const createProductApi = async (formData: any) => {
-  const { data } = await api.post(PRODUCTS_API.ROOT, formData);
-  return data;
-};
+export const createProductApi = (payload: any) =>
+  dataOf(api.post(PRODUCTS_API.ROOT, payload));
 
 export const updateProductApi = ({
   id,
@@ -34,17 +27,10 @@ export const updateProductApi = ({
 }: {
   id: string;
   data: any;
-}) => {
-  return api.put(PRODUCTS_API.BY_ID(id), data).then(res => res.data);
-};
+}) => dataOf(api.put(PRODUCTS_API.BY_ID(id), data));
 
+export const deleteProductApi = (id: string) =>
+  dataOf(api.delete(PRODUCTS_API.BY_ID(id)));
 
-export const deleteProductApi = async (id: string) => {
-  const { data } = await api.delete(PRODUCTS_API.BY_ID(id));
-  return data;
-};
-
-// api/products.ts
 export const searchProductsApi = (search: string) =>
-  api.get(PRODUCTS_API.ROOT, { params: { search, limit: 20 } })
-     .then(res => res.data.products);
+  getProductsApi({ search, limit: 20 }).then((data: any) => data?.products ?? []);

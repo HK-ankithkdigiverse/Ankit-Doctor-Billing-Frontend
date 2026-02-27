@@ -9,6 +9,8 @@ import {
 } from "../api/productApi";
 import { QUERY_KEYS } from "../constants";
 
+const isValidObjectId = (id?: string) => !!id && /^[a-fA-F0-9]{24}$/.test(id);
+
 /* -------- GET (LIST) -------- */
 export const useProducts = (
   page: number,
@@ -53,7 +55,7 @@ export const useProduct = (id: string) => {
   return useQuery({
     queryKey: QUERY_KEYS.PRODUCT(id),
     queryFn: () => getProductByIdApi(id),
-    enabled: !!id,
+    enabled: isValidObjectId(id),
   });
 };
 

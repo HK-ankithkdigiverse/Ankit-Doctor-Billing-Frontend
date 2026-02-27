@@ -21,7 +21,7 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { sortNumber, sortText } from "../../utils/tableSort";
 
-const ProductsList = () => {
+export default function ProductsList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [filters, setFilters] = useState({
@@ -144,13 +144,6 @@ const ProductsList = () => {
       render: (_: any, product: Product) => `Rs ${Number(product.mrp || 0).toFixed(2)}`,
     },
     {
-      title: "GST %",
-      key: "tax",
-      align: "right" as const,
-      sorter: (a: Product, b: Product) => sortNumber(a.taxPercent, b.taxPercent),
-      render: (_: any, product: Product) => `${Number(product.taxPercent || 0)}%`,
-    },
-    {
       title: "Price",
       key: "price",
       align: "right" as const,
@@ -257,6 +250,4 @@ const ProductsList = () => {
       </div>
     </Card>
   );
-};
-
-export default ProductsList;
+}

@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Card, Col, DatePicker, Grid, Row, Select, Space, Statistic, Table, Typography } from "antd";
 import { EyeOutlined, FilePdfOutlined } from "@ant-design/icons";
-import dayjs, { type Dayjs } from "dayjs";
 import { ROLE } from "../../constants";
 import { ROUTES } from "../../constants";
 import { useMe } from "../../hooks/useMe";
@@ -14,25 +13,26 @@ import { useUsers } from "../../hooks/useUsers";
 import { useThemeMode } from "../../contexts/themeMode";
 import { formatDateTime } from "../../utils/dateTime";
 import { sortDateTime, sortNumber, sortText } from "../../utils/tableSort";
+import type { BillSortType, DateFilterType } from "../../types/bill";
+import {
+  type BillingDateRange,
+  BILL_SORT_OPTIONS,
+  DATE_FILTER_OPTIONS,
+  filterBills,
+  getBillCompanyName,
+  getBillCreatorLabel,
+  mapUsersToSelectOptions,
+  sortBillsByCreatedAt,
+} from "../../utils/billing";
 
-type DateFilterType = "all" | "today" | "week" | "month" | "custom";
-type SortType = "newest" | "oldest";
-
-const getCurrentWeekRange = () => {
-  const today = dayjs();
-  const mondayStart = today.startOf("day").subtract((today.day() + 6) % 7, "day");
-  const sundayEnd = mondayStart.add(6, "day").endOf("day");
-  return { start: mondayStart, end: sundayEnd };
-};
-
-const Dashboard = () => {
+export default function Dashboard() {
   const { RangePicker } = DatePicker;
   const navigate = useNavigate();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [dateFilter, setDateFilter] = useState<DateFilterType>("all");
-  const [customRange, setCustomRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const [sortOrder, setSortOrder] = useState<SortType>("newest");
+  const [customRange, setCustomRange] = useState<BillingDateRange>(null);
+  const [sortOrder, setSortOrder] = useState<BillSortType>("newest");
   const [createdByFilter, setCreatedByFilter] = useState<string>("");
   const { data: user, isLoading } = useMe();
   const { mode } = useThemeMode();
@@ -55,51 +55,18 @@ const Dashboard = () => {
   const totalBills = billsQuery.data?.pagination?.total ?? 0;
   const totalUsers = usersQuery.data?.pagination?.total ?? 0;
   const recentBillsRaw = billsQuery.data?.data ?? [];
-  const userFilterOptions =
-    usersFilterQuery.data?.users?.map((u) => ({ value: u._id, label: u.name || u.email })) ?? [];
+  const userFilterOptions = mapUsersToSelectOptions(usersFilterQuery.data?.users);
 
   const recentBills = useMemo(() => {
-    const isInDateFilter = (bill: any) => {
-      if (dateFilter === "all") return true;
-      const createdAt = bill?.createdAt ? dayjs(bill.createdAt) : null;
-      if (!createdAt || !createdAt.isValid()) return false;
-      if (dateFilter === "today") return createdAt.isSame(dayjs(), "day");
-      if (dateFilter === "week") {
-        const { start, end } = getCurrentWeekRange();
-        return !createdAt.isBefore(start) && !createdAt.isAfter(end);
-      }
-      if (dateFilter === "month") return !createdAt.isBefore(dayjs().startOf("month")) && !createdAt.isAfter(dayjs().endOf("month"));
-      if (dateFilter === "custom") {
-        const start = customRange?.[0];
-        const end = customRange?.[1];
-        if (!start || !end) return true;
-        return !createdAt.isBefore(start.startOf("day")) && !createdAt.isAfter(end.endOf("day"));
-      }
-      return true;
-    };
-
-    const getCreatedById = (bill: any) => bill?.userId?._id || bill?.createdBy?._id || "";
-
-    const filtered = recentBillsRaw.filter((bill: any) => {
-      const userOk = !isAdmin || !createdByFilter || getCreatedById(bill) === createdByFilter;
-      const dateOk = isInDateFilter(bill);
-      return userOk && dateOk;
+    const filtered = filterBills(recentBillsRaw, {
+      isAdmin,
+      createdBy: createdByFilter,
+      dateFilter,
+      customRange,
     });
-
-    const sorted = [...filtered].sort((a: any, b: any) => {
-      const ta = dayjs(a?.createdAt).isValid() ? dayjs(a.createdAt).valueOf() : 0;
-      const tb = dayjs(b?.createdAt).isValid() ? dayjs(b.createdAt).valueOf() : 0;
-      return sortOrder === "newest" ? tb - ta : ta - tb;
-    });
-
-    return sorted.slice(0, 5);
+    return sortBillsByCreatedAt(filtered, sortOrder).slice(0, 5);
   }, [recentBillsRaw, dateFilter, customRange, isAdmin, createdByFilter, sortOrder]);
-  const getCreatedByLabel = (bill: any) => {
-    const createdByName = bill?.userId?.name || bill?.createdBy?.name || "";
-    const createdByEmail = bill?.userId?.email || bill?.createdBy?.email || "";
-    if (!createdByName) return "-";
-    return createdByEmail ? `${createdByName} (${createdByEmail})` : createdByName;
-  };
+
   const billColumns = [
     {
       title: "S.No",
@@ -116,16 +83,16 @@ const Dashboard = () => {
     {
       title: "Company",
       key: "company",
-      sorter: (a: any, b: any) => sortText(a?.companyId?.companyName || a?.companyId?.name, b?.companyId?.companyName || b?.companyId?.name),
-      render: (_: any, record: any) => record.companyId?.companyName || record.companyId?.name || "-",
+      sorter: (a: any, b: any) => sortText(getBillCompanyName(a), getBillCompanyName(b)),
+      render: (_: any, record: any) => getBillCompanyName(record),
     },
     ...(isAdmin
       ? [
           {
             title: "Created By",
             key: "createdBy",
-            sorter: (a: any, b: any) => sortText(getCreatedByLabel(a), getCreatedByLabel(b)),
-            render: (_: any, record: any) => getCreatedByLabel(record),
+            sorter: (a: any, b: any) => sortText(getBillCreatorLabel(a), getBillCreatorLabel(b)),
+            render: (_: any, record: any) => getBillCreatorLabel(record),
           },
         ]
       : []),
@@ -237,28 +204,19 @@ const Dashboard = () => {
                 if (value !== "custom") setCustomRange(null);
               }}
               style={{ width: 160 }}
-              options={[
-                { value: "all", label: "All Dates" },
-                { value: "today", label: "Today" },
-                { value: "week", label: "This Week" },
-                { value: "month", label: "This Month" },
-                { value: "custom", label: "Custom Range" },
-              ]}
+              options={DATE_FILTER_OPTIONS}
             />
             {dateFilter === "custom" && (
               <RangePicker
                 value={customRange}
-                onChange={(values) => setCustomRange(values as [Dayjs | null, Dayjs | null] | null)}
+                onChange={(values) => setCustomRange(values as BillingDateRange)}
               />
             )}
             <Select
               value={sortOrder}
-              onChange={(value: SortType) => setSortOrder(value)}
+              onChange={(value: BillSortType) => setSortOrder(value)}
               style={{ width: 140 }}
-              options={[
-                { value: "newest", label: "Newest" },
-                { value: "oldest", label: "Oldest" },
-              ]}
+              options={BILL_SORT_OPTIONS}
             />
           </Space>
         }
@@ -275,6 +233,4 @@ const Dashboard = () => {
       </Card>
     </div>
   );
-};
-
-export default Dashboard;
+}

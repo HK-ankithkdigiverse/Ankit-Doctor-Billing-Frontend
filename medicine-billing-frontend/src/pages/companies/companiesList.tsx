@@ -24,7 +24,7 @@ import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
 
-const CompaniesList = () => {
+export default function CompaniesList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [filters, setFilters] = useState({
@@ -262,7 +262,5 @@ const CompaniesList = () => {
       </SectionCard>
     </PageShell>
   );
-};
-
-export default CompaniesList;
+}
 

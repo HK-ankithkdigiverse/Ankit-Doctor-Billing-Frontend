@@ -4,7 +4,7 @@ import { ROUTES } from "../../constants";
 import { useChangePassword } from "../../hooks/useProfile";
 import { passwordMinRule, requiredRule } from "../../utils/formRules";
 
-const ChangePassword = () => {
+export default function ChangePassword() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const changePasswordMutation = useChangePassword();
@@ -79,7 +79,5 @@ const ChangePassword = () => {
       </Form>
     </Card>
   );
-};
-
-export default ChangePassword;
+}
 

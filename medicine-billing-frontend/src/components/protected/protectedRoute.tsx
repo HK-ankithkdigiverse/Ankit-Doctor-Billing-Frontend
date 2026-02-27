@@ -8,7 +8,7 @@ type ProtectedRouteProps = {
   roles?: string[];
 };
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles }) => {
+export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
   const location = useLocation();
   const { data: me, isLoading } = useMe();
 
@@ -49,6 +49,4 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles }) => {
   }
 
   return <Outlet />;
-};
-
-export default ProtectedRoute;
+}

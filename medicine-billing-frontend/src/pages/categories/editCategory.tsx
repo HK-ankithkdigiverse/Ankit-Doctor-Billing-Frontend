@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, Form, Input, Typography, App } from "antd";
+import { Card, Form, Typography, App } from "antd";
 import axios from "axios";
 import { ROUTES } from "../../constants";
 import { useCategory, useUpdateCategory } from "../../hooks/useCategories";
-import { requiredRule } from "../../utils/formRules";
+import CategoryFormFields from "../../components/forms/CategoryFormFields";
+import FormActionButtons from "../../components/forms/FormActionButtons";
 
-const EditCategory = () => {
+export default function EditCategory() {
   const { message } = App.useApp();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -56,27 +57,11 @@ const EditCategory = () => {
         style={{ marginTop: 16 }}
        
       >
-        <Form.Item
-          name="name"
-          label="Category Name"
-          rules={[requiredRule("Category name"), { min: 2, message: "Category name must be at least 2 characters" }]}
-        >
-          <Input placeholder="Enter category name" />
-        </Form.Item>
+        <CategoryFormFields />
 
-        <Form.Item name="description" label="Description" rules={[{ max: 500, message: "Description cannot exceed 500 characters" }]}>
-          <Input.TextArea rows={4} placeholder="Enter description (optional)" />
-        </Form.Item>
-
-        <Form.Item style={{ marginBottom: 0 }}>
-          <Button type="primary" htmlType="submit" loading={isPending}>
-            Update Category
-          </Button>
-        </Form.Item>
+        <FormActionButtons submitText="Update Category" loading={isPending} />
       </Form>
     </Card>
   );
-};
-
-export default EditCategory;
+}
 

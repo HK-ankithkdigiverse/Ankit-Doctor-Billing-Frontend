@@ -1,32 +1,15 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { App, Button, Card, Col, Form, Input, Row, Typography } from "antd";
+import { App, Card, Col, Form, Input, Row, Typography } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCreateUser } from "../../hooks/useUsers";
-import { emailRule, gstRule, passwordMinRule, phoneRule, requiredRule } from "../../utils/formRules";
+import { emailRule, passwordMinRule, phoneRule, requiredRule } from "../../utils/formRules";
 import type { CreateUserPayload } from "../../api/userApi";
-
-const PINCODE_REGEX = /^[0-9]{6}$/;
-const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-
-const pincodeRule = {
-  pattern: PINCODE_REGEX,
-  message: "Pincode must be exactly 6 digits",
-};
-
-const panRule = {
-  pattern: PAN_REGEX,
-  message: "PAN card number must match format ABCDE1234F",
-};
-
-const nonWhitespaceRule = (label: string) => ({
-  validator: (_: unknown, value: string | undefined) => {
-    if (value === undefined || value === null) return Promise.resolve();
-    if (typeof value === "string" && value.trim().length === 0) {
-      return Promise.reject(new Error(`${label} is required`));
-    }
-    return Promise.resolve();
-  },
-});
+import { uploadSingleFileApi } from "../../api/uploadApi";
+import SignatureUploadField from "../../components/forms/SignatureUploadField";
+import UserBusinessFields from "../../components/forms/UserBusinessFields";
+import FormActionButtons from "../../components/forms/FormActionButtons";
+import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../utils/userForm";
 
 interface CreateUserFormValues {
   name: string;
@@ -34,79 +17,65 @@ interface CreateUserFormValues {
   email: string;
   password: string;
   phone?: string;
-  address?: string;
-  state?: string;
-  city?: string;
-  pincode?: string;
-  gstNumber?: string;
-  panCardNumber?: string;
+  address: string;
+  state: string;
+  city: string;
+  pincode: string;
+  gstNumber: string;
+  panCardNumber: string;
 }
-
-const trimIfString = (value?: string) => {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed || undefined;
-};
-
-const getErrorMessage = (error: any): string => {
-  const responseData = error?.response?.data;
-  if (typeof responseData?.message === "string") return responseData.message;
-  if (typeof responseData?.error === "string") return responseData.error;
-  if (typeof error?.message === "string") return error.message;
-  return "";
-};
-
-const isDuplicateEmailError = (error: any) => {
-  const errorText = getErrorMessage(error);
-  return (
-    error?.response?.status === 409 ||
-    (/email/i.test(errorText) && /(already|exists|taken|duplicate)/i.test(errorText))
-  );
-};
 
 const buildPayload = (values: CreateUserFormValues): CreateUserPayload => {
   const name = trimIfString(values.name) || "";
   const medicalName = trimIfString(values.medicalName) || "";
   const email = trimIfString(values.email) || "";
   const password = trimIfString(values.password) || "";
+  const address = trimIfString(values.address) || "";
+  const state = trimIfString(values.state) || "";
+  const city = trimIfString(values.city) || "";
+  const pincode = trimIfString(values.pincode) || "";
+  const gstNumber = trimIfString(values.gstNumber)?.toUpperCase() || "";
+  const panCardNumber = trimIfString(values.panCardNumber)?.toUpperCase() || "";
 
   const payload: CreateUserPayload = {  
     name,
     medicalName,
     email: email.toLowerCase(),
     password,
+    address,
+    state,
+    city,
+    pincode,
+    gstNumber,
+    panCardNumber,
     role: ROLE.USER,
     isActive: true,
   };
 
   const phone = trimIfString(values.phone);
-  const address = trimIfString(values.address);
-  const state = trimIfString(values.state);
-  const city = trimIfString(values.city);
-  const pincode = trimIfString(values.pincode);
-  const gstNumber = trimIfString(values.gstNumber)?.toUpperCase();
-  const panCardNumber = trimIfString(values.panCardNumber)?.toUpperCase();
 
   if (phone) payload.phone = phone;
-  if (address) payload.address = address;
-  if (state) payload.state = state;
-  if (city) payload.city = city;
-  if (pincode) payload.pincode = pincode;
-  if (gstNumber) payload.gstNumber = gstNumber;
-  if (panCardNumber) payload.panCardNumber = panCardNumber;
 
   return payload;
 };
 
-const CreateUser: React.FC = () => {
+export default function CreateUser() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const { mutateAsync: createUser, isPending } = useCreateUser();
   const [form] = Form.useForm<CreateUserFormValues>();
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
 
   const handleSubmit = async (values: CreateUserFormValues) => {
     try {
-      await createUser(buildPayload(values));
+      const payload = buildPayload(values);
+
+      if (signatureFile) {
+        const signaturePath = await uploadSingleFileApi(signatureFile);
+        payload.signature = signaturePath;
+      }
+
+      await createUser(payload);
       message.success("User created");
       navigate(ROUTES.USERS);
     } catch (error: any) {
@@ -179,69 +148,16 @@ const CreateUser: React.FC = () => {
           </Col>
         </Row>
 
-        <Form.Item name="address" label="Address">
-          <Input.TextArea rows={3} />
-        </Form.Item>
+        <UserBusinessFields required />
 
-        <Row gutter={16}>
-          <Col xs={24} md={8}>
-            <Form.Item name="city" label="City">
-              <Input />
-            </Form.Item>
-          </Col>
-           <Col xs={24} md={8}>
-            <Form.Item name="state" label="State">
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={8}>
-            <Form.Item
-              name="pincode"
-              label="Pincode"
-              rules={[pincodeRule]}
-              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
-            >
-              <Input maxLength={6} inputMode="numeric" />
-            </Form.Item>
-          </Col>
-        </Row>
+        <SignatureUploadField
+          disabled={isPending}
+          onSelectFile={(file) => setSignatureFile(file)}
+          onClearFile={() => setSignatureFile(null)}
+        />
 
-        <Row gutter={16}>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="gstNumber"
-              label="GST Number"
-              rules={[gstRule]}
-              normalize={(value?: string) => value?.toUpperCase()}
-            >
-              <Input style={{ textTransform: "uppercase" }} maxLength={15} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="panCardNumber"
-              label="PAN Card Number"
-              rules={[panRule]}
-              normalize={(value?: string) => value?.toUpperCase()}
-            >
-              <Input style={{ textTransform: "uppercase" }} maxLength={10} />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item style={{ marginBottom: 0 }}>
-          <Button onClick={() => navigate(ROUTES.USERS)} style={{ marginRight: 8 }}>
-            Cancel
-          </Button>
-          <Button type="primary" htmlType="submit" loading={isPending}>
-            Add User
-          </Button>
-        </Form.Item>
+        <FormActionButtons submitText="Add User" loading={isPending} onCancel={() => navigate(ROUTES.USERS)} />
       </Form>
     </Card>
   );
-};
-
-export default CreateUser;
-
-
+}

@@ -22,7 +22,7 @@ import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
 import { sortDateTime, sortText } from "../../utils/tableSort";
 
-const CategoriesList = () => {
+export default function CategoriesList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [filters, setFilters] = useState({
@@ -240,6 +240,4 @@ const CategoriesList = () => {
       </div>
     </Card>
   );
-};
-
-export default CategoriesList;
+}

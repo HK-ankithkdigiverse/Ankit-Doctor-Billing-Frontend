@@ -6,7 +6,7 @@ type PageShellProps = PropsWithChildren<{
   className?: string;
 }>;
 
-const PageShell = ({ radial = false, className, children }: PageShellProps) => {
+export default function PageShell({ radial = false, className, children }: PageShellProps) {
   const { mode } = useThemeMode();
   const darkBg = radial
     ? "bg-[radial-gradient(circle_at_12%_18%,#0f172a_0%,#111827_34%,#1e1b4b_68%,#0f172a_100%)]"
@@ -18,6 +18,4 @@ const PageShell = ({ radial = false, className, children }: PageShellProps) => {
       {children}
     </div>
   );
-};
-
-export default PageShell;
+}

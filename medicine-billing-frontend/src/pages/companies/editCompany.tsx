@@ -1,23 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Form, Input, Upload, App } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { Form, App } from "antd";
 import { ROUTES } from "../../constants";
 import { useCompany, useUpdateCompany } from "../../hooks/useCompanies";
-import { emailRule, gstRule, phoneRule, requiredRule } from "../../utils/formRules";
 import { getCompanyDisplayName } from "../../utils/company";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
+import CompanyFormFields from "../../components/forms/CompanyFormFields";
+import FormActionButtons from "../../components/forms/FormActionButtons";
 
-const EditCompany = () => {
+export default function EditCompany() {
   const { message } = App.useApp();
   const { id } = useParams();
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const { data: company, isLoading } = useCompany(id);
   const { mutateAsync, isPending } = useUpdateCompany();
-  const [logo, setLogo] = useState<File | null>(null);
 
   useEffect(() => {
     if (!company) return;
@@ -35,7 +34,6 @@ const EditCompany = () => {
     if (!company) return;
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => formData.append(key, String(value || "")));
-    if (logo) formData.append("logo", logo);
 
     try {
       await mutateAsync({ id: company._id, formData });
@@ -57,47 +55,15 @@ const EditCompany = () => {
       >
         <SectionTitle className="!mb-[18px] !mt-0">Edit Company</SectionTitle>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item name="companyName" label="Company Name" rules={[requiredRule("Company name")]}>
-            <Input style={{ borderRadius: 10 }} />
-          </Form.Item>
-          <Form.Item name="gstNumber" label="GST Number" rules={[requiredRule("GST number"), gstRule]}>
-            <Input style={{ textTransform: "uppercase", borderRadius: 10 }} />
-          </Form.Item>
-          <Form.Item name="email" label="Email" rules={[requiredRule("Email"), emailRule]}>
-            <Input style={{ borderRadius: 10 }} />
-          </Form.Item>
-          <Form.Item
-            name="phone"
-            label="Phone"
-            rules={[requiredRule("Phone"), phoneRule]}
-            normalize={(value?: string) => (value || "").replace(/\D/g, "")}
-          >
-            <Input style={{ borderRadius: 10 }} maxLength={10} inputMode="numeric" />
-          </Form.Item>
-          <Form.Item name="state" label="State" rules={[requiredRule("State"), { max: 80, message: "State must be 80 characters or less" }]}>
-            <Input style={{ borderRadius: 10 }} />
-          </Form.Item>
-          <Form.Item name="address" label="Address" rules={[requiredRule("Address"), { max: 500, message: "Address must be 500 characters or less" }]}>
-            <Input.TextArea rows={4} style={{ borderRadius: 10 }} />
-          </Form.Item>
-          <Form.Item label="Logo">
-            <Upload beforeUpload={(file) => { setLogo(file); return false; }} maxCount={1}>
-              <Button icon={<UploadOutlined />} style={{ borderRadius: 10 }}>Change Logo</Button>
-            </Upload>
-          </Form.Item>
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Button onClick={() => navigate(`${ROUTES.COMPANIES}/${company._id}`)} style={{ marginRight: 8, borderRadius: 10 }}>
-              Cancel
-            </Button>
-            <Button type="primary" htmlType="submit" loading={isPending} className="!border-0 !bg-hero-gradient !rounded-[10px]">
-              Update Company
-            </Button>
-          </Form.Item>
+          <CompanyFormFields />
+          <FormActionButtons
+            submitText="Update Company"
+            loading={isPending}
+            onCancel={() => navigate(`${ROUTES.COMPANIES}/${company._id}`)}
+          />
         </Form>
       </SectionCard>
     </PageShell>
   );
-};
-
-export default EditCompany;
+}
 

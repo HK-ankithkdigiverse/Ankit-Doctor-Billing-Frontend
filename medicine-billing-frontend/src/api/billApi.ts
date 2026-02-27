@@ -1,100 +1,50 @@
 import { api } from "./axios";
 import { BILLS_API } from "../constants";
+import { dataOf } from "./http";
+import type { BillPayload, BillUpdatePayload } from "../types/bill";
 
-/* =========================
-   GET ALL BILLS
-========================= */
-export const getBillsApi = async (params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-}) => {
-  const { data } = await api.get(BILLS_API.ROOT, { params });
-  return data;
+const getErrorMessage = (error: any, fallback: string) => {
+  const responseData = error?.response?.data;
+  const detailMessage =
+    Array.isArray(responseData?.error) && responseData.error.length
+      ? responseData.error[0]
+      : responseData?.error?.message;
+  return detailMessage || responseData?.message || fallback;
 };
 
-/* =========================
-   GET BILL BY ID
-========================= */
-export const getBillByIdApi = async (id: string) => {
-  const { data } = await api.get(BILLS_API.BY_ID(id));
-  return data;
-};
-
-/* =========================
-   CREATE BILL
-========================= */
-export const createBillApi = async (payload: {
-  userId?: string;
-  companyId: string;
-  discount?: number;
-  items: {
-    productId: string;
-    qty: number;
-    freeQty?: number;
-    rate: number;
-    taxPercent: number;
-    discount?: number;
-  }[];
-}) => {
+const requestWithError = async <T>(request: Promise<T>, fallback: string) => {
   try {
-    const { data } = await api.post(BILLS_API.ROOT, {
-      ...payload,
-      discount: payload.discount || 0,
-    });
-
-    return data;
-  } catch (err: any) {
-    const responseData = err?.response?.data;
-    const detailMessage =
-      Array.isArray(responseData?.error) && responseData.error.length
-        ? responseData.error[0]
-        : responseData?.error?.message;
-
-    console.error("Create Bill Error:", responseData);
-    throw new Error(detailMessage || responseData?.message || "Failed to create bill");
+    return await request;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, fallback));
   }
 };
 
-/* =========================
-   DELETE BILL
-========================= */
-export const deleteBillApi = async (id: string) => {
-  const { data } = await api.delete(BILLS_API.BY_ID(id));
-  return data;
-};
+export const getBillsApi = (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) => dataOf(api.get(BILLS_API.ROOT, { params }));
 
-/* =========================
-   UPDATE BILL
-========================= */
-export const updateBillApi = async ({
+export const getBillByIdApi = (id: string) => dataOf(api.get(BILLS_API.BY_ID(id)));
+
+export const createBillApi = (payload: BillPayload) =>
+  requestWithError(
+    dataOf(
+      api.post(BILLS_API.ROOT, {
+        ...payload,
+        discount: payload.discount || 0,
+      })
+    ),
+    "Failed to create bill"
+  );
+
+export const deleteBillApi = (id: string) => dataOf(api.delete(BILLS_API.BY_ID(id)));
+
+export const updateBillApi = ({
   id,
   payload,
 }: {
   id: string;
-  payload: {
-    discount: number;
-    userId?: string;
-    companyId?: string;
-    items?: {
-      productId: string;
-      qty: number;
-      freeQty?: number;
-      rate: number;
-      taxPercent: number;
-      discount?: number;
-    }[];
-  };
-}) => {
-  try {
-    const { data } = await api.put(BILLS_API.BY_ID(id), payload);
-    return data;
-  } catch (err: any) {
-    const responseData = err?.response?.data;
-    const detailMessage =
-      Array.isArray(responseData?.error) && responseData.error.length
-        ? responseData.error[0]
-        : responseData?.error?.message;
-    throw new Error(detailMessage || responseData?.message || "Failed to update bill");
-  }
-};
+  payload: BillUpdatePayload;
+}) => requestWithError(dataOf(api.put(BILLS_API.BY_ID(id), payload)), "Failed to update bill");

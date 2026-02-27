@@ -19,7 +19,7 @@ type SidebarProps = {
   onNavigate?: () => void;
 };
 
-const Sidebar = ({ onNavigate }: SidebarProps) => {
+export default function Sidebar({ onNavigate }: SidebarProps) {
   const { data, isLoading } = useMe();
   const location = useLocation();
   const navigate = useNavigate();
@@ -141,6 +141,4 @@ const Sidebar = ({ onNavigate }: SidebarProps) => {
       />
     </div>
   );
-};
-
-export default Sidebar;
+}
