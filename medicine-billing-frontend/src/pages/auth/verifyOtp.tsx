@@ -4,13 +4,12 @@ import { MailOutlined, SafetyOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuth";
 import type { VerifyOtpPayload } from "../../types";
 import { ROUTES } from "../../constants";
-import { otpRule, requiredRule } from "../../common/helpers/formRules";
-import { useThemeMode } from "../../contexts/themeMode";
+import { otpRule, requiredRule } from "../../utils/formRules";
 import {
   clearPostLoginRedirect,
   readPostLoginRedirect,
   storePostLoginRedirect,
-} from "../../common/helpers/authRedirect";
+} from "../../utils/authRedirect";
 import AuthCard from "../../components/auth/AuthCard";
 
 export default function VerifyOtp() {
@@ -18,7 +17,6 @@ export default function VerifyOtp() {
   const navigate = useNavigate();
   const location = useLocation();
   const { verifyOtp, loading } = useAuth();
-  const { setMode } = useThemeMode();
 
   const emailFromState = location.state?.email || "";
   const otpSent = Boolean(location.state?.otpSent);
@@ -36,7 +34,6 @@ export default function VerifyOtp() {
     try {
       const payload: VerifyOtpPayload = { email: emailFromState, otp: values.otp };
       await verifyOtp(payload);
-      setMode("light");
       message.success("OTP verified successfully");
       const redirectTo = redirectToFromState || readPostLoginRedirect() || ROUTES.DASHBOARD;
       clearPostLoginRedirect();
@@ -102,5 +99,4 @@ export default function VerifyOtp() {
     </AuthCard>
   );
 }
-
 

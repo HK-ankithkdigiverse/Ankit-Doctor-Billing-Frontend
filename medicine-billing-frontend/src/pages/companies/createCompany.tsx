@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import type { User } from "../../types";
 import { useNavigate } from "react-router-dom";
 import { Form, App } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCreateCompany } from "../../hooks/useCompanies";
 import { useMe } from "../../hooks/useMe";
-import { useUsers } from "../../hooks/useUsers";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -13,7 +12,7 @@ import CompanyFormFields from "../../components/forms/CompanyFormFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
 
 interface CompanyFormValues {
-  userId?: string;
+  medicalStoreId?: string;
   companyName: string;
   gstNumber: string;
   email?: string;
@@ -30,22 +29,21 @@ export default function CreateCompany() {
   const [logo, setLogo] = useState<File | null>(null);
   const { data: me } = useMe();
   const isAdmin = String(me?.role || "").toUpperCase() === ROLE.ADMIN;
-  const { data: usersData, isLoading: isUsersLoading } = useUsers(1, 1000, "", "all");
-  const userOptions = useMemo<{ label: string; value: string }[]>(
+  const { data: medicalStoresData, isLoading: isLoadingStores } = useMedicalStores(1, 1000, "", {
+    enabled: isAdmin,
+  });
+  const storeOptions = useMemo<{ label: string; value: string }[]>(
     () =>
-      (usersData?.users ?? ([] as User[]))
-        .filter(
-          (user: User) =>
-            user.isActive !== false && String(user.role || "").toUpperCase() === ROLE.USER
-        )
-        .map((user: User) => ({
-          value: user._id,
-          label: user.name || user.email || user._id,
+      (medicalStoresData?.medicalStores ?? [])
+        .filter((store) => store.isActive !== false)
+        .map((store) => ({
+          value: store._id,
+          label: store.name || store._id,
         }))
         .sort((a: { label: string; value: string }, b: { label: string; value: string }) =>
           a.label.localeCompare(b.label)
         ),
-    [usersData?.users]
+    [medicalStoresData?.medicalStores]
   );
 
   const handleSubmit = async (values: CompanyFormValues) => {
@@ -76,10 +74,10 @@ export default function CreateCompany() {
           <CompanyFormFields
             showLogo
             onLogoSelect={setLogo}
-            showUserSelect={isAdmin}
-            userSelectRequired={isAdmin}
-            userOptions={userOptions}
-            userSelectLoading={isAdmin && isUsersLoading}
+            showStoreSelect={isAdmin}
+            storeSelectRequired={isAdmin}
+            storeOptions={storeOptions}
+            storeSelectLoading={isAdmin && isLoadingStores}
           />
           <div className="rounded-[10px]!">
             <FormActionButtons
@@ -93,4 +91,3 @@ export default function CreateCompany() {
     </PageShell>
   );
 }
-

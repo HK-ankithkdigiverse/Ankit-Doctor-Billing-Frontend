@@ -2,9 +2,10 @@ import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Spin } from "antd";
 import { ROUTES } from "../../constants";
-import { clearStoredToken } from "../../common/helpers/tokenStorage";
-import { hasRequiredRole } from "../../common/helpers/roleAccess";
-import { storePostLoginRedirect } from "../../common/helpers/authRedirect";
+import { clearStoredToken } from "../../helpers/tokenStorage";
+import { hasRequiredRole } from "../../utils/roleAccess";
+import { storePostLoginRedirect } from "../../utils/authRedirect";
+import { getLoginBlockReason } from "../../utils/authAccess";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   clearAuth,
@@ -23,13 +24,14 @@ export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
   const me = useAppSelector(selectAuthUser);
   const isLoading = useAppSelector(selectAuthLoading);
   const isInitialized = useAppSelector(selectAuthInitialized);
+  const loginBlockReason = getLoginBlockReason(me);
 
   useEffect(() => {
-    if (me?.isActive === false) {
+    if (loginBlockReason) {
       clearStoredToken();
       dispatch(clearAuth());
     }
-  }, [dispatch, me?.isActive]);
+  }, [dispatch, loginBlockReason]);
 
   if (!isInitialized || isLoading) {
     return (
@@ -46,10 +48,11 @@ export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
     );
   }
 
-  if (!me || me.isActive === false) {
+  if (!me || loginBlockReason) {
     const target = `${location.pathname}${location.search}${location.hash}`;
     storePostLoginRedirect(target);
-    return <Navigate to={ROUTES.LOGIN} replace state={{ from: location }} />;
+    const loginPath = loginBlockReason ? `${ROUTES.LOGIN}?reason=${loginBlockReason}` : ROUTES.LOGIN;
+    return <Navigate to={loginPath} replace state={{ from: location }} />;
   }
 
   if (!hasRequiredRole(me.role, roles)) {
@@ -58,4 +61,3 @@ export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
 
   return <Outlet />;
 }
-

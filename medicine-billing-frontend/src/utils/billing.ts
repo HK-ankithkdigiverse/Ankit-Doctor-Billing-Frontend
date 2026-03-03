@@ -391,6 +391,7 @@ export const mapUsersToSelectOptions = (
         _id?: string;
         name?: string;
         email?: string;
+        medicalName?: string;
         state?: string;
         medicalStore?:
           | {
@@ -416,7 +417,6 @@ export const mapUsersToSelectOptions = (
     .map((user) => {
       const name = user.name || "";
       const email = user.email || "";
-      const label = includeEmailWithName ? (name ? `${name} (${email})` : email) : name || email;
       const medicalStore =
         typeof user.medicalStoreId === "object"
           ? user.medicalStoreId
@@ -427,7 +427,12 @@ export const mapUsersToSelectOptions = (
         typeof user.medicalStoreId === "string"
           ? user.medicalStoreId
           : user.medicalStoreId?._id;
-      const medicalStoreName = medicalStore?.name || "";
+      const medicalStoreName =
+        medicalStore?.name ||
+        (typeof user.medicalName === "string" ? user.medicalName.trim() : "") ||
+        "";
+      const baseLabel = includeEmailWithName ? (name ? `${name} (${email})` : email) : name || email;
+      const label = medicalStoreName.trim() || baseLabel;
       const medicalStoreState = (user.state || medicalStore?.state || "").trim();
       return {
         value: user._id as string,
@@ -571,7 +576,7 @@ export const validateBillForm = ({
   items: BillFormRow[];
 }) => {
   if (!companyId) return "Company is required";
-  if (isAdmin && !userId) return "User is required";
+  if (isAdmin && !userId) return "Store is required";
   if (toNumber(gstPercent) < 0 || toNumber(gstPercent) > 100) return "GST % must be between 0 and 100";
   if (toNumber(discount) < 0 || toNumber(discount) > 100) return "Discount % must be between 0 and 100";
   if (!items.length) return "At least one bill item is required";

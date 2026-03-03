@@ -1,44 +1,44 @@
 import { Button, Form, Input, Select, Upload } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
-import { emailRule, gstRule, phoneRule, requiredRule } from "../../common/helpers/formRules";
+import { emailRule, gstRule, phoneRule, requiredRule } from "../../utils/formRules";
 
 interface CompanyFormFieldsProps {
   showLogo?: boolean;
   onLogoSelect?: (file: File | null) => void;
-  showUserSelect?: boolean;
-  userSelectRequired?: boolean;
-  userOptions?: Array<{ label: string; value: string }>;
-  userSelectLoading?: boolean;
+  showStoreSelect?: boolean;
+  storeSelectRequired?: boolean;
+  storeOptions?: Array<{ label: string; value: string }>;
+  storeSelectLoading?: boolean;
 }
 
 export default function CompanyFormFields({
   showLogo = false,
   onLogoSelect,
-  showUserSelect = false,
-  userSelectRequired = false,
-  userOptions = [],
-  userSelectLoading = false,
+  showStoreSelect = false,
+  storeSelectRequired = false,
+  storeOptions = [],
+  storeSelectLoading = false,
 }: CompanyFormFieldsProps) {
   return (
     <>
-      {showUserSelect && (
+      {showStoreSelect && (
         <Form.Item
-          name="userId"
-          label="User"
-          rules={userSelectRequired ? [requiredRule("User")] : []}
+          name="medicalStoreId"
+          label="Store"
+          rules={storeSelectRequired ? [requiredRule("Store")] : []}
           extra={
-            !userSelectLoading && userOptions.length === 0
-              ? "No active users found."
+            !storeSelectLoading && storeOptions.length === 0
+              ? "No active medical store found."
               : undefined
           }
         >
           <Select
             showSearch
             optionFilterProp="label"
-            placeholder={userSelectLoading ? "Loading users..." : "Select user"}
-            options={userOptions}
-            loading={userSelectLoading}
-            allowClear={!userSelectRequired}
+            placeholder={storeSelectLoading ? "Loading stores..." : "Select store"}
+            options={storeOptions}
+            loading={storeSelectLoading}
+            allowClear={!storeSelectRequired}
           />
         </Form.Item>
       )}
@@ -90,4 +90,3 @@ export default function CompanyFormFields({
     </>
   );
 }
-

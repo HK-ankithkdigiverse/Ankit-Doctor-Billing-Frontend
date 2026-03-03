@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { App, Button, Form, Typography } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
-import type { MedicalStorePayload } from "../../modules/medicalStores/api";
+import type { MedicalStorePayload } from "../../api/medicalStoreApi";
 import MedicalStoreFormFields from "../../components/forms/MedicalStoreFormFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
 import PageShell from "../../components/ui/PageShell";
@@ -9,7 +9,7 @@ import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
 import { ROUTES } from "../../constants";
 import { useMedicalStore, useUpdateMedicalStore } from "../../hooks/useMedicalStores";
-import { getErrorMessage, trimIfString } from "../../common/helpers/userForm";
+import { getErrorMessage, trimIfString } from "../../utils/userForm";
 
 interface MedicalStoreFormValues {
   name: string;

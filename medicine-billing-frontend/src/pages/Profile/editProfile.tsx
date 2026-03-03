@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { App, Card, Col, Form, Input, Row, Typography } from "antd";
 import { ROUTES } from "../../constants";
 import { useProfile, useUpdateProfile } from "../../hooks/useProfile";
-import { emailRule, requiredRule } from "../../common/helpers/formRules";
-import { uploadSingleFileApi } from "../../modules/files/api";
+import { emailRule, requiredRule } from "../../utils/formRules";
+import { uploadSingleFileApi } from "../../api/uploadApi";
 import { getUploadFileUrl } from "../../utils/company";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
 import FormActionButtons from "../../components/forms/FormActionButtons";
-import { nonWhitespaceRule, trimIfString } from "../../common/helpers/userForm";
+import { nonWhitespaceRule, trimIfString } from "../../utils/userForm";
 
 interface EditProfileFormValues {
   name: string;

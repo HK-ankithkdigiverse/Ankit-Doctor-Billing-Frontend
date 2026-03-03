@@ -1,5 +1,5 @@
 import { Form, Input } from "antd";
-import { requiredRule } from "../../common/helpers/formRules";
+import { requiredRule } from "../../utils/formRules";
 
 export default function CategoryFormFields() {
   return (

@@ -12,7 +12,6 @@ import {
 import { ROUTES } from "../../constants";
 import { useCompany } from "../../hooks/useCompanies";
 import { getCompanyDisplayName, getCompanyLogoUrl } from "../../utils/company";
-import { useThemeMode } from "../../contexts/themeMode";
 
 type DetailField = {
   key: string;
@@ -34,8 +33,6 @@ const getInitials = (value: string) => {
 export default function CompanyDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { mode } = useThemeMode();
-  const isDark = mode === "dark";
   const { data: company, isLoading } = useCompany(id);
   const logoUrl = useMemo(
     () => getCompanyLogoUrl((company as any)?.logo || (company as any)?.logoUrl || (company as any)?.image),
@@ -54,43 +51,24 @@ export default function CompanyDetails() {
   const avatarText = getInitials(companyDisplayName);
   const avatarSrc = logoUrl && isLogoVisible ? logoUrl : undefined;
 
-  const palette = isDark
-    ? {
-        panelBg: "rgba(2, 6, 23, 0.78)",
-        panelBorder: "rgba(148, 163, 184, 0.35)",
-        panelShadow: "0 14px 32px rgba(2, 6, 23, 0.42)",
-        title: "#f8fafc",
-        subtitle: "#94a3b8",
-        iconBg: "rgba(30, 41, 59, 0.9)",
-        iconColor: "#cbd5e1",
-        avatarBg: "#1e3a8a",
-        avatarText: "#dbeafe",
-        fieldBg: "rgba(15, 23, 42, 0.58)",
-        fieldBorder: "rgba(148, 163, 184, 0.34)",
-        label: "#94a3b8",
-        value: "#f8fafc",
-        editBg: "rgba(30, 41, 59, 0.7)",
-        editBorder: "rgba(148, 163, 184, 0.45)",
-        editText: "#e2e8f0",
-      }
-    : {
-        panelBg: "#ffffff",
-        panelBorder: "#dbe4ef",
-        panelShadow: "0 12px 28px rgba(15, 23, 42, 0.09)",
-        title: "#0f172a",
-        subtitle: "#64748b",
-        iconBg: "#eef2f7",
-        iconColor: "#475569",
-        avatarBg: "#dbeafe",
-        avatarText: "#1e3a8a",
-        fieldBg: "#f8fafc",
-        fieldBorder: "#dbe4ef",
-        label: "#5b7089",
-        value: "#0f172a",
-        editBg: "#ffffff",
-        editBorder: "#cbd5e1",
-        editText: "#334155",
-      };
+  const palette = {
+    panelBg: "#ffffff",
+    panelBorder: "#dbe4ef",
+    panelShadow: "0 12px 28px rgba(15, 23, 42, 0.09)",
+    title: "#0f172a",
+    subtitle: "#64748b",
+    iconBg: "#eef2f7",
+    iconColor: "#475569",
+    avatarBg: "#dbeafe",
+    avatarText: "#1e3a8a",
+    fieldBg: "#f8fafc",
+    fieldBorder: "#dbe4ef",
+    label: "#5b7089",
+    value: "#0f172a",
+    editBg: "#ffffff",
+    editBorder: "#cbd5e1",
+    editText: "#334155",
+  };
 
   const fields: DetailField[] = [
     { key: "name", label: "Company Name", value: companyDisplayName, icon: <ShopOutlined /> },

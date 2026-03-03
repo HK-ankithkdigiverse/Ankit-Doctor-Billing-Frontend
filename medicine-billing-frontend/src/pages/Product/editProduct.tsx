@@ -25,11 +25,9 @@ const toId = (value: unknown) => {
   return "";
 };
 
-const getCompanyMedicalStoreId = (company: any) =>
-  toId(company?.medicalStoreId) || toId(company?.userId?.medicalStoreId);
+const getCompanyMedicalStoreId = (company: any) => toId(company?.medicalStoreId);
 
-const getCategoryMedicalStoreId = (category: any) =>
-  toId(category?.medicalStoreId) || toId(category?.createdBy?.medicalStoreId);
+const getCategoryMedicalStoreId = (category: any) => toId(category?.medicalStoreId);
 
 export default function UpdateProduct() {
   const { message } = App.useApp();

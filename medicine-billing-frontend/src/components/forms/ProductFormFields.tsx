@@ -1,5 +1,5 @@
 import { Form, Input, InputNumber, Select } from "antd";
-import { requiredRule } from "../../common/helpers/formRules";
+import { requiredRule } from "../../utils/formRules";
 
 type Option = {
   value: string;

@@ -1,6 +1,6 @@
 import { App, Form } from "antd";
 import { useNavigate } from "react-router-dom";
-import type { MedicalStorePayload } from "../../modules/medicalStores/api";
+import type { MedicalStorePayload } from "../../api/medicalStoreApi";
 import MedicalStoreFormFields from "../../components/forms/MedicalStoreFormFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
 import PageShell from "../../components/ui/PageShell";
@@ -8,7 +8,7 @@ import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
 import { ROUTES } from "../../constants";
 import { useCreateMedicalStore } from "../../hooks/useMedicalStores";
-import { getErrorMessage, trimIfString } from "../../common/helpers/userForm";
+import { getErrorMessage, trimIfString } from "../../utils/userForm";
 
 interface MedicalStoreFormValues {
   name: string;
@@ -20,7 +20,6 @@ interface MedicalStoreFormValues {
   gstNumber: string;
   panCardNumber: string;
   gstType: "IGST" | "CGST_SGST";
-  isActive?: boolean;
 }
 
 const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => {
@@ -34,7 +33,7 @@ const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => {
     gstNumber: (trimIfString(values.gstNumber) || "").toUpperCase(),
     panCardNumber: (trimIfString(values.panCardNumber) || "").toUpperCase(),
     gstType: values.gstType,
-    isActive: values.isActive !== false,
+    isActive: true,
   };
 };
 
@@ -65,9 +64,9 @@ export default function CreateMedicalStore() {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          initialValues={{ isActive: true, gstType: "CGST_SGST" }}
+          initialValues={{ gstType: "CGST_SGST" }}
         >
-          <MedicalStoreFormFields disabled={isPending} showStatus />
+          <MedicalStoreFormFields disabled={isPending} showStatus={false} />
           <FormActionButtons
             submitText="Create Medical Store"
             loading={isPending}

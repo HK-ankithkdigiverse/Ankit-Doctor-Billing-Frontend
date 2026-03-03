@@ -4,12 +4,12 @@ import { App, Card, Col, Form, Input, Row, Select, Typography } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCreateUser } from "../../hooks/useUsers";
 import { useMedicalStores } from "../../hooks/useMedicalStores";
-import { emailRule, passwordMinRule, requiredRule } from "../../common/helpers/formRules";
-import type { CreateUserPayload } from "../../modules/users/api";
-import { uploadSingleFileApi } from "../../modules/files/api";
+import { emailRule, passwordMinRule, requiredRule } from "../../utils/formRules";
+import type { CreateUserPayload } from "../../api/userApi";
+import { uploadSingleFileApi } from "../../api/uploadApi";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
 import FormActionButtons from "../../components/forms/FormActionButtons";
-import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../common/helpers/userForm";
+import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../utils/userForm";
 
 interface CreateUserFormValues {
   name: string;

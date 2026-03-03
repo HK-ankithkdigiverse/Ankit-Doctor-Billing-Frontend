@@ -4,14 +4,14 @@ import { App, Button, Card, Col, Form, Input, Row, Select, Typography } from "an
 import { ROUTES } from "../../constants";
 import { useUpdateUser, useUsers } from "../../hooks/useUsers";
 import { useMedicalStores } from "../../hooks/useMedicalStores";
-import type { UpdateUserPayload } from "../../modules/users/api";
+import type { UpdateUserPayload } from "../../api/userApi";
 import type { User } from "../../types";
-import { emailRule, requiredRule } from "../../common/helpers/formRules";
-import { uploadSingleFileApi } from "../../modules/files/api";
+import { emailRule, requiredRule } from "../../utils/formRules";
+import { uploadSingleFileApi } from "../../api/uploadApi";
 import { getUploadFileUrl } from "../../utils/company";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
 import FormActionButtons from "../../components/forms/FormActionButtons";
-import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../common/helpers/userForm";
+import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../utils/userForm";
 import type { EditUserFormValues, NormalizedEditUserValues } from "../../types/userForm";
 
 interface EditUserLocationState {

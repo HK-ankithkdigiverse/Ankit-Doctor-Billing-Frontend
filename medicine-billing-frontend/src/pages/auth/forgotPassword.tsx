@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { App, Button, Form, Input } from "antd";
-import { forgotPasswordApi } from "../../modules/auth/api";
+import { forgotPasswordApi } from "../../api/auth.api";
 import { ROUTES } from "../../constants";
-import { emailRule, requiredRule } from "../../common/helpers/formRules";
+import { emailRule, requiredRule } from "../../utils/formRules";
 import AuthCard from "../../components/auth/AuthCard";
 
 type ForgotPasswordValues = {

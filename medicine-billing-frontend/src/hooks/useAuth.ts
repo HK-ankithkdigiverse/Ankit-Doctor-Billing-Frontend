@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { loginApi, logoutApi, verifyOtpApi } from "../modules/auth/api";
+import { loginApi, logoutApi, verifyOtpApi } from "../api/auth.api";
 import { ROUTES } from "../constants";
-import { clearStoredToken, setStoredToken } from "../common/helpers/tokenStorage";
+import { clearStoredToken, setStoredToken } from "../helpers/tokenStorage";
+import { getLoginBlockReason } from "../utils/authAccess";
 import { useAppDispatch } from "../store/hooks";
 import { clearAuth, hydrateAuth, setToken } from "../store/slices/authSlice";
 
@@ -10,6 +11,12 @@ export const useAuth = () => {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+
+  const clearAuthState = () => {
+    clearStoredToken();
+    dispatch(clearAuth());
+    queryClient.clear();
+  };
 
   const login = useMutation({
     mutationFn: loginApi,
@@ -23,15 +30,18 @@ export const useAuth = () => {
       setStoredToken(data.token);
       dispatch(setToken(data.token));
       queryClient.clear();
-      await dispatch(hydrateAuth());
+      const hydratedUser = await dispatch(hydrateAuth()).unwrap();
+      const loginBlockReason = getLoginBlockReason(hydratedUser);
+      if (!loginBlockReason) return;
+
+      clearAuthState();
+      throw new Error(
+        loginBlockReason === "store-inactive"
+          ? "Your medical store is not active."
+          : "Your account is not active."
+      );
     },
   });
-
-  const clearAuthState = () => {
-    clearStoredToken();
-    dispatch(clearAuth());
-    queryClient.clear();
-  };
 
   const logout = useMutation({
     mutationFn: logoutApi,
@@ -53,5 +63,4 @@ export const useAuth = () => {
     loading: login.isPending || verifyOtp.isPending || logout.isPending,
   };
 };
-
 

@@ -3,8 +3,9 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Spin } from "antd";
 import NotFound from "../../pages/notFound";
 import { ROUTES } from "../../constants";
-import { clearStoredToken } from "../../common/helpers/tokenStorage";
-import { clearPostLoginRedirect, readPostLoginRedirect } from "../../common/helpers/authRedirect";
+import { clearStoredToken } from "../../helpers/tokenStorage";
+import { clearPostLoginRedirect, readPostLoginRedirect } from "../../utils/authRedirect";
+import { getLoginBlockReason } from "../../utils/authAccess";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   clearAuth,
@@ -19,14 +20,15 @@ export default function PublicOnlyRoute() {
   const me = useAppSelector(selectAuthUser);
   const isLoading = useAppSelector(selectAuthLoading);
   const isInitialized = useAppSelector(selectAuthInitialized);
+  const loginBlockReason = getLoginBlockReason(me);
 
   useEffect(() => {
-    if (me?.isActive === false) {
+    if (loginBlockReason) {
       clearStoredToken();
       clearPostLoginRedirect();
       dispatch(clearAuth());
     }
-  }, [dispatch, me?.isActive]);
+  }, [dispatch, loginBlockReason]);
 
   if (!isInitialized || isLoading) {
     return (
@@ -43,7 +45,7 @@ export default function PublicOnlyRoute() {
     );
   }
 
-  if (me?.isActive === false) {
+  if (loginBlockReason) {
     clearPostLoginRedirect();
     return <Outlet />;
   }
@@ -59,4 +61,3 @@ export default function PublicOnlyRoute() {
 
   return <Outlet />;
 }
-

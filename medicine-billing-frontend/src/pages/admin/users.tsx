@@ -17,8 +17,8 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { User } from "../../types";
 import { useMe } from "../../hooks/useMe";
 import { useConfirmDialog } from "../../utils/confirmDialog";
-import { formatDateTime } from "../../common/helpers/dateTime";
-import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
+import { formatDateTime } from "../../utils/dateTime";
+import { createDateSorter, createNameSorter } from "../../utils/tableSort";
 
 export default function Users() {
   const { message } = App.useApp();

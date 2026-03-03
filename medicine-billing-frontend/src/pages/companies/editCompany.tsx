@@ -1,11 +1,10 @@
 import { useEffect, useMemo } from "react";
-import type { User } from "../../types";
 import { useParams, useNavigate } from "react-router-dom";
 import { Form, App } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCompany, useUpdateCompany } from "../../hooks/useCompanies";
 import { useMe } from "../../hooks/useMe";
-import { useUsers } from "../../hooks/useUsers";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { getCompanyDisplayName } from "../../utils/company";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
@@ -14,7 +13,7 @@ import CompanyFormFields from "../../components/forms/CompanyFormFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
 
 interface CompanyFormValues {
-  userId?: string;
+  medicalStoreId?: string;
   companyName: string;
   gstNumber: string;
   email?: string;
@@ -32,31 +31,30 @@ export default function EditCompany() {
   const { mutateAsync, isPending } = useUpdateCompany();
   const { data: me } = useMe();
   const isAdmin = String(me?.role || "").toUpperCase() === ROLE.ADMIN;
-  const { data: usersData, isLoading: isUsersLoading } = useUsers(1, 1000, "", "all");
-  const userOptions = useMemo<{ label: string; value: string }[]>(
+  const { data: medicalStoresData, isLoading: isLoadingStores } = useMedicalStores(1, 1000, "", {
+    enabled: isAdmin,
+  });
+  const storeOptions = useMemo<{ label: string; value: string }[]>(
     () =>
-      (usersData?.users ?? ([] as User[]))
-        .filter(
-          (user: User) =>
-            user.isActive !== false && String(user.role || "").toUpperCase() === ROLE.USER
-        )
-        .map((user: User) => ({
-          value: user._id,
-          label: user.name || user.email || user._id,
+      (medicalStoresData?.medicalStores ?? [])
+        .filter((store) => store.isActive !== false)
+        .map((store) => ({
+          value: store._id,
+          label: store.name || store._id,
         }))
         .sort((a: { label: string; value: string }, b: { label: string; value: string }) =>
           a.label.localeCompare(b.label)
         ),
-    [usersData?.users]
+    [medicalStoresData?.medicalStores]
   );
 
   useEffect(() => {
     if (!company) return;
-    const selectedUserId =
-      typeof company.userId === "string" ? company.userId : company.userId?._id;
+    const selectedStoreId =
+      typeof company.medicalStoreId === "string" ? company.medicalStoreId : company.medicalStoreId?._id;
 
     form.setFieldsValue({
-      userId: selectedUserId || undefined,
+      medicalStoreId: selectedStoreId || undefined,
       companyName: getCompanyDisplayName(company),
       gstNumber: company.gstNumber || "",
       email: company.email || "",
@@ -95,10 +93,10 @@ export default function EditCompany() {
         <SectionTitle className="mb-4.5! mt-0!">Edit Company</SectionTitle>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <CompanyFormFields
-            showUserSelect={isAdmin}
-            userSelectRequired={isAdmin}
-            userOptions={userOptions}
-            userSelectLoading={isAdmin && isUsersLoading}
+            showStoreSelect={isAdmin}
+            storeSelectRequired={isAdmin}
+            storeOptions={storeOptions}
+            storeSelectLoading={isAdmin && isLoadingStores}
           />
           <FormActionButtons
             submitText="Update Company"
@@ -110,4 +108,3 @@ export default function EditCompany() {
     </PageShell>
   );
 }
-

@@ -6,7 +6,7 @@ import {
   updateProductApi,
   deleteProductApi,
   getProductByIdApi,
-} from "../modules/products/api";
+} from "../api/productApi";
 import { QUERY_KEYS } from "../constants";
 
 const isValidObjectId = (id?: string) => !!id && /^[a-fA-F0-9]{24}$/.test(id);

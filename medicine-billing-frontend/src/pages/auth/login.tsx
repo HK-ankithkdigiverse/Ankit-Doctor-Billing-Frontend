@@ -5,8 +5,8 @@ import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuth";
 import type { LoginPayload } from "../../types";
 import { ROUTES } from "../../constants";
-import { emailRule, passwordMinRule, requiredRule } from "../../common/helpers/formRules";
-import { readPostLoginRedirect } from "../../common/helpers/authRedirect";
+import { emailRule, passwordMinRule, requiredRule } from "../../utils/formRules";
+import { readPostLoginRedirect } from "../../utils/authRedirect";
 import AuthCard from "../../components/auth/AuthCard";
 
 export default function Login() {
@@ -20,6 +20,16 @@ export default function Login() {
     const reason = params.get("reason");
     if (reason === "session-expired") {
       message.warning("Your session expired. Please login again.");
+      navigate(ROUTES.LOGIN, { replace: true });
+      return;
+    }
+    if (reason === "account-inactive") {
+      message.error("Your account is not active.");
+      navigate(ROUTES.LOGIN, { replace: true });
+      return;
+    }
+    if (reason === "store-inactive") {
+      message.error("Your medical store is not active.");
       navigate(ROUTES.LOGIN, { replace: true });
     }
   }, [location.search, message, navigate]);
@@ -35,11 +45,27 @@ export default function Login() {
       navigate(ROUTES.VERIFY_OTP, { state: { email: values.email, otpSent: true, redirectTo: fromPath } });
     } catch (error: any) {
       const statusCode = error?.response?.status;
-      const apiStatus = Number(error?.response?.data?.status || 0);
+      const responseData = error?.response?.data;
+      const apiStatus = Number(responseData?.status || 0);
+      const responseMessage = String(
+        responseData?.message ||
+        responseData?.error?.message ||
+        (Array.isArray(responseData?.error) ? responseData.error[0] : "")
+      ).toLowerCase();
+      const storeInactiveFromPayload =
+        responseData?.medicalStore?.isActive === false ||
+        responseData?.medicalStoreId?.isActive === false ||
+        responseData?.medicalStoreActive === false;
+      const isStoreInactive = storeInactiveFromPayload || responseMessage.includes("store inactive");
       const isInactiveAccount =
         statusCode === 403 ||
         apiStatus === 403 ||
-        error?.response?.data?.isActive === false;
+        responseData?.isActive === false;
+
+      if (isStoreInactive) {
+        message.error("Your medical store is not active.");
+        return;
+      }
 
       if (isInactiveAccount) {
         message.error("Your account is not active.");
@@ -87,5 +113,4 @@ export default function Login() {
     </AuthCard>
   );
 }
-
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ClipboardEvent, type FocusEvent, type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import {
   App,
   Button,
@@ -22,7 +22,7 @@ import {
   toBillPayloadItems,
   validateBillForm,
 } from "../../utils/billing";
-import { createNameSorter } from "../../common/helpers/tableSort";
+import { createNameSorter } from "../../utils/tableSort";
 
 type BillFormProps = {
   title: string;
@@ -40,6 +40,26 @@ type BillFormProps = {
   onSubmit: (payload: BillPayload) => Promise<void>;
   onCancel: () => void;
 };
+
+const normalizeWholePercent = (value: number) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  const clamped = Math.min(100, Math.max(0, numeric));
+  return Math.floor(clamped);
+};
+
+const parseWholePercentInput = (input: string | undefined) => {
+  const digitsOnly = String(input ?? "").replace(/[^\d]/g, "");
+  return normalizeWholePercent(digitsOnly === "" ? 0 : Number(digitsOnly));
+};
+const PERCENT_CONTROL_KEYS = new Set(["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End", "Enter"]);
+const hasInvalidPercentText = (input: string | undefined) => {
+  const trimmed = String(input ?? "").trim();
+  if (!trimmed) return false;
+  return /[^0-9]/.test(trimmed);
+};
+const getCompanyMedicalStoreId = (company: any) =>
+  typeof company?.medicalStoreId === "object" ? company?.medicalStoreId?._id : company?.medicalStoreId;
 
 export default function BillForm({
   title,
@@ -60,8 +80,8 @@ export default function BillForm({
   const { message } = App.useApp();
   const [userId, setUserId] = useState(initialUserId);
   const [companyId, setCompanyId] = useState(initialCompanyId);
-  const [discountPercent, setDiscountPercent] = useState(initialDiscount);
-  const [gstPercent, setGstPercent] = useState(initialGstPercent);
+  const [discountPercent, setDiscountPercent] = useState(normalizeWholePercent(initialDiscount));
+  const [gstPercent, setGstPercent] = useState(normalizeWholePercent(initialGstPercent));
   const [items, setItems] = useState<BillFormRow[]>(normalizeBillFormRows(initialItems));
   const { data: me } = useMe();
   const { data: medicalStoresData } = useMedicalStores(1, 1000, "");
@@ -75,21 +95,63 @@ export default function BillForm({
   useEffect(() => {
     setUserId(initialUserId || "");
     setCompanyId(initialCompanyId || "");
-    setDiscountPercent(Number(initialDiscount || 0));
-    setGstPercent(Number(initialGstPercent || 0));
+    setDiscountPercent(normalizeWholePercent(initialDiscount));
+    setGstPercent(normalizeWholePercent(initialGstPercent));
     setItems(normalizeBillFormRows(initialItems));
   }, [initialUserId, initialCompanyId, initialDiscount, initialGstPercent, initialItems]);
 
+  const storeNameById = useMemo(() => {
+    const storeMap = new Map<string, string>();
+    (medicalStoresData?.medicalStores ?? []).forEach((store: any) => {
+      const storeId = String(store?._id || "").trim();
+      const storeName = String(store?.name || "").trim();
+      if (!storeId || !storeName) return;
+      storeMap.set(storeId, storeName);
+    });
+    return storeMap;
+  }, [medicalStoresData?.medicalStores]);
+
+  const storeOptions = useMemo(
+    () => {
+      const optionsByStoreId = new Map<string, BillUserOption>();
+      users.forEach((option) => {
+        const storeId = String(option.medicalStoreId || "").trim();
+        if (!storeId) return;
+        const resolvedStoreName =
+          option.medicalStoreName?.trim() || (storeId ? storeNameById.get(storeId) : "") || "";
+        if (optionsByStoreId.has(storeId)) return;
+        optionsByStoreId.set(storeId, {
+          ...option,
+          medicalStoreId: storeId,
+          medicalStoreName: resolvedStoreName || option.medicalStoreName,
+          label: resolvedStoreName || option.label,
+        });
+      });
+      return Array.from(optionsByStoreId.values());
+    },
+    [storeNameById, users]
+  );
+
+  useEffect(() => {
+    if (!isAdmin || !userId) return;
+    const selectedUser = users.find((option) => option.value === userId);
+    const selectedStoreId = String(selectedUser?.medicalStoreId || "").trim();
+    if (!selectedStoreId) return;
+    const canonicalStoreOption = storeOptions.find(
+      (option) => String(option.medicalStoreId || "").trim() === selectedStoreId
+    );
+    if (canonicalStoreOption && canonicalStoreOption.value !== userId) {
+      setUserId(canonicalStoreOption.value);
+    }
+  }, [isAdmin, storeOptions, userId, users]);
+
   const companyOptions = useMemo(() => {
-    const selectedUserStoreId = users.find((option) => option.value === userId)?.medicalStoreId || "";
+    const selectedUserStoreId = storeOptions.find((option) => option.value === userId)?.medicalStoreId || "";
 
     const isVisibleForSelectedUser = (company: any) => {
       if (!isAdmin) return true;
       if (!userId || !selectedUserStoreId) return false;
-      const companyStoreId =
-        typeof company?.medicalStoreId === "object"
-          ? company?.medicalStoreId?._id
-          : company?.medicalStoreId;
+      const companyStoreId = getCompanyMedicalStoreId(company);
       return String(companyStoreId || "") === String(selectedUserStoreId);
     };
 
@@ -107,11 +169,11 @@ export default function BillForm({
     }
 
     return options;
-  }, [companies, initialCompanyId, initialCompanyName, isAdmin, userId, users]);
+  }, [companies, initialCompanyId, initialCompanyName, isAdmin, storeOptions, userId]);
 
   const getProduct = (id: string) => products.find((product: any) => product._id === id);
   const getProductName = (id: string) => getProduct(id)?.name || "";
-  const selectedUserOption = users.find((option) => option.value === userId);
+  const selectedUserOption = storeOptions.find((option) => option.value === userId);
 
   const meMedicalStoreId =
     typeof me?.medicalStoreId === "string"
@@ -177,6 +239,31 @@ export default function BillForm({
   const removeRow = (rowId: string) =>
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.rowId !== rowId)));
 
+  const handlePercentBlur = (
+    label: "GST" | "Discount",
+    setValue: (next: number) => void
+  ) => (event: FocusEvent<HTMLInputElement>) => {
+    const rawValue = event.target.value;
+    if (hasInvalidPercentText(rawValue)) {
+      message.error(`${label} % accepts only numbers`);
+    }
+    setValue(parseWholePercentInput(rawValue));
+  };
+
+  const handlePercentKeyDown = (label: "GST" | "Discount") => (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (/^\d$/.test(event.key) || PERCENT_CONTROL_KEYS.has(event.key)) return;
+    event.preventDefault();
+    message.error(`${label} % accepts only numbers`);
+  };
+
+  const handlePercentPaste = (label: "GST" | "Discount") => (event: ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = event.clipboardData.getData("text");
+    if (!hasInvalidPercentText(pastedText)) return;
+    event.preventDefault();
+    message.error(`${label} % accepts only numbers`);
+  };
+
   const {
     subTotal,
     totalTax,
@@ -196,6 +283,20 @@ export default function BillForm({
   );
 
   const submit = async () => {
+    if (isAdmin && userId && !selectedUserMedicalStoreId) {
+      message.error("Selected store is invalid");
+      return;
+    }
+
+    if (isAdmin && userId && selectedUserMedicalStoreId && companyId) {
+      const selectedCompany = companies.find((company: any) => String(company?._id || "") === String(companyId));
+      const selectedCompanyStoreId = getCompanyMedicalStoreId(selectedCompany);
+      if (selectedCompany && String(selectedCompanyStoreId || "") !== String(selectedUserMedicalStoreId)) {
+        message.error("Selected company must belong to selected store");
+        return;
+      }
+    }
+
     const validationMessage = validateBillForm({
       isAdmin,
       userId,
@@ -301,12 +402,12 @@ export default function BillForm({
 
       <Form layout="vertical">
         {isAdmin && (
-          <Form.Item label="User" required>
+          <Form.Item label="Store" required>
             <Select
               value={userId || undefined}
-              placeholder="Select user"
+              placeholder="Select store"
               onChange={handleUserChange}
-              options={users}
+              options={storeOptions}
               showSearch
               optionFilterProp="label"
             />
@@ -315,7 +416,7 @@ export default function BillForm({
         <Form.Item label="Company" required>
           <Select
             value={companyId || undefined}
-            placeholder={isAdmin && !userId ? "Select user first" : "Select company"}
+            placeholder={isAdmin && !userId ? "Select store first" : "Select company"}
             onChange={handleCompanyChange}
             options={companyOptions}
             className="bill-company-select"
@@ -360,7 +461,13 @@ export default function BillForm({
               min={0}
               max={100}
               value={gstPercent}
-              onChange={(value: number | null) => setGstPercent(value || 0)}
+              onChange={(value: number | null) => setGstPercent(normalizeWholePercent(value || 0))}
+              onBlur={handlePercentBlur("GST", setGstPercent)}
+              onKeyDown={handlePercentKeyDown("GST")}
+              onPaste={handlePercentPaste("GST")}
+              parser={parseWholePercentInput}
+              step={1}
+              precision={0}
               addonAfter="%"
             />
           </div>
@@ -395,7 +502,13 @@ export default function BillForm({
               min={0}
               max={100}
               value={discountPercent}
-              onChange={(value: number | null) => setDiscountPercent(value || 0)}
+              onChange={(value: number | null) => setDiscountPercent(normalizeWholePercent(value || 0))}
+              onBlur={handlePercentBlur("Discount", setDiscountPercent)}
+              onKeyDown={handlePercentKeyDown("Discount")}
+              onPaste={handlePercentPaste("Discount")}
+              parser={parseWholePercentInput}
+              step={1}
+              precision={0}
               addonAfter="%"
             />
           </div>

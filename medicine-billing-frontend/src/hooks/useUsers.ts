@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllUsersApi, updateUserApi, createUserApi, deleteUserApi, type UpdateUserPayload } from "../modules/users/api";
+import { getAllUsersApi, updateUserApi, createUserApi, deleteUserApi, type UpdateUserPayload } from "../api/userApi";
 import { useMe } from "./useMe";
 import { QUERY_KEYS } from "../constants";
 

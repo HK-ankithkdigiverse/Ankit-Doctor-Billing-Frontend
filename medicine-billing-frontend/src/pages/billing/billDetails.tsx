@@ -1,23 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { Button, Card, Space, Typography } from "antd";
+import { Button, Card, Grid, Space, Typography } from "antd";
 import { EditOutlined, FilePdfOutlined } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
 import { useBill } from "../../hooks/useBills";
 import { getCompanyDisplayName, getCompanyLogoUrl, getUploadFileUrl } from "../../utils/company";
 import {
   getBillUserProfile,
-  resolveBillDiscountAmount,
   resolveBillDiscountPercent,
   resolveBillGstPercent,
 } from "../../utils/billing";
-import { formatDateTime } from "../../common/helpers/dateTime";
+import { formatDateTime } from "../../utils/dateTime";
 
 const INVOICE_ACCENT = "#2f3f46";
+const normalizeWholePercent = (value: number) =>
+  Math.floor(Math.min(100, Math.max(0, Number(value) || 0)));
+const toWholePercent = (value: number) => `${normalizeWholePercent(value)}%`;
 
 export default function BillView() {
   const navigate = useNavigate();
   const location = useLocation();
+  const screens = Grid.useBreakpoint();
   const { id } = useParams();
   const isValidBillId = !!id && /^[a-fA-F0-9]{24}$/.test(id);
   const { data, isLoading } = useBill(id!);
@@ -44,38 +47,33 @@ export default function BillView() {
   const signatureUrl = useMemo(() => getUploadFileUrl(userSignature), [userSignature]);
   const [isLogoVisible, setIsLogoVisible] = useState(true);
   const [isSignatureVisible, setIsSignatureVisible] = useState(true);
+  const [isPreparingPdf, setIsPreparingPdf] = useState(false);
   const shouldShowLogo = !!logoUrl && isLogoVisible;
   const shouldShowSignature = !!signatureUrl && isSignatureVisible;
+  const compactPreview = !screens.md && !isPreparingPdf;
   const totals = (data as any)?.totals || (bill as any)?.totals || {};
   const subTotal = Number(totals?.subtotal ?? bill?.subTotal ?? 0);
-  const gstPercent = Number(totals?.gstPercent ?? resolveBillGstPercent(bill, items));
-  const cgstTotal = Number(
-    totals?.cgst ?? items.reduce((sum: number, item: any) => sum + Number(item?.cgst || 0), 0)
-  );
-  const sgstTotal = Number(
-    totals?.sgst ?? items.reduce((sum: number, item: any) => sum + Number(item?.sgst || 0), 0)
-  );
-  const igstTotal = Number(
+  const rawGstPercent = Number(totals?.gstPercent ?? resolveBillGstPercent(bill, items));
+  const gstPercent = normalizeWholePercent(rawGstPercent);
+  const rawIgstTotal = Number(
     totals?.igst ?? items.reduce((sum: number, item: any) => sum + Number(item?.igst || 0), 0)
   );
-  const hasSplitTaxTotals =
-    totals?.igst !== undefined || totals?.cgst !== undefined || totals?.sgst !== undefined;
-  const totalTax = hasSplitTaxTotals
-    ? igstTotal + cgstTotal + sgstTotal
-    : Number(bill?.totalTax ?? igstTotal + cgstTotal + sgstTotal);
   const resolvedTaxType =
     totals?.gstType === "IGST" ||
     (bill as any)?.gstType === "IGST" ||
     (bill as any)?.taxType === "INTER" ||
-    igstTotal > 0
+    rawIgstTotal > 0
       ? "IGST"
       : "CGST_SGST";
-  const discountPercent = Number(resolveBillDiscountPercent({ ...(bill as any), totals }));
-  const discountAmount = Number(resolveBillDiscountAmount({ ...(bill as any), totals }));
+  const totalTax = (subTotal * gstPercent) / 100;
+  const igstTotal = resolvedTaxType === "IGST" ? totalTax : 0;
+  const cgstTotal = resolvedTaxType === "IGST" ? 0 : totalTax / 2;
+  const sgstTotal = resolvedTaxType === "IGST" ? 0 : totalTax / 2;
+  const rawDiscountPercent = Number(resolveBillDiscountPercent({ ...(bill as any), totals }));
+  const discountPercent = normalizeWholePercent(rawDiscountPercent);
   const totalBeforeDiscount = subTotal + totalTax;
-  const grandTotal = Number(
-    totals?.finalPayableAmount ?? bill?.grandTotal ?? Math.max(0, totalBeforeDiscount - discountAmount)
-  );
+  const discountAmount = (totalBeforeDiscount * discountPercent) / 100;
+  const grandTotal = Math.max(0, totalBeforeDiscount - discountAmount);
 
   useEffect(() => {
     setIsLogoVisible(true);
@@ -88,18 +86,24 @@ export default function BillView() {
   const handleDownloadPdf = useCallback(async () => {
     if (!printRef.current || !bill) return;
     const html2pdf = (await import("html2pdf.js")).default;
+    setIsPreparingPdf(true);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
-    await html2pdf()
-      .set({
-        margin: 0,
-        filename: `${bill.billNo || "invoice"}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css"] },
-      } as any)
-      .from(printRef.current)
-      .save();
+    try {
+      await html2pdf()
+        .set({
+          margin: 0,
+          filename: `${bill.billNo || "invoice"}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["avoid-all", "css"] },
+        } as any)
+        .from(printRef.current)
+        .save();
+    } finally {
+      setIsPreparingPdf(false);
+    }
   }, [bill]);
 
   useEffect(() => {
@@ -127,7 +131,7 @@ export default function BillView() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
           <Typography.Title level={4} style={{ margin: 0, color: "#102A43", fontWeight: 700 }}>
             Invoice Details
@@ -147,12 +151,14 @@ export default function BillView() {
         </Space>
       </div>
 
-      <Card style={{ borderRadius: 14 }} bodyStyle={{ padding: 0, overflow: "hidden" }}>
+      <Card style={{ borderRadius: 14 }} styles={{ body: { padding: 0, overflow: "hidden" } }}>
         <div
           ref={printRef}
           style={{
-            width: "209mm",
-            height: "296mm",
+            width: isPreparingPdf ? "209mm" : "100%",
+            maxWidth: isPreparingPdf ? "209mm" : 980,
+            minHeight: isPreparingPdf ? "296mm" : undefined,
+            height: isPreparingPdf ? "296mm" : "auto",
             margin: "0 auto",
             boxSizing: "border-box",
             fontFamily: "Inter, Poppins, Roboto, 'Segoe UI', sans-serif",
@@ -165,27 +171,34 @@ export default function BillView() {
             flexDirection: "column",
             overflow: "hidden",
           }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 18,
-              background: INVOICE_ACCENT,
-            }}
-          />
-
-          <div style={{ padding: "24px 24px 0 34px", flex: 1, display: "flex", flexDirection: "column" }}>
+          >
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1.15fr) minmax(0, 0.85fr)",
-                gap: 24,
-                alignItems: "start",
+                position: "absolute",
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: compactPreview ? 12 : 18,
+                background: INVOICE_ACCENT,
+              }}
+            />
+
+            <div
+              style={{
+                padding: compactPreview ? "16px 12px 0 20px" : "24px 24px 0 34px",
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
               }}
             >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: compactPreview ? "1fr" : "minmax(0, 1.15fr) minmax(0, 0.85fr)",
+                  gap: compactPreview ? 14 : 24,
+                  alignItems: "start",
+                }}
+              >
               <div style={{ minWidth: 0 }}>
                 <Typography.Text style={{ display: "block", fontWeight: 700, fontSize: 24, color: "#1f2a30" }}>
                   INVOICE
@@ -203,10 +216,10 @@ export default function BillView() {
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>PAN Card Number: {userPanCardNumber}</Typography.Text>
               </div>
 
-              <div style={{ width: "100%" }}>
-                <div style={{ background: INVOICE_ACCENT, color: "#fff", padding: "10px 12px", marginBottom: 12 }}>
-                  <Typography.Text style={{ display: "block", color: "#fff", fontSize: 12 }}>
-                    {companyPhone}
+                <div style={{ width: "100%" }}>
+                  <div style={{ background: INVOICE_ACCENT, color: "#fff", padding: "10px 12px", marginBottom: 12 }}>
+                    <Typography.Text style={{ display: "block", color: "#fff", fontSize: 12 }}>
+                      {companyPhone}
                   </Typography.Text>
                   <Typography.Text style={{ display: "block", color: "#fff", fontSize: 12 }}>
                     {companyEmail}
@@ -215,10 +228,10 @@ export default function BillView() {
                     {companyAddress}
                   </Typography.Text>
                 </div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  {shouldShowLogo && (
-                    <img
-                      src={logoUrl}
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                    {shouldShowLogo && (
+                      <img
+                        src={logoUrl}
                       alt="Company Logo"
                       style={{ width: 84, height: 84, objectFit: "contain", background: "#fff", padding: 6 }}
                       onError={() => setIsLogoVisible(false)}
@@ -240,8 +253,8 @@ export default function BillView() {
               </div>
             </div>
 
-            <div style={{ marginTop: 24 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <div style={{ marginTop: 24, overflowX: compactPreview ? "auto" : "visible" }}>
+              <table style={{ width: "100%", minWidth: compactPreview ? 620 : "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: INVOICE_ACCENT }}>
                     <th style={{ color: "#fff", textAlign: "left", padding: "10px 12px", fontWeight: 600 }}>DESCRIPTION</th>
@@ -265,7 +278,16 @@ export default function BillView() {
               </table>
             </div>
 
-            <div style={{ marginTop: "auto", paddingTop: 16, display: "grid", gridTemplateColumns: "1fr 280px", gap: 22, minHeight: 120 }}>
+            <div
+              style={{
+                marginTop: "auto",
+                paddingTop: 16,
+                display: "grid",
+                gridTemplateColumns: compactPreview ? "1fr" : "1fr 280px",
+                gap: compactPreview ? 14 : 22,
+                minHeight: 120,
+              }}
+            >
               <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
                 <Typography.Text style={{ display: "block", fontWeight: 700, marginBottom: 6 }}>
                   TERMS AND CONDITIONS
@@ -285,16 +307,15 @@ export default function BillView() {
                 >
                   {[
                     { label: "SUB TOTAL", value: `Rs ${subTotal.toFixed(2)}` },
-                    { label: "GST (%)", value: `${gstPercent.toFixed(2)}%` },
-                    { label: "GST AMOUNT", value: `Rs ${totalTax.toFixed(2)}` },
-                    ...(resolvedTaxType === "IGST"
+                    { label: "GST (%)", value: toWholePercent(gstPercent) },
+                     ...(resolvedTaxType === "IGST"
                       ? [{ label: "IGST", value: `Rs ${igstTotal.toFixed(2)}` }]
                       : [
                           { label: "CGST", value: `Rs ${cgstTotal.toFixed(2)}` },
                           { label: "SGST", value: `Rs ${sgstTotal.toFixed(2)}` },
                         ]),
                     { label: "TOTAL AMOUNT", value: `Rs ${totalBeforeDiscount.toFixed(2)}` },
-                    { label: "DISCOUNT (%)", value: `${discountPercent.toFixed(2)}%` },
+                    { label: "DISCOUNT (%)", value: toWholePercent(discountPercent) },
                     { label: "DISCOUNT AMOUNT", value: `Rs ${discountAmount.toFixed(2)}` },
                   ].map((row, index, arr) => (
                     <div
@@ -347,7 +368,7 @@ export default function BillView() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: 30, textAlign: "center" }}>
+                <div style={{ marginTop: compactPreview ? 16 : 30, textAlign: "center" }}>
                   {shouldShowSignature ? (
                     <img
                       src={signatureUrl}
@@ -363,7 +384,14 @@ export default function BillView() {
             </div>
           </div>
 
-          <div style={{ marginTop: 8, background: INVOICE_ACCENT, color: "#fff", padding: "12px 24px 12px 34px" }}>
+          <div
+            style={{
+              marginTop: 8,
+              background: INVOICE_ACCENT,
+              color: "#fff",
+              padding: compactPreview ? "10px 12px 10px 20px" : "12px 24px 12px 34px",
+            }}
+          >
             <Typography.Text style={{ display: "block", color: "#fff", fontWeight: 600 }}>
               Thank you for your business.
             </Typography.Text>

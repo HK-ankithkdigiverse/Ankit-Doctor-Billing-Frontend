@@ -11,7 +11,7 @@ import {
   createBillApi,
   deleteBillApi,
   updateBillApi,
-} from "../modules/billing/api";
+} from "../api/billApi";
 import { QUERY_KEYS } from "../constants";
 
 const isValidObjectId = (id?: string) => !!id && /^[a-fA-F0-9]{24}$/.test(id);

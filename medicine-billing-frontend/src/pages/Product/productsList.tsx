@@ -19,8 +19,8 @@ import type { Product } from "../../types/product";
 import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
-import { formatDateTime } from "../../common/helpers/dateTime";
-import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
+import { formatDateTime } from "../../utils/dateTime";
+import { createDateSorter, createNameSorter } from "../../utils/tableSort";
 
 export default function ProductsList() {
   const { message } = App.useApp();

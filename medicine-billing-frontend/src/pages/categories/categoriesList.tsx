@@ -18,8 +18,8 @@ import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Category } from "../../types/category";
 import { useConfirmDialog } from "../../utils/confirmDialog";
-import { formatDateTime } from "../../common/helpers/dateTime";
-import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
+import { formatDateTime } from "../../utils/dateTime";
+import { createDateSorter, createNameSorter } from "../../utils/tableSort";
 
 export default function CategoriesList() {
   const { message } = App.useApp();

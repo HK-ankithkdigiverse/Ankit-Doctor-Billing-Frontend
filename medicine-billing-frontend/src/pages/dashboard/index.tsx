@@ -21,9 +21,8 @@ import { useCompanies } from "../../hooks/useCompanies";
 import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { useProducts } from "../../hooks/useProducts";
 import { useUsers } from "../../hooks/useUsers";
-import { useThemeMode } from "../../contexts/themeMode";
-import { formatDateTime } from "../../common/helpers/dateTime";
-import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
+import { formatDateTime } from "../../utils/dateTime";
+import { createDateSorter, createNameSorter } from "../../utils/tableSort";
 import type { BillSortType, DateFilterType } from "../../types/bill";
 import {
   type BillingDateRange,
@@ -66,8 +65,7 @@ export default function Dashboard() {
   const [billsLimit, setBillsLimit] = useState(1);
   const [usersLimit, setUsersLimit] = useState(1);
   const { data: user, isLoading } = useMe();
-  const { mode } = useThemeMode();
-  const isDark = mode === "dark";
+
   const isAdmin = user?.role === ROLE.ADMIN;
   const meMedicalStoreId =
     toId(user?.medicalStoreId) || (typeof user?.medicineId === "string" ? user.medicineId : "");
@@ -382,7 +380,7 @@ export default function Dashboard() {
       ];
 
   const getCardIcon = (title: string) => {
-    const iconStyle = { fontSize: 24, color: isDark ? "#9CC6E6" : "#88B5D8" };
+    const iconStyle = { fontSize: 20, color: "#88B5D8" };
 
     if (title.includes("Medical Store")) return <ShopOutlined style={iconStyle} />;
     if (title.includes("Medicines") || title.includes("Product")) return <MedicineBoxOutlined style={iconStyle} />;
@@ -420,47 +418,48 @@ export default function Dashboard() {
         )}
       </div>
 
-      <Row gutter={[16, 16]}>
+      <div style={{ maxWidth: 1220 }}>
+      <Row gutter={[12, 12]}>
         {cards.map((card, idx) => (
-          <Col xs={24} sm={12} lg={6} key={card.title}>
+          <Col xs={24} sm={12} lg={6} key={card.title} style={{ display: "flex", justifyContent: "center" }}>
             <Card
-              styles={{ body: { padding: isMobile ? 14 : 18 } }}
+              size="small"
+              styles={{ body: { padding: isMobile ? 12 : 14 } }}
               style={{
+                width: "100%",
+                maxWidth: isMobile ? "100%" : 280,
                 background:
-                  isDark
-                    ? idx % 2 === 0
-                      ? "linear-gradient(135deg, #111827 0%, #1f2937 100%)"
-                      : "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
-                    : idx % 2 === 0
-                      ? "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"
-                      : "linear-gradient(135deg, #f8fffc 0%, #edf7f4 100%)",
+                  idx % 2 === 0
+                    ? "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)"
+                    : "linear-gradient(135deg, #f8fffc 0%, #edf7f4 100%)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 10,
+                    width: 38,
+                    height: 38,
+                    borderRadius: 8,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
-                    background: isDark ? "rgba(156, 198, 230, 0.12)" : "rgba(136, 181, 216, 0.16)",
+                    background: "rgba(136, 181, 216, 0.16)",
                   }}
                 >
                   {getCardIcon(card.title)}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <Statistic
-                    title={card.title}
+                    title={<span style={{ fontSize: isMobile ? 15 : 16 }}>{card.title}</span>}
                     value={card.value}
                     prefix={card.isCurrency ? "Rs " : undefined}
                     precision={card.isCurrency ? 2 : 0}
                     valueStyle={{
-                      color: isDark ? "#E2E8F0" : "#102A43",
+                      color: "#102A43",
                       lineHeight: 1.1,
-                      fontWeight: 500,
+                      fontWeight: 430,
+                      fontSize: isMobile ? 20 : 24,
                     }}
                   />
                 </div>
@@ -469,6 +468,7 @@ export default function Dashboard() {
           </Col>
         ))}
       </Row>
+      </div>
 
       <Card
         style={{ marginTop: 16 }}

@@ -1,6 +1,6 @@
 import { Col, Form, Input, Row, Select, Switch } from "antd";
-import { nonWhitespaceRule } from "../../common/helpers/userForm";
-import { phoneRule, requiredRule } from "../../common/helpers/formRules";
+import { nonWhitespaceRule } from "../../utils/userForm";
+import { phoneRule, requiredRule } from "../../utils/formRules";
 import UserBusinessFields from "./UserBusinessFields";
 
 type MedicalStoreFormFieldsProps = {

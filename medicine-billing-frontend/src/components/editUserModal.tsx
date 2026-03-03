@@ -1,10 +1,10 @@
 import { Col, Form, Input, Modal, Row, Select } from "antd";
 import { useMemo } from "react";
-import type { UpdateUserPayload } from "../modules/users/api";
+import type { UpdateUserPayload } from "../api/userApi";
 import { useMedicalStores } from "../hooks/useMedicalStores";
 import type { User } from "../types";
-import { emailRule, requiredRule } from "../common/helpers/formRules";
-import { nonWhitespaceRule, trimIfString } from "../common/helpers/userForm";
+import { emailRule, requiredRule } from "../utils/formRules";
+import { nonWhitespaceRule, trimIfString } from "../utils/userForm";
 import type { EditUserFormValues, NormalizedEditUserValues } from "../types/userForm";
 
 type EditUserModalFormValues = EditUserFormValues;

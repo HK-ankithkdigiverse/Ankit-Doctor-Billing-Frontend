@@ -1,10 +1,8 @@
 import { Card } from "antd";
 import type { CardProps } from "antd";
-import { useThemeMode } from "../../contexts/themeMode";
 
 export default function SectionCard({ className = "", ...props }: CardProps) {
-  const { mode } = useThemeMode();
-  const themeClass = mode === "dark" ? "border-slate-700 bg-slate-900/80" : "border-surface-border";
+  const themeClass = "border-surface-border";
 
   return (
     <Card

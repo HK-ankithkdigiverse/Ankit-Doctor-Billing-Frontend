@@ -5,7 +5,7 @@ import {
   getMedicalStoreByIdApi,
   getMedicalStoresApi,
   updateMedicalStoreApi,
-} from "../modules/medicalStores/api";
+} from "../api/medicalStoreApi";
 import { QUERY_KEYS } from "../constants";
 import { useMe } from "./useMe";
 
