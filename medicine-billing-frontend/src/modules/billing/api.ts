@@ -20,6 +20,14 @@ const requestWithError = async <T>(request: Promise<T>, fallback: string) => {
   }
 };
 
+const toBillRequestPayload = (payload: BillPayload | BillUpdatePayload) => ({
+  ...(payload.userId ? { userId: payload.userId } : {}),
+  ...(payload.companyId ? { companyId: payload.companyId } : {}),
+  ...(typeof payload.discount === "number" ? { discount: payload.discount } : {}),
+  ...(typeof payload.gstPercent === "number" ? { gstPercent: payload.gstPercent } : {}),
+  ...(Array.isArray(payload.items) ? { items: payload.items } : {}),
+});
+
 export const getBillsApi = (params?: {
   page?: number;
   limit?: number;
@@ -32,7 +40,7 @@ export const createBillApi = (payload: BillPayload) =>
   requestWithError(
     dataOf(
       api.post(BILLS_API.ROOT, {
-        ...payload,
+        ...toBillRequestPayload(payload),
         discount: payload.discount || 0,
       })
     ),
@@ -47,5 +55,8 @@ export const updateBillApi = ({
 }: {
   id: string;
   payload: BillUpdatePayload;
-}) => requestWithError(dataOf(api.put(BILLS_API.BY_ID(id), payload)), "Failed to update bill");
-
+}) =>
+  requestWithError(
+    dataOf(api.put(BILLS_API.BY_ID(id), toBillRequestPayload(payload))),
+    "Failed to update bill"
+  );

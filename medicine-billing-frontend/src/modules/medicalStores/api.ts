@@ -28,6 +28,7 @@ export interface MedicalStorePayload {
   pincode: string;
   gstNumber: string;
   panCardNumber: string;
+  gstType: "IGST" | "CGST_SGST";
   isActive?: boolean;
 }
 
@@ -57,4 +58,3 @@ export const updateMedicalStoreApi = ({
 
 export const deleteMedicalStoreApi = (id: string): Promise<{ message: string }> =>
   dataOf(api.delete(MEDICAL_STORES_API.BY_ID(id)));
-

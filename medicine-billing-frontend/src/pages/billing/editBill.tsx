@@ -5,7 +5,11 @@ import { ROUTES } from "../../constants";
 import { useBill, useUpdateBill } from "../../hooks/useBills";
 import { useBillFormMeta } from "../../hooks/useBillFormMeta";
 import type { BillPayload } from "../../types/bill";
-import { normalizeBillItemsForForm } from "../../utils/billing";
+import {
+  normalizeBillItemsForForm,
+  resolveBillDiscountPercent,
+  resolveBillGstPercent,
+} from "../../utils/billing";
 
 export default function EditBill() {
   const { message } = App.useApp();
@@ -16,6 +20,8 @@ export default function EditBill() {
   const { mutateAsync, isPending } = useUpdateBill();
 
   const initialItems = normalizeBillItemsForForm(billData?.items);
+  const initialDiscountPercent = resolveBillDiscountPercent(billData?.bill);
+  const initialGstPercent = resolveBillGstPercent(billData?.bill, billData?.items ?? []);
 
   if (isLoading) return <p>Loading...</p>;
   if (!billData || !id) return <p>Bill not found</p>;
@@ -44,7 +50,8 @@ export default function EditBill() {
       companies={companies}
       initialCompanyId={(billData.bill.companyId as any)?._id || ""}
       initialCompanyName={(billData.bill.companyId as any)?.companyName || (billData.bill.companyId as any)?.name || ""}
-      initialDiscount={Number(billData.bill.discount || 0)}
+      initialDiscount={initialDiscountPercent}
+      initialGstPercent={initialGstPercent}
       initialItems={initialItems}
       onSubmit={handleSubmit}
       onCancel={() => navigate(ROUTES.BILL_DETAILS(id))}

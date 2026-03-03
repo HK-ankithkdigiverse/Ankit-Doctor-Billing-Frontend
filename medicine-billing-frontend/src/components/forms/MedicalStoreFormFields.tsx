@@ -1,4 +1,4 @@
-import { Col, Form, Input, Row, Switch } from "antd";
+import { Col, Form, Input, Row, Select, Switch } from "antd";
 import { nonWhitespaceRule } from "../../common/helpers/userForm";
 import { phoneRule, requiredRule } from "../../common/helpers/formRules";
 import UserBusinessFields from "./UserBusinessFields";
@@ -43,6 +43,25 @@ export default function MedicalStoreFormFields({
 
       <UserBusinessFields required disabled={disabled} />
 
+      <Row gutter={16}>
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="gstType"
+            label="GST Type"
+            rules={[requiredRule("GST Type")]}
+            initialValue="CGST_SGST"
+          >
+            <Select
+              disabled={disabled}
+              options={[
+                { value: "CGST_SGST", label: "CGST & SGST" },
+                { value: "IGST", label: "IGST" },
+              ]}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
       {showStatus ? (
         <Form.Item name="isActive" label="Status" valuePropName="checked">
           <Switch checkedChildren="Active" unCheckedChildren="Inactive" disabled={disabled} />
@@ -51,5 +70,3 @@ export default function MedicalStoreFormFields({
     </>
   );
 }
-
-

@@ -30,6 +30,7 @@ export interface MedicalStore {
   pincode?: string;
   gstNumber?: string;
   panCardNumber?: string;
+  gstType?: "IGST" | "CGST_SGST";
   isActive?: boolean;
   isDeleted?: boolean;
   createdAt?: string;

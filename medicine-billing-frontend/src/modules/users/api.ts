@@ -20,6 +20,7 @@ type MedicalStore = {
   pincode?: string;
   gstNumber?: string;
   panCardNumber?: string;
+  gstType?: "IGST" | "CGST_SGST";
   isActive?: boolean;
 };
 
@@ -66,6 +67,14 @@ const toMedicalStore = (value: unknown): MedicalStore | undefined => {
       pincode: clean(source.pincode),
       gstNumber: clean(source.gstNumber),
       panCardNumber: clean(source.panCardNumber),
+      gstType:
+        source.gstType === "IGST" || source.gstType === "CGST_SGST"
+          ? source.gstType
+          : source.taxType === "INTER"
+          ? "IGST"
+          : source.taxType === "INTRA"
+          ? "CGST_SGST"
+          : undefined,
       isActive: typeof source.isActive === "boolean" ? source.isActive : undefined,
     };
   }
@@ -200,4 +209,3 @@ export const changePasswordApi = (data: {
   oldPassword: string;
   newPassword: string;
 }) => dataOf(api.put(USERS_API.ME_PASSWORD, data));
-

@@ -1,5 +1,6 @@
 export type DateFilterType = "all" | "day" | "today" | "week" | "month" | "year" | "custom";
 export type BillSortType = "newest" | "oldest";
+export type BillTaxMode = "IGST" | "CGST_SGST";
 
 export interface BillMedicalStore {
   _id?: string;
@@ -29,6 +30,7 @@ export interface BillItem {
   taxPercent?: number;
   cgst?: number;
   sgst?: number;
+  igst?: number;
   discount?: number;
   payment?: string;
   status?: string;
@@ -75,12 +77,33 @@ export interface Bill {
   subTotal?: number;
   totalTax?: number;
   discount?: number;
+  discountPercent?: number;
   grandTotal?: number;
+  gstType?: BillTaxMode;
+  gstPercent?: number;
+  cgstTotal?: number;
+  sgstTotal?: number;
+  igstTotal?: number;
+  totals?: BillTotals;
+}
+
+export interface BillTotals {
+  subtotal?: number;
+  discountPercent?: number;
+  discountAmount?: number;
+  taxableAmount?: number;
+  gstType?: BillTaxMode;
+  gstPercent?: number;
+  igst?: number;
+  cgst?: number;
+  sgst?: number;
+  finalPayableAmount?: number;
 }
 
 export interface BillResponse {
   bill: Bill;
   items: BillItem[];
+  totals?: BillTotals;
 }
 
 export interface BillFormItem {
@@ -89,8 +112,18 @@ export interface BillFormItem {
   freeQty: number;
   rate: number;
   mrp: number;
-  taxPercent: number;
-  discount: number;
+  taxPercent?: number;
+  discount?: number;
+  cgst?: number;
+  sgst?: number;
+  igst?: number;
+  total?: number;
+}
+
+export interface BillPayloadItem {
+  productId: string;
+  qty: number;
+  freeQty?: number;
 }
 
 export interface BillFormRow extends BillFormItem {
@@ -101,18 +134,24 @@ export interface BillUserOption {
   value: string;
   label: string;
   medicalStoreId?: string;
+  medicalStoreName?: string;
+  medicalStoreState?: string;
 }
 
 export interface BillPayload {
   userId?: string;
   companyId: string;
-  discount: number;
-  items: BillFormItem[];
+  discount?: number;
+  discountPercent?: number;
+  gstPercent?: number;
+  items: BillPayloadItem[];
 }
 
 export interface BillUpdatePayload {
-  discount: number;
+  discount?: number;
+  discountPercent?: number;
+  gstPercent?: number;
   userId?: string;
   companyId?: string;
-  items?: BillFormItem[];
+  items?: BillPayloadItem[];
 }

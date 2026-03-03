@@ -20,20 +20,24 @@ interface MedicalStoreFormValues {
   pincode: string;
   gstNumber: string;
   panCardNumber: string;
+  gstType: "IGST" | "CGST_SGST";
   isActive?: boolean;
 }
 
-const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => ({
-  name: trimIfString(values.name) || "",
-  phone: trimIfString(values.phone) || "",
-  address: trimIfString(values.address) || "",
-  state: trimIfString(values.state) || "",
-  city: trimIfString(values.city) || "",
-  pincode: trimIfString(values.pincode) || "",
-  gstNumber: (trimIfString(values.gstNumber) || "").toUpperCase(),
-  panCardNumber: (trimIfString(values.panCardNumber) || "").toUpperCase(),
-  isActive: values.isActive !== false,
-});
+const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => {
+  return {
+    name: trimIfString(values.name) || "",
+    phone: trimIfString(values.phone) || "",
+    address: trimIfString(values.address) || "",
+    state: trimIfString(values.state) || "",
+    city: trimIfString(values.city) || "",
+    pincode: trimIfString(values.pincode) || "",
+    gstNumber: (trimIfString(values.gstNumber) || "").toUpperCase(),
+    panCardNumber: (trimIfString(values.panCardNumber) || "").toUpperCase(),
+    gstType: values.gstType,
+    isActive: values.isActive !== false,
+  };
+};
 
 export default function EditMedicalStore() {
   const { message } = App.useApp();
@@ -54,6 +58,11 @@ export default function EditMedicalStore() {
       pincode: medicalStore.pincode || "",
       gstNumber: medicalStore.gstNumber || "",
       panCardNumber: medicalStore.panCardNumber || "",
+      gstType:
+        (medicalStore as any).gstType === "IGST" ||
+        (medicalStore as any).taxType === "INTER"
+          ? "IGST"
+          : "CGST_SGST",
       isActive: medicalStore.isActive !== false,
     });
   }, [form, medicalStore]);
@@ -106,6 +115,3 @@ export default function EditMedicalStore() {
     </PageShell>
   );
 }
-
-
-

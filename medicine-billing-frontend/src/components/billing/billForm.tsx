@@ -12,7 +12,9 @@ import {
 } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useProducts } from "../../hooks/useProducts";
-import type { BillFormItem, BillFormRow, BillPayload, BillUserOption } from "../../types/bill";
+import type { BillFormItem, BillFormRow, BillPayload, BillTaxMode, BillUserOption } from "../../types/bill";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { useMe } from "../../hooks/useMe";
 import {
   getBillSummary,
   normalizeBillFormRows,
@@ -33,6 +35,7 @@ type BillFormProps = {
   initialCompanyId?: string;
   initialCompanyName?: string;
   initialDiscount?: number;
+  initialGstPercent?: number;
   initialItems?: BillFormItem[];
   onSubmit: (payload: BillPayload) => Promise<void>;
   onCancel: () => void;
@@ -49,6 +52,7 @@ export default function BillForm({
   initialCompanyId = "",
   initialCompanyName = "",
   initialDiscount = 0,
+  initialGstPercent = 0,
   initialItems,
   onSubmit,
   onCancel,
@@ -56,8 +60,11 @@ export default function BillForm({
   const { message } = App.useApp();
   const [userId, setUserId] = useState(initialUserId);
   const [companyId, setCompanyId] = useState(initialCompanyId);
-  const [discount, setDiscount] = useState(initialDiscount);
+  const [discountPercent, setDiscountPercent] = useState(initialDiscount);
+  const [gstPercent, setGstPercent] = useState(initialGstPercent);
   const [items, setItems] = useState<BillFormRow[]>(normalizeBillFormRows(initialItems));
+  const { data: me } = useMe();
+  const { data: medicalStoresData } = useMedicalStores(1, 1000, "");
 
   const { data: productData, isLoading: productsLoading } = useProducts(1, 1000, "", {
     companyId: companyId || undefined,
@@ -68,9 +75,10 @@ export default function BillForm({
   useEffect(() => {
     setUserId(initialUserId || "");
     setCompanyId(initialCompanyId || "");
-    setDiscount(Number(initialDiscount || 0));
+    setDiscountPercent(Number(initialDiscount || 0));
+    setGstPercent(Number(initialGstPercent || 0));
     setItems(normalizeBillFormRows(initialItems));
-  }, [initialUserId, initialCompanyId, initialDiscount, initialItems]);
+  }, [initialUserId, initialCompanyId, initialDiscount, initialGstPercent, initialItems]);
 
   const companyOptions = useMemo(() => {
     const selectedUserStoreId = users.find((option) => option.value === userId)?.medicalStoreId || "";
@@ -103,6 +111,37 @@ export default function BillForm({
 
   const getProduct = (id: string) => products.find((product: any) => product._id === id);
   const getProductName = (id: string) => getProduct(id)?.name || "";
+  const selectedUserOption = users.find((option) => option.value === userId);
+
+  const meMedicalStoreId =
+    typeof me?.medicalStoreId === "string"
+      ? me.medicalStoreId
+      : me?.medicalStoreId?._id || me?.medicineId || "";
+  const selectedUserMedicalStoreId = selectedUserOption?.medicalStoreId || "";
+  const selectedMedicalStoreId = isAdmin ? selectedUserMedicalStoreId : meMedicalStoreId;
+
+  const selectedMedicalStore = useMemo(() => {
+    const stores = medicalStoresData?.medicalStores ?? [];
+    const fromList = stores.find((store) => String(store._id) === String(selectedMedicalStoreId));
+    if (fromList) return fromList as any;
+
+    if (typeof me?.medicalStoreId === "object" && me?.medicalStoreId?._id === selectedMedicalStoreId) {
+      return me.medicalStoreId as any;
+    }
+
+    return null;
+  }, [medicalStoresData?.medicalStores, me?.medicalStoreId, selectedMedicalStoreId]);
+
+  const resolvedTaxMode: BillTaxMode =
+    (selectedMedicalStore as any)?.gstType === "IGST" ||
+    (selectedMedicalStore as any)?.taxType === "INTER"
+      ? "IGST"
+      : "CGST_SGST";
+  const resolvedStoreState =
+    (selectedMedicalStore as any)?.state ||
+    selectedUserOption?.medicalStoreState ||
+    (typeof me?.state === "string" ? me.state : "") ||
+    (typeof me?.medicalStoreId === "object" ? (me.medicalStoreId as any)?.state || "" : "");
 
   const handleCompanyChange = (value: string) => {
     setCompanyId(value);
@@ -126,7 +165,6 @@ export default function BillForm({
           if (product) {
             nextRow.rate = Number(product.price || 0);
             nextRow.mrp = Number(product.mrp || 0);
-            nextRow.taxPercent = Number(product.taxPercent || 0);
           }
         }
 
@@ -139,9 +177,22 @@ export default function BillForm({
   const removeRow = (rowId: string) =>
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.rowId !== rowId)));
 
-  const { rowTotals, subTotal, totalTax, totalBeforeDiscount, discountAmount, grandTotal } = useMemo(
-    () => getBillSummary(items, discount),
-    [items, discount]
+  const {
+    subTotal,
+    totalTax,
+    totalCgst,
+    totalSgst,
+    totalIgst,
+    totalBeforeDiscount,
+    discountAmount,
+    grandTotal,
+  } = useMemo(
+    () =>
+      getBillSummary(items, discountPercent, {
+        taxMode: resolvedTaxMode,
+        gstPercent,
+      }),
+    [discountPercent, gstPercent, items, resolvedTaxMode]
   );
 
   const submit = async () => {
@@ -149,8 +200,8 @@ export default function BillForm({
       isAdmin,
       userId,
       companyId,
-      discount,
-      totalBeforeDiscount,
+      gstPercent,
+      discount: discountPercent,
       items,
     });
 
@@ -162,7 +213,9 @@ export default function BillForm({
     await onSubmit({
       userId: isAdmin ? userId : undefined,
       companyId,
+      // Backend currently persists `discount` as amount.
       discount: discountAmount,
+      gstPercent,
       items: toBillPayloadItems(items),
     });
   };
@@ -223,26 +276,10 @@ export default function BillForm({
       render: (_: unknown, item: BillFormRow) => Number(item.mrp || 0).toFixed(2),
     },
     {
-      title: "GST %",
-      key: "tax",
-      render: (_: unknown, item: BillFormRow) => Number(item.taxPercent || 0),
-    },
-    {
-      title: "Disc %",
-      key: "discount",
-      render: (_: unknown, item: BillFormRow) => (
-        <InputNumber
-          min={0}
-          max={100}
-          value={item.discount}
-          onChange={(value: number | null) => updateItem(item.rowId, "discount", value || 0)}
-        />
-      ),
-    },
-    {
-      title: "Total",
+      title: "Line Total",
       key: "total",
-      render: (_: unknown, item: BillFormRow) => `Rs ${(rowTotals[item.rowId]?.total || 0).toFixed(2)}`,
+      render: (_: unknown, item: BillFormRow) =>
+        `Rs ${(Number(item.rate || 0) * Number(item.qty || 0)).toFixed(2)}`,
     },
     {
       title: "",
@@ -285,6 +322,14 @@ export default function BillForm({
             disabled={isAdmin && !userId}
           />
         </Form.Item>
+        <Typography.Text type="secondary">
+          GST Type:{" "}
+          {resolvedTaxMode === "IGST" ? "IGST" : "CGST & SGST"}
+        </Typography.Text>
+        <br />
+        <Typography.Text type="secondary">
+          Store State: {resolvedStoreState || "-"}
+        </Typography.Text>
       </Form>
 
       <Table
@@ -310,24 +355,53 @@ export default function BillForm({
             <Typography.Text className="bill-summary-value">Rs {subTotal.toFixed(2)}</Typography.Text>
           </div>
           <div className="bill-summary-row">
-            <Typography.Text className="bill-summary-label">Tax</Typography.Text>
+            <Typography.Text className="bill-summary-label">GST (%)</Typography.Text>
+            <InputNumber
+              min={0}
+              max={100}
+              value={gstPercent}
+              onChange={(value: number | null) => setGstPercent(value || 0)}
+              addonAfter="%"
+            />
+          </div>
+          <div className="bill-summary-row">
+            <Typography.Text className="bill-summary-label">GST Amount</Typography.Text>
             <Typography.Text className="bill-summary-value">Rs {totalTax.toFixed(2)}</Typography.Text>
           </div>
+          {resolvedTaxMode === "IGST" ? (
+            <div className="bill-summary-row">
+              <Typography.Text className="bill-summary-label">IGST</Typography.Text>
+              <Typography.Text className="bill-summary-value">Rs {totalIgst.toFixed(2)}</Typography.Text>
+            </div>
+          ) : (
+            <>
+              <div className="bill-summary-row">
+                <Typography.Text className="bill-summary-label">CGST</Typography.Text>
+                <Typography.Text className="bill-summary-value">Rs {totalCgst.toFixed(2)}</Typography.Text>
+              </div>
+              <div className="bill-summary-row">
+                <Typography.Text className="bill-summary-label">SGST</Typography.Text>
+                <Typography.Text className="bill-summary-value">Rs {totalSgst.toFixed(2)}</Typography.Text>
+              </div>
+            </>
+          )}
           <div className="bill-summary-row">
-            <Typography.Text className="bill-summary-label">Total Before Discount</Typography.Text>
+            <Typography.Text className="bill-summary-label">Total Amount</Typography.Text>
             <Typography.Text className="bill-summary-value">Rs {totalBeforeDiscount.toFixed(2)}</Typography.Text>
           </div>
-          <InputNumber
-            style={{ width: "100%" }}
-            value={discount}
-            min={0}
-            max={Number(totalBeforeDiscount.toFixed(2))}
-            onChange={(value: number | null) => setDiscount(value || 0)}
-            addonBefore="Bill Discount"
-          />
+          <div className="bill-summary-row">
+            <Typography.Text className="bill-summary-label">Discount (%)</Typography.Text>
+            <InputNumber
+              min={0}
+              max={100}
+              value={discountPercent}
+              onChange={(value: number | null) => setDiscountPercent(value || 0)}
+              addonAfter="%"
+            />
+          </div>
           <div className="bill-summary-row">
             <Typography.Text className="bill-summary-label">Discount Amount</Typography.Text>
-            <Typography.Text className="bill-summary-value">- Rs {discountAmount.toFixed(2)}</Typography.Text>
+            <Typography.Text className="bill-summary-value">Rs {discountAmount.toFixed(2)}</Typography.Text>
           </div>
           <div className="bill-summary-row bill-summary-row-grand">
             <Typography.Text className="bill-summary-label">Grand Total</Typography.Text>
@@ -345,4 +419,3 @@ export default function BillForm({
     </Card>
   );
 }
-

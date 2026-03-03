@@ -19,20 +19,24 @@ interface MedicalStoreFormValues {
   pincode: string;
   gstNumber: string;
   panCardNumber: string;
+  gstType: "IGST" | "CGST_SGST";
   isActive?: boolean;
 }
 
-const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => ({
-  name: trimIfString(values.name) || "",
-  phone: trimIfString(values.phone) || "",
-  address: trimIfString(values.address) || "",
-  state: trimIfString(values.state) || "",
-  city: trimIfString(values.city) || "",
-  pincode: trimIfString(values.pincode) || "",
-  gstNumber: (trimIfString(values.gstNumber) || "").toUpperCase(),
-  panCardNumber: (trimIfString(values.panCardNumber) || "").toUpperCase(),
-  isActive: values.isActive !== false,
-});
+const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => {
+  return {
+    name: trimIfString(values.name) || "",
+    phone: trimIfString(values.phone) || "",
+    address: trimIfString(values.address) || "",
+    state: trimIfString(values.state) || "",
+    city: trimIfString(values.city) || "",
+    pincode: trimIfString(values.pincode) || "",
+    gstNumber: (trimIfString(values.gstNumber) || "").toUpperCase(),
+    panCardNumber: (trimIfString(values.panCardNumber) || "").toUpperCase(),
+    gstType: values.gstType,
+    isActive: values.isActive !== false,
+  };
+};
 
 export default function CreateMedicalStore() {
   const { message } = App.useApp();
@@ -61,7 +65,7 @@ export default function CreateMedicalStore() {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          initialValues={{ isActive: true }}
+          initialValues={{ isActive: true, gstType: "CGST_SGST" }}
         >
           <MedicalStoreFormFields disabled={isPending} showStatus />
           <FormActionButtons
@@ -74,6 +78,3 @@ export default function CreateMedicalStore() {
     </PageShell>
   );
 }
-
-
-

@@ -134,7 +134,8 @@ export default function BillList() {
       title: "Total",
       key: "total",
       align: "right" as const,
-      render: (_: any, bill: any) => `Rs ${Number(bill.grandTotal || 0).toFixed(2)}`,
+      render: (_: any, bill: any) =>
+        `Rs ${Number(bill?.totals?.finalPayableAmount ?? bill?.grandTotal ?? 0).toFixed(2)}`,
     },
     {
       title: "Date (Created Date, Updated Date)",
@@ -278,4 +279,3 @@ export default function BillList() {
     </Card>
   );
 }
-
