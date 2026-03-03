@@ -1,5 +1,5 @@
 import { Form, Input, InputNumber, Select } from "antd";
-import { requiredRule } from "../../utils/formRules";
+import { requiredRule } from "../../common/helpers/formRules";
 
 type Option = {
   value: string;
@@ -10,9 +10,17 @@ interface ProductFormFieldsProps {
   categoryOptions: Option[];
   companyOptions: Option[];
   stockLabel?: string;
+  categoryDisabled?: boolean;
+  categoryPlaceholder?: string;
 }
 
-export default function ProductFormFields({ categoryOptions, companyOptions, stockLabel = "Stock" }: ProductFormFieldsProps) {
+export default function ProductFormFields({
+  categoryOptions,
+  companyOptions,
+  stockLabel = "Stock",
+  categoryDisabled = false,
+  categoryPlaceholder = "Select category",
+}: ProductFormFieldsProps) {
   return (
     <>
       <Form.Item
@@ -24,7 +32,11 @@ export default function ProductFormFields({ categoryOptions, companyOptions, sto
       </Form.Item>
 
       <Form.Item name="category" label="Category" rules={[requiredRule("Category")]}>
-        <Select placeholder="Select category" options={categoryOptions} />
+        <Select
+          placeholder={categoryPlaceholder}
+          options={categoryOptions}
+          disabled={categoryDisabled}
+        />
       </Form.Item>
 
       <Form.Item name="productType" label="Product Type" rules={[requiredRule("Product type")]}>
@@ -60,3 +72,4 @@ export default function ProductFormFields({ categoryOptions, companyOptions, sto
     </>
   );
 }
+

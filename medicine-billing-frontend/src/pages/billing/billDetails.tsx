@@ -6,7 +6,7 @@ import { ROUTES } from "../../constants";
 import { useBill } from "../../hooks/useBills";
 import { getCompanyDisplayName, getCompanyLogoUrl, getUploadFileUrl } from "../../utils/company";
 import { getBillUserProfile } from "../../utils/billing";
-import { formatDateTime } from "../../utils/dateTime";
+import { formatDateTime } from "../../common/helpers/dateTime";
 
 const INVOICE_ACCENT = "#2f3f46";
 
@@ -26,9 +26,7 @@ export default function BillView() {
   const companyPhone = bill?.companyId?.phone || "-";
   const companyEmail = bill?.companyId?.email || "-";
   const userProfile = getBillUserProfile(bill);
-  const userName = userProfile.name;
-  const userMedicalName = userProfile.medicalName || companyName || userName || "-";
-  const userEmail = userProfile.email;
+  const userMedicalName = userProfile.medicalName || companyName || "-";
   const userPhone = userProfile.phone;
   const userAddress = userProfile.address;
   const userSignature = userProfile.signature;
@@ -169,8 +167,6 @@ export default function BillView() {
                 <Typography.Text style={{ display: "block", color: "#1f2a30", fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
                   {userMedicalName}
                 </Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#4b5563" }}>Name: {userName}</Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#4b5563" }}>Email: {userEmail}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Phone: {userPhone}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>Address: {userAddress}</Typography.Text>
                 <Typography.Text style={{ display: "block", color: "#4b5563" }}>GST Number: {userGstNumber}</Typography.Text>
@@ -348,3 +344,4 @@ export default function BillView() {
     </div>
   );
 }
+

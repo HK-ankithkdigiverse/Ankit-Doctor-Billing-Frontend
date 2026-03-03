@@ -8,6 +8,11 @@ export type Company = {
         email?: string;
         role?: string;
       };
+  medicalStoreId?:
+    | string
+    | {
+        _id?: string;
+      };
   companyName?: string;
   name?: string;
   gstNumber: string;

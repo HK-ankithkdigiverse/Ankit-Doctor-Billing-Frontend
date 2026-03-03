@@ -1,70 +1,43 @@
 import { Col, Form, Input, Modal, Row, Select } from "antd";
 import { useMemo } from "react";
-import type { UpdateUserPayload } from "../api/userApi";
-import { ROLE } from "../constants";
+import type { UpdateUserPayload } from "../modules/users/api";
+import { useMedicalStores } from "../hooks/useMedicalStores";
 import type { User } from "../types";
-import { emailRule, phoneRule, requiredRule } from "../utils/formRules";
-import UserBusinessFields from "./forms/UserBusinessFields";
-import { nonWhitespaceRule, trimIfString } from "../utils/userForm";
+import { emailRule, requiredRule } from "../common/helpers/formRules";
+import { nonWhitespaceRule, trimIfString } from "../common/helpers/userForm";
 import type { EditUserFormValues, NormalizedEditUserValues } from "../types/userForm";
 
-type EditUserModalFormValues = Omit<EditUserFormValues, "medicalName"> & {
-  medicalName?: string;
-  role: string;
-};
-
-type NormalizedEditUserModalValues = NormalizedEditUserValues & {
-  role: string;
-};
+type EditUserModalFormValues = EditUserFormValues;
+type NormalizedEditUserModalValues = NormalizedEditUserValues;
 
 const toInitialValues = (user: User): EditUserModalFormValues => ({
   name: user.name || "",
-  medicalName: user.medicalName || "",
   email: user.email || "",
-  phone: user.phone || "",
-  address: user.address || "",
-  state: user.state || "",
-  city: user.city || "",
-  pincode: user.pincode || "",
-  gstNumber: user.gstNumber || "",
-  panCardNumber: user.panCardNumber || "",
-  role: user.role || ROLE.USER,
+  medicalStoreId:
+    (typeof user.medicalStoreId === "string"
+      ? trimIfString(user.medicalStoreId)
+      : trimIfString(user.medicalStoreId?._id)) || "",
 });
 
 const normalizeForCompare = (
   values: Partial<EditUserModalFormValues> | undefined
 ): NormalizedEditUserModalValues => ({
   name: trimIfString(values?.name) ?? "",
-  medicalName: trimIfString(values?.medicalName) ?? "",
   email: (trimIfString(values?.email) ?? "").toLowerCase(),
-  phone: trimIfString(values?.phone) ?? "",
-  address: trimIfString(values?.address) ?? "",
-  state: trimIfString(values?.state) ?? "",
-  city: trimIfString(values?.city) ?? "",
-  pincode: trimIfString(values?.pincode) ?? "",
-  gstNumber: (trimIfString(values?.gstNumber) ?? "").toUpperCase(),
-  panCardNumber: (trimIfString(values?.panCardNumber) ?? "").toUpperCase(),
-  role: values?.role || ROLE.USER,
+  medicalStoreId: trimIfString(values?.medicalStoreId) ?? "",
 });
 
-const buildPayload = (values: EditUserModalFormValues): UpdateUserPayload => ({
-  name: trimIfString(values.name) || "",
-  medicalName: trimIfString(values.medicalName),
-  email: (trimIfString(values.email) || "").toLowerCase(),
-  phone: trimIfString(values.phone),
-  address: trimIfString(values.address),
-  state: trimIfString(values.state),
-  city: trimIfString(values.city),
-  pincode: trimIfString(values.pincode),
-  gstNumber: trimIfString(values.gstNumber)?.toUpperCase(),
-  panCardNumber: trimIfString(values.panCardNumber)?.toUpperCase(),
-  role: values.role || ROLE.USER,
-});
+const buildPayload = (values: EditUserModalFormValues): UpdateUserPayload => {
+  const payload: UpdateUserPayload = {
+    name: trimIfString(values.name) || "",
+    email: (trimIfString(values.email) || "").toLowerCase(),
+  };
 
-const ROLE_OPTIONS = [
-  { label: "Admin", value: ROLE.ADMIN },
-  { label: "User", value: ROLE.USER },
-];
+  const medicalStoreId = trimIfString(values.medicalStoreId);
+  if (medicalStoreId) payload.medicalStoreId = medicalStoreId;
+
+  return payload;
+};
 
 interface Props {
   user: User;
@@ -77,6 +50,39 @@ export default function EditUserModal({ user, onClose, onSave, isLoading }: Prop
   const [form] = Form.useForm<EditUserModalFormValues>();
   const initialValues = useMemo(() => toInitialValues(user), [user]);
   const watchedValues = Form.useWatch([], form);
+  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useMedicalStores(
+    1,
+    1000,
+    "",
+    { enabled: true }
+  );
+  const medicalStoreOptions = useMemo(() => {
+    const options = (medicalStoresData?.medicalStores ?? [])
+      .map((store) => {
+        const storeId = trimIfString(store._id);
+        if (!storeId) return null;
+        const storeName = trimIfString(store.name) || "Medical Store";
+        const status = store.isActive === false ? "Inactive" : "Active";
+        return {
+          label: status === "Inactive" ? `${storeName} (Inactive)` : storeName,
+          value: storeId,
+        };
+      })
+      .filter((value): value is { label: string; value: string } => Boolean(value));
+
+    const selectedStoreId = trimIfString(initialValues?.medicalStoreId);
+    if (selectedStoreId && !options.some((option) => option.value === selectedStoreId)) {
+      const fallbackLabel = user?.medicalName || "Linked Medical Store";
+      options.unshift({ label: fallbackLabel, value: selectedStoreId });
+    }
+
+    const deduped = new Map<string, { label: string; value: string }>();
+    options.forEach((option) => {
+      if (!deduped.has(option.value)) deduped.set(option.value, option);
+    });
+
+    return [...deduped.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [medicalStoresData?.medicalStores, initialValues?.medicalStoreId, user?.medicalName]);
 
   const normalizedInitial = useMemo(
     () => normalizeForCompare(initialValues),
@@ -97,7 +103,7 @@ export default function EditUserModal({ user, onClose, onSave, isLoading }: Prop
   const hasRequiredValues = Boolean(
     trimIfString(watchedValues?.name) &&
       trimIfString(watchedValues?.email) &&
-      watchedValues?.role
+      trimIfString(watchedValues?.medicalStoreId)
   );
 
   return (
@@ -137,14 +143,6 @@ export default function EditUserModal({ user, onClose, onSave, isLoading }: Prop
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
-            <Form.Item name="medicalName" label="Medical Name">
-              <Input disabled={isLoading} />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col xs={24} md={12}>
             <Form.Item
               name="email"
               label="Email"
@@ -156,26 +154,36 @@ export default function EditUserModal({ user, onClose, onSave, isLoading }: Prop
         </Row>
 
         <Row gutter={16}>
-          <Col xs={24} md={12}>
+          <Col xs={24}>
             <Form.Item
-              name="phone"
-              label="Phone"
-              rules={[phoneRule]}
-              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
+              name="medicalStoreId"
+              label="Medical Store"
+              rules={[requiredRule("Medical Store")]}
+              extra={
+                !isLoadingMedicalStores && medicalStoreOptions.length === 0
+                  ? "No medical store found."
+                  : undefined
+              }
             >
-              <Input maxLength={10} inputMode="numeric" disabled={isLoading} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item name="role" label="Role" rules={[requiredRule("Role")]}>
-              <Select options={ROLE_OPTIONS} disabled={isLoading} />
+              <Select
+                allowClear={false}
+                showSearch
+                optionFilterProp="label"
+                placeholder={
+                  isLoadingMedicalStores ? "Loading Medical Stores..." : "Select Medical Store"
+                }
+                options={medicalStoreOptions}
+                loading={isLoadingMedicalStores}
+                disabled={isLoading}
+              />
             </Form.Item>
           </Col>
         </Row>
-
-        <UserBusinessFields disabled={isLoading} />
       </Form>
     </Modal>
   );
 }
+
+
+
 

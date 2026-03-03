@@ -1,8 +1,17 @@
+import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Spin } from "antd";
-import { useMe } from "../../hooks/useMe";
-import { ROUTES, STORAGE_KEYS } from "../../constants";
-import { storePostLoginRedirect } from "../../utils/authRedirect";
+import { ROUTES } from "../../constants";
+import { clearStoredToken } from "../../common/helpers/tokenStorage";
+import { hasRequiredRole } from "../../common/helpers/roleAccess";
+import { storePostLoginRedirect } from "../../common/helpers/authRedirect";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import {
+  clearAuth,
+  selectAuthInitialized,
+  selectAuthLoading,
+  selectAuthUser,
+} from "../../store/slices/authSlice";
 
 type ProtectedRouteProps = {
   roles?: string[];
@@ -10,9 +19,19 @@ type ProtectedRouteProps = {
 
 export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
   const location = useLocation();
-  const { data: me, isLoading } = useMe();
+  const dispatch = useAppDispatch();
+  const me = useAppSelector(selectAuthUser);
+  const isLoading = useAppSelector(selectAuthLoading);
+  const isInitialized = useAppSelector(selectAuthInitialized);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (me?.isActive === false) {
+      clearStoredToken();
+      dispatch(clearAuth());
+    }
+  }, [dispatch, me?.isActive]);
+
+  if (!isInitialized || isLoading) {
     return (
       <div
         style={{
@@ -27,26 +46,16 @@ export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
     );
   }
 
-  // not logged in
-  if (!me) {
+  if (!me || me.isActive === false) {
     const target = `${location.pathname}${location.search}${location.hash}`;
     storePostLoginRedirect(target);
     return <Navigate to={ROUTES.LOGIN} replace state={{ from: location }} />;
   }
 
-  // inactive users cannot access protected pages
-  if (me.isActive === false) {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem("token");
-    const target = `${location.pathname}${location.search}${location.hash}`;
-    storePostLoginRedirect(target);
-    return <Navigate to={ROUTES.LOGIN} replace />;
-  }
-
-  // role based access
-  if (roles && !roles.includes(me.role)) {
+  if (!hasRequiredRole(me.role, roles)) {
     return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
 }
+

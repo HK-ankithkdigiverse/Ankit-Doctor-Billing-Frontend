@@ -1,31 +1,35 @@
-import { theme as antdTheme, type ThemeConfig } from "antd";
 import type { CSSProperties } from "react";
+import type { ThemeConfig } from "antd";
 
 export const authPageTheme: ThemeConfig = {
-  algorithm: antdTheme.defaultAlgorithm,
   token: {
-    colorPrimary: "#1f7a68",
-    colorInfo: "#1f7a68",
-    colorBgContainer: "#ffffff",
-    colorText: "#102a43",
-    colorTextPlaceholder: "#94a3b8",
-    colorBorder: "#b9d1ca",
+    colorPrimary: "#1e8b7b",
     borderRadius: 10,
+    fontFamily: "\"Segoe UI\", \"Inter\", \"Roboto\", sans-serif",
   },
   components: {
     Card: {
-      colorBgContainer: "#ffffff",
+      borderRadiusLG: 16,
+    },
+    Button: {
+      borderRadius: 10,
+      controlHeight: 42,
+      colorPrimary: "#1e8b7b",
+      colorPrimaryHover: "#1b7e70",
+      colorPrimaryActive: "#16695d",
     },
     Input: {
-      activeBorderColor: "#1f7a68",
-      hoverBorderColor: "#2a8f79",
-      colorBgContainer: "#ffffff",
-      colorText: "#102a43",
-      colorBorder: "#b9d1ca",
-      colorTextPlaceholder: "#94a3b8",
+      controlHeight: 42,
+      activeBorderColor: "#1e8b7b",
+      hoverBorderColor: "#2a9c8b",
     },
-    Form: {
-      labelColor: "#16324a",
+    InputNumber: {
+      activeBorderColor: "#1e8b7b",
+      hoverBorderColor: "#2a9c8b",
+    },
+    Select: {
+      activeBorderColor: "#1e8b7b",
+      hoverBorderColor: "#2a9c8b",
     },
   },
 };
@@ -34,14 +38,13 @@ export const authPageBackground: CSSProperties = {
   minHeight: "100vh",
   display: "grid",
   placeItems: "center",
-  background: "linear-gradient(180deg, #0e4e59 0%, #1e7f6f 55%, #89c3b8 100%)",
-  padding: 16,
+  padding: "24px 16px",
+  background: "linear-gradient(180deg, #0f5f66 0%, #1f7f7f 52%, #63ae9f 100%)",
 };
 
 export const authPageCardBase: CSSProperties = {
   width: "100%",
   borderRadius: 16,
-  border: "1px solid #cfe0db",
-  background: "#ffffff",
-  boxShadow: "0 20px 45px rgba(12, 52, 57, 0.28)",
+  border: "1px solid #d9e3ef",
+  boxShadow: "0 10px 24px rgba(16, 42, 67, 0.08)",
 };

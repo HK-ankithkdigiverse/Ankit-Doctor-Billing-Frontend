@@ -31,4 +31,8 @@ export const ROUTES = {
   USERS: "/users",
   CREATE_USER: "/users/create",
   USER_EDIT: "/users/:id/edit",
+
+  MEDICAL_STORES: "/medical-stores",
+  CREATE_MEDICAL_STORE: "/medical-stores/create",
+  MEDICAL_STORE_EDIT: "/medical-stores/:id/edit",
 };

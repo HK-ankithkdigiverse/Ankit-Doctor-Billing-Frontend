@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -17,17 +17,17 @@ import { ROLE, ROUTES } from "../../constants";
 import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
-import { useUsers } from "../../hooks/useUsers";
-import { formatDateTime } from "../../utils/dateTime";
-import { sortDateTime, sortNumber, sortText } from "../../utils/tableSort";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { formatDateTime } from "../../common/helpers/dateTime";
+import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
 import type { DateFilterType } from "../../types/bill";
 import {
   type BillingDateRange,
   DATE_FILTER_OPTIONS,
   filterBills,
   getBillCompanyName,
-  getBillCreatorLabel,
-  mapUsersToSelectOptions,
+  getBillMedicalStoreId,
+  getBillMedicalStoreName,
 } from "../../utils/billing";
 
 export default function BillList() {
@@ -37,29 +37,50 @@ export default function BillList() {
     page: 1,
     limit: 10,
     search: "",
-    createdBy: "",
+    medicalStoreId: "",
   });
   const [dateFilter, setDateFilter] = useState<DateFilterType>("all");
   const [customRange, setCustomRange] = useState<BillingDateRange>(null);
   const debouncedSearch = useDebouncedValue(filters.search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
-  const hasAdminUserFilter = isAdmin && !!filters.createdBy;
+  const hasAdminMedicalStoreFilter = isAdmin && !!filters.medicalStoreId;
   const hasDateFilter = dateFilter !== "all";
-  const hasLocalFilter = hasAdminUserFilter || hasDateFilter;
+  const hasLocalFilter = hasAdminMedicalStoreFilter || hasDateFilter;
   const queryPage = hasLocalFilter ? 1 : filters.page;
   const queryLimit = hasLocalFilter ? 1000 : filters.limit;
 
   const { data, isLoading, isFetching } = useBills(queryPage, queryLimit, debouncedSearch);
-  const { data: usersFilterData } = useUsers(1, 1000, "", "all");
+  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", {
+    enabled: isAdmin,
+  });
   const searchLoading = filters.search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteBill } = useDeleteBill();
   const confirmDialog = useConfirmDialog();
+  const medicalStoreNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (medicalStoresData?.medicalStores ?? []).forEach((store) => {
+      const storeId = store?._id ? String(store._id) : "";
+      const storeName = store?.name ? String(store.name).trim() : "";
+      if (storeId && storeName) {
+        map.set(storeId, storeName);
+      }
+    });
+    return map;
+  }, [medicalStoresData?.medicalStores]);
+  const getBillMedicalStoreLabel = (bill: any) => {
+    const embeddedName = getBillMedicalStoreName(bill);
+    if (embeddedName !== "-") return embeddedName;
+
+    const storeId = getBillMedicalStoreId(bill);
+    if (!storeId) return "-";
+    return medicalStoreNameById.get(storeId) || "-";
+  };
 
   const rowsRaw = data?.data ?? [];
   const filteredRows = filterBills(rowsRaw, {
     isAdmin,
-    createdBy: filters.createdBy,
+    medicalStoreId: filters.medicalStoreId,
     dateFilter,
     customRange,
   });
@@ -75,8 +96,11 @@ export default function BillList() {
     { label: "100 / page", value: 100 },
     ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
   ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
-  const userOptions =
-    mapUsersToSelectOptions(usersFilterData?.users);
+  const medicalStoreOptions =
+    (medicalStoresData?.medicalStores ?? []).map((store) => ({
+      value: store._id,
+      label: store.name || store._id,
+    })) ?? [];
 
   const columns = [
     {
@@ -89,21 +113,20 @@ export default function BillList() {
       title: "Bill No",
       dataIndex: "billNo",
       key: "billNo",
-      sorter: (a: any, b: any) => sortText(a.billNo, b.billNo),
     },
     {
       title: "Company",
       key: "company",
-      sorter: (a: any, b: any) => sortText(getBillCompanyName(a), getBillCompanyName(b)),
+      sorter: createNameSorter((row: any) => getBillCompanyName(row)),
       render: (_: any, bill: any) => getBillCompanyName(bill),
     },
     ...(isAdmin
       ? [
           {
-            title: "Created By",
-            key: "addedBy",
-            sorter: (a: any, b: any) => sortText(getBillCreatorLabel(a), getBillCreatorLabel(b)),
-            render: (_: any, bill: any) => getBillCreatorLabel(bill),
+            title: "Medical Store",
+            key: "medicalStore",
+            sorter: createNameSorter((row: any) => getBillMedicalStoreLabel(row)),
+            render: (_: any, bill: any) => getBillMedicalStoreLabel(bill),
           },
         ]
       : []),
@@ -111,14 +134,12 @@ export default function BillList() {
       title: "Total",
       key: "total",
       align: "right" as const,
-      sorter: (a: any, b: any) => sortNumber(a?.grandTotal, b?.grandTotal),
       render: (_: any, bill: any) => `Rs ${Number(bill.grandTotal || 0).toFixed(2)}`,
     },
     {
       title: "Date (Created Date, Updated Date)",
       key: "createdUpdatedAt",
-      sorter: (a: any, b: any) =>
-        sortDateTime(a?.updatedAt || a?.createdAt, b?.updatedAt || b?.createdAt),
+      sorter: createDateSorter((row: any) => row?.updatedAt || row?.createdAt),
       render: (_: any, bill: any) => (
         <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
           {formatDateTime(bill.createdAt)}
@@ -202,13 +223,13 @@ export default function BillList() {
               allowClear
               showSearch
               optionFilterProp="label"
-              placeholder="Filter by user"
-              value={filters.createdBy || undefined}
-              options={userOptions}
+              placeholder="Filter by medical store"
+              value={filters.medicalStoreId || undefined}
+              options={medicalStoreOptions}
               onChange={(value) =>
-                setFilters((prev) => ({ ...prev, page: 1, createdBy: value || "" }))
+                setFilters((prev) => ({ ...prev, page: 1, medicalStoreId: value || "" }))
               }
-              style={{ width: 220 }}
+              style={{ width: 240 }}
             />
           )}
           <Select
@@ -257,3 +278,4 @@ export default function BillList() {
     </Card>
   );
 }
+

@@ -1,60 +1,37 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { App, Card, Col, Form, Input, Row, Typography } from "antd";
+import { App, Card, Col, Form, Input, Row, Select, Typography } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCreateUser } from "../../hooks/useUsers";
-import { emailRule, passwordMinRule, phoneRule, requiredRule } from "../../utils/formRules";
-import type { CreateUserPayload } from "../../api/userApi";
-import { uploadSingleFileApi } from "../../api/uploadApi";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { emailRule, passwordMinRule, requiredRule } from "../../common/helpers/formRules";
+import type { CreateUserPayload } from "../../modules/users/api";
+import { uploadSingleFileApi } from "../../modules/files/api";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
-import UserBusinessFields from "../../components/forms/UserBusinessFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
-import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../utils/userForm";
+import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../common/helpers/userForm";
 
 interface CreateUserFormValues {
   name: string;
-  medicalName: string;
   email: string;
   password: string;
-  phone?: string;
-  address: string;
-  state: string;
-  city: string;
-  pincode: string;
-  gstNumber: string;
-  panCardNumber: string;
+  medicalStoreId: string;
 }
 
 const buildPayload = (values: CreateUserFormValues): CreateUserPayload => {
-  const name = trimIfString(values.name) || "";
-  const medicalName = trimIfString(values.medicalName) || "";
-  const email = trimIfString(values.email) || "";
-  const password = trimIfString(values.password) || "";
-  const address = trimIfString(values.address) || "";
-  const state = trimIfString(values.state) || "";
-  const city = trimIfString(values.city) || "";
-  const pincode = trimIfString(values.pincode) || "";
-  const gstNumber = trimIfString(values.gstNumber)?.toUpperCase() || "";
-  const panCardNumber = trimIfString(values.panCardNumber)?.toUpperCase() || "";
+  const medicalStoreId = trimIfString(values.medicalStoreId);
 
-  const payload: CreateUserPayload = {  
-    name,
-    medicalName,
-    email: email.toLowerCase(),
-    password,
-    address,
-    state,
-    city,
-    pincode,
-    gstNumber,
-    panCardNumber,
+  const payload: CreateUserPayload = {
+    name: trimIfString(values.name) || "",
+    email: (trimIfString(values.email) || "").toLowerCase(),
+    password: trimIfString(values.password) || "",
     role: ROLE.USER,
     isActive: true,
   };
 
-  const phone = trimIfString(values.phone);
-
-  if (phone) payload.phone = phone;
+  if (medicalStoreId) {
+    payload.medicalStoreId = medicalStoreId;
+  }
 
   return payload;
 };
@@ -63,8 +40,31 @@ export default function CreateUser() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const { mutateAsync: createUser, isPending } = useCreateUser();
+  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useMedicalStores(1, 1000, "");
   const [form] = Form.useForm<CreateUserFormValues>();
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
+
+  const medicalStoreOptions = useMemo(() => {
+    const options = (medicalStoresData?.medicalStores ?? [])
+      .filter((store) => store.isActive !== false)
+      .map((store) => {
+        const storeId = trimIfString(store._id);
+        if (!storeId) return null;
+        const storeName = trimIfString(store.name) || "Medical Store";
+        return {
+          label: storeName,
+          value: storeId,
+        };
+      })
+      .filter((value): value is { label: string; value: string } => Boolean(value));
+
+    const deduped = new Map<string, { label: string; value: string }>();
+    options.forEach((option) => {
+      if (!deduped.has(option.value)) deduped.set(option.value, option);
+    });
+
+    return [...deduped.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [medicalStoresData?.medicalStores]);
 
   const handleSubmit = async (values: CreateUserFormValues) => {
     try {
@@ -102,53 +102,69 @@ export default function CreateUser() {
             <Form.Item
               name="name"
               label="Name"
-              rules={[requiredRule("Name"), nonWhitespaceRule("Name"), { min: 2, message: "Name must be at least 2 characters" }]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12}>
-            <Form.Item
-              name="medicalName"
-              label="Medical Name"
               rules={[
-                requiredRule("Medical Name"),
-                nonWhitespaceRule("Medical Name"),
-                { min: 2, message: "Medical Name must be at least 2 characters" },
+                requiredRule("Name"),
+                nonWhitespaceRule("Name"),
+                { min: 2, message: "Name must be at least 2 characters" },
               ]}
             >
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col xs={24} md={24}>
-            <Form.Item name="email" label="Email" rules={[requiredRule("Email"), nonWhitespaceRule("Email"), emailRule]}>
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col xs={24} md={12}>
-            <Form.Item name="password" label="Password" rules={[requiredRule("Password"), nonWhitespaceRule("Password"), passwordMinRule]}>
-              <Input.Password />
+              <Input disabled={isPending} />
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
             <Form.Item
-              name="phone"
-              label="Phone"
-              rules={[phoneRule]}
-              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
+              name="medicalStoreId"
+              label="Medical Store"
+              rules={[requiredRule("Medical Store")]}
+              extra={
+                !isLoadingMedicalStores && medicalStoreOptions.length === 0
+                  ? "No active medical store found. Create a medical store first."
+                  : undefined
+              }
             >
-              <Input maxLength={10} inputMode="numeric" />
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder={
+                  isLoadingMedicalStores ? "Loading Medical Stores..." : "Select Medical Store"
+                }
+                options={medicalStoreOptions}
+                loading={isLoadingMedicalStores}
+                disabled={
+                  isPending || (!isLoadingMedicalStores && medicalStoreOptions.length === 0)
+                }
+              />
             </Form.Item>
           </Col>
         </Row>
 
-        <UserBusinessFields required />
+        <Row gutter={16}>
+          <Col xs={24}>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[requiredRule("Email"), nonWhitespaceRule("Email"), emailRule]}
+            >
+              <Input disabled={isPending} />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col xs={24}>
+            <Form.Item
+              name="password"
+              label="Password"
+              rules={[
+                requiredRule("Password"),
+                nonWhitespaceRule("Password"),
+                passwordMinRule,
+              ]}
+            >
+              <Input.Password disabled={isPending} />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <SignatureUploadField
           disabled={isPending}
@@ -156,8 +172,15 @@ export default function CreateUser() {
           onClearFile={() => setSignatureFile(null)}
         />
 
-        <FormActionButtons submitText="Add User" loading={isPending} onCancel={() => navigate(ROUTES.USERS)} />
+        <FormActionButtons
+          submitText="Add User"
+          loading={isPending}
+          onCancel={() => navigate(ROUTES.USERS)}
+        />
       </Form>
     </Card>
   );
 }
+
+
+

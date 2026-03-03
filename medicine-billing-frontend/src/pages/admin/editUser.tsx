@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { App, Button, Card, Col, Form, Input, Row, Typography } from "antd";
-import { useUpdateUser, useUsers } from "../../hooks/useUsers";
-import type { UpdateUserPayload } from "../../api/userApi";
+import { App, Button, Card, Col, Form, Input, Row, Select, Typography } from "antd";
 import { ROUTES } from "../../constants";
+import { useUpdateUser, useUsers } from "../../hooks/useUsers";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
+import type { UpdateUserPayload } from "../../modules/users/api";
 import type { User } from "../../types";
-import { emailRule, phoneRule, requiredRule } from "../../utils/formRules";
-import { uploadSingleFileApi } from "../../api/uploadApi";
+import { emailRule, requiredRule } from "../../common/helpers/formRules";
+import { uploadSingleFileApi } from "../../modules/files/api";
 import { getUploadFileUrl } from "../../utils/company";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
-import UserBusinessFields from "../../components/forms/UserBusinessFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
-import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../utils/userForm";
+import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../common/helpers/userForm";
 import type { EditUserFormValues, NormalizedEditUserValues } from "../../types/userForm";
 
 interface EditUserLocationState {
@@ -20,47 +20,32 @@ interface EditUserLocationState {
 
 const toInitialValues = (user: User): EditUserFormValues => ({
   name: user.name || "",
-  medicalName: user.medicalName || "",
   email: user.email || "",
-  phone: user.phone || "",
-  address: user.address || "",
-  state: user.state || "",
-  city: user.city || "",
-  pincode: user.pincode || "",
-  gstNumber: user.gstNumber || "",
-  panCardNumber: user.panCardNumber || "",
+  medicalStoreId:
+    (typeof user.medicalStoreId === "string"
+      ? trimIfString(user.medicalStoreId)
+      : trimIfString(user.medicalStoreId?._id)) || "",
 });
 
 const normalizeForCompare = (
   values: Partial<EditUserFormValues> | undefined
 ): NormalizedEditUserValues => ({
   name: trimIfString(values?.name) ?? "",
-  medicalName: trimIfString(values?.medicalName) ?? "",
   email: (trimIfString(values?.email) ?? "").toLowerCase(),
-  phone: trimIfString(values?.phone) ?? "",
-  address: trimIfString(values?.address) ?? "",
-  state: trimIfString(values?.state) ?? "",
-  city: trimIfString(values?.city) ?? "",
-  pincode: trimIfString(values?.pincode) ?? "",
-  gstNumber: (trimIfString(values?.gstNumber) ?? "").toUpperCase(),
-  panCardNumber: (trimIfString(values?.panCardNumber) ?? "").toUpperCase(),
+  medicalStoreId: trimIfString(values?.medicalStoreId) ?? "",
 });
 
-const buildPayload = (values: EditUserFormValues): UpdateUserPayload => ({
-  name: trimIfString(values.name) || "",
-  medicalName: trimIfString(values.medicalName) || "",
-  email: (trimIfString(values.email) || "").toLowerCase(),
-  phone: trimIfString(values.phone),
-  address: trimIfString(values.address),
-  state: trimIfString(values.state),
-  city: trimIfString(values.city),
-  pincode: trimIfString(values.pincode),
-  gstNumber: trimIfString(values.gstNumber)?.toUpperCase(),
-  panCardNumber: trimIfString(values.panCardNumber)?.toUpperCase(),
-});
+const buildPayload = (values: EditUserFormValues): UpdateUserPayload => {
+  const payload: UpdateUserPayload = {
+    name: trimIfString(values.name) || "",
+    email: (trimIfString(values.email) || "").toLowerCase(),
+  };
 
+  const medicalStoreId = trimIfString(values.medicalStoreId);
+  if (medicalStoreId) payload.medicalStoreId = medicalStoreId;
 
-
+  return payload;
+};
 
 export default function EditUser() {
   const { message } = App.useApp();
@@ -71,6 +56,12 @@ export default function EditUser() {
   const watchedValues = Form.useWatch([], form);
   const { data, isLoading } = useUsers(1, 1000, "", "all");
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
+  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useMedicalStores(
+    1,
+    1000,
+    "",
+    { enabled: true }
+  );
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [removeSignature, setRemoveSignature] = useState(false);
 
@@ -80,13 +71,39 @@ export default function EditUser() {
   const user = useMemo(() => {
     if (!id) return undefined;
     if (routeState?.user?._id === id) return routeState.user;
-    return users.find((candidate) => candidate._id === id);
+    return users.find((candidate: User) => candidate._id === id);
   }, [id, routeState, users]);
-
   const initialValues = useMemo(
     () => (user ? toInitialValues(user) : undefined),
     [user]
   );
+  const medicalStoreOptions = useMemo(() => {
+    const options = (medicalStoresData?.medicalStores ?? [])
+      .map((store) => {
+        const storeId = trimIfString(store._id);
+        if (!storeId) return null;
+        const storeName = trimIfString(store.name) || "Medical Store";
+        const status = store.isActive === false ? "Inactive" : "Active";
+        return {
+          label: status === "Inactive" ? `${storeName} (Inactive)` : storeName,
+          value: storeId,
+        };
+      })
+      .filter((value): value is { label: string; value: string } => Boolean(value));
+
+    const selectedStoreId = trimIfString(initialValues?.medicalStoreId);
+    if (selectedStoreId && !options.some((option) => option.value === selectedStoreId)) {
+      const fallbackLabel = user?.medicalName || "Linked Medical Store";
+      options.unshift({ label: fallbackLabel, value: selectedStoreId });
+    }
+
+    const deduped = new Map<string, { label: string; value: string }>();
+    options.forEach((option) => {
+      if (!deduped.has(option.value)) deduped.set(option.value, option);
+    });
+
+    return [...deduped.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [medicalStoresData?.medicalStores, initialValues?.medicalStoreId, user?.medicalName]);
 
   useEffect(() => {
     if (!initialValues) return;
@@ -110,15 +127,15 @@ export default function EditUser() {
 
   const hasRequiredValues = Boolean(
     trimIfString(watchedValues?.name) &&
-      trimIfString(watchedValues?.medicalName) &&
-      trimIfString(watchedValues?.email)
+      trimIfString(watchedValues?.email) &&
+      trimIfString(watchedValues?.medicalStoreId)
   );
   const signatureChanged = Boolean(signatureFile) || removeSignature;
   const existingSignatureUrl =
     !removeSignature && !signatureFile ? getUploadFileUrl(user?.signature) : "";
 
   const handleSubmit = async (values: EditUserFormValues) => {
-    if (!id) return;
+    if (!id || !user) return;
 
     try {
       const payload = buildPayload(values);
@@ -183,23 +200,6 @@ export default function EditUser() {
           </Col>
           <Col xs={24} md={12}>
             <Form.Item
-              name="medicalName"
-              label="Medical Name"
-              rules={[
-                requiredRule("Medical Name"),
-                nonWhitespaceRule("Medical Name"),
-                { min: 2, message: "Medical Name must be at least 2 characters" },
-              ]}
-            >
-              <Input disabled={isPending} />
-            </Form.Item>
-          </Col>
-          
-        </Row>
-
-        <Row gutter={16}>
-          <Col xs={24} md={24}>
-            <Form.Item
               name="email"
               label="Email"
               rules={[requiredRule("Email"), nonWhitespaceRule("Email"), emailRule]}
@@ -210,19 +210,31 @@ export default function EditUser() {
         </Row>
 
         <Row gutter={16}>
-          <Col xs={24} md={24}>
+          <Col xs={24}>
             <Form.Item
-              name="phone"
-              label="Phone"
-              rules={[phoneRule]}
-              normalize={(value?: string) => (value || "").replace(/\D/g, "")}
+              name="medicalStoreId"
+              label="Medical Store"
+              rules={[requiredRule("Medical Store")]}
+              extra={
+                !isLoadingMedicalStores && medicalStoreOptions.length === 0
+                  ? "No medical store found."
+                  : undefined
+              }
             >
-              <Input maxLength={10} inputMode="numeric" disabled={isPending} />
+              <Select
+                allowClear={false}
+                showSearch
+                optionFilterProp="label"
+                placeholder={
+                  isLoadingMedicalStores ? "Loading Medical Stores..." : "Select Medical Store"
+                }
+                options={medicalStoreOptions}
+                loading={isLoadingMedicalStores}
+                disabled={isPending}
+              />
             </Form.Item>
           </Col>
         </Row>
-
-        <UserBusinessFields disabled={isPending} />
 
         <SignatureUploadField
           signatureUrl={existingSignatureUrl}
@@ -248,3 +260,6 @@ export default function EditUser() {
     </Card>
   );
 }
+
+
+

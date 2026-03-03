@@ -1,4 +1,5 @@
-import { useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
+import type { MedicalStore, User } from "../../types";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -13,13 +14,14 @@ import { DeleteOutlined, EditOutlined, EyeOutlined, LoadingOutlined, PlusOutline
 import { ROLE, ROUTES } from "../../constants";
 import { useCompanies, useDeleteCompany } from "../../hooks/useCompanies";
 import { useUsers } from "../../hooks/useUsers";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Company } from "../../types/company";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { getCompanyDisplayName } from "../../utils/company";
-import { formatDateTime } from "../../utils/dateTime";
-import { sortDateTime, sortText } from "../../utils/tableSort";
+import { formatDateTime } from "../../common/helpers/dateTime";
+import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -31,31 +33,58 @@ export default function CompaniesList() {
     page: 1,
     limit: 10,
     search: "",
-    createdBy: "",
+    medicalStoreId: "",
   });
   const debouncedSearch = useDebouncedValue(filters.search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
-  const hasAdminUserFilter = isAdmin && !!filters.createdBy;
-  const queryPage = hasAdminUserFilter ? 1 : filters.page;
-  const queryLimit = hasAdminUserFilter ? 1000 : filters.limit;
+  const hasAdminStoreFilter = isAdmin && !!filters.medicalStoreId;
+  const queryPage = hasAdminStoreFilter ? 1 : filters.page;
+  const queryLimit = hasAdminStoreFilter ? 1000 : filters.limit;
 
   const { data, isLoading, isFetching } = useCompanies(queryPage, queryLimit, debouncedSearch);
   const { data: usersFilterData } = useUsers(1, 1000, "", "all");
+  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", { enabled: isAdmin });
   const searchLoading = filters.search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteCompany, isPending } = useDeleteCompany();
   const confirmDialog = useConfirmDialog();
   const companiesRaw: Company[] = data?.companies ?? [];
+  const getUserMedicalStoreId = (user: User) => {
+    const storeId = user.medicalStoreId;
+    if (!storeId) return "";
+    return typeof storeId === "string" ? storeId : storeId?._id || "";
+  };
   const getOwnerId = (company: Company) =>
     typeof company.userId === "object" ? company.userId?._id : company.userId;
+  const userStoreIdById = new Map<string, string>(
+    (usersFilterData?.users ?? [])
+      .map((user: User) => [user._id, getUserMedicalStoreId(user)] as const)
+      .filter(([, storeId]: readonly [string, string]) => !!storeId)
+  );
+  const getCompanyMedicalStoreId = (company: Company) => {
+    const companyStore = company.medicalStoreId;
+    if (typeof companyStore === "string") return companyStore;
+    if (companyStore && typeof companyStore === "object") return companyStore._id || "";
+    const ownerId = getOwnerId(company);
+    if (!ownerId) return "";
+    return userStoreIdById.get(ownerId) || "";
+  };
+  const medicalStoreNameById = new Map<string, string>(
+    (medicalStoresData?.medicalStores ?? [])
+      .map((store: MedicalStore) => [store._id, store.name?.trim() || store._id] as const)
+      .filter(([storeId]) => !!storeId)
+  );
   const filteredCompanies = isAdmin
-    ? companiesRaw.filter((company) => !filters.createdBy || getOwnerId(company) === filters.createdBy)
+    ? companiesRaw.filter(
+        (company) =>
+          !filters.medicalStoreId || getCompanyMedicalStoreId(company) === filters.medicalStoreId
+      )
     : companiesRaw;
-  const companies = hasAdminUserFilter
+  const companies = hasAdminStoreFilter
     ? filteredCompanies.slice((filters.page - 1) * filters.limit, filters.page * filters.limit)
     : filteredCompanies;
   const pagination = data?.pagination;
-  const totalRecords = hasAdminUserFilter ? filteredCompanies.length : pagination?.total || 0;
+  const totalRecords = hasAdminStoreFilter ? filteredCompanies.length : pagination?.total || 0;
   const pageSizeSelectOptions = [
     { label: "10 / page", value: 10 },
     { label: "30 / page", value: 30 },
@@ -68,11 +97,35 @@ export default function CompaniesList() {
       {value || "-"}
     </span>
   );
-  const userOptions =
-    usersFilterData?.users?.map((user) => ({
-      value: user._id,
-      label: user.name || user.email,
-    })) ?? [];
+  const medicalStoreOptions = useMemo<{ label: string; value: string }[]>(
+    () => {
+      const optionMap = new Map<string, string>();
+
+      (medicalStoresData?.medicalStores ?? []).forEach((store: MedicalStore) => {
+        if (!store?._id || store.isActive === false) return;
+        optionMap.set(store._id, store.name?.trim() || store._id);
+      });
+
+      // Keep filterable ids visible even if a store record is not in the current response.
+      companiesRaw.forEach((company: Company) => {
+        const storeId = getCompanyMedicalStoreId(company);
+        if (!storeId || optionMap.has(storeId)) return;
+        optionMap.set(storeId, storeId);
+      });
+
+      return [...optionMap.entries()]
+        .map(([value, label]) => ({ value, label }))
+        .sort((a: { label: string; value: string }, b: { label: string; value: string }) =>
+          a.label.localeCompare(b.label)
+        );
+    },
+    [companiesRaw, medicalStoresData?.medicalStores]
+  );
+  const getCreatedByStoreLabel = (company: Company) => {
+    const storeId = getCompanyMedicalStoreId(company);
+    if (!storeId) return "-";
+    return medicalStoreNameById.get(storeId) || storeId;
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -94,28 +147,25 @@ export default function CompaniesList() {
     {
       title: "Company",
       key: "companyName",
-      sorter: (a: Company, b: Company) => sortText(getCompanyDisplayName(a), getCompanyDisplayName(b)),
+      sorter: createNameSorter((row: Company) => getCompanyDisplayName(row)),
       render: (_: unknown, company: Company) => oneLineCell(getCompanyDisplayName(company)),
     },
     {
       title: "GST",
       dataIndex: "gstNumber",
       key: "gstNumber",
-      sorter: (a: Company, b: Company) => sortText(a.gstNumber, b.gstNumber),
       render: (v: string) => oneLineCell(v),
     },
     {
       title: "Email",
       dataIndex: "email",
       key: "email",
-      sorter: (a: Company, b: Company) => sortText(a.email, b.email),
       render: (v: string) => oneLineCell(v),
     },
     {
       title: "Phone",
       dataIndex: "phone",
       key: "phone",
-      sorter: (a: Company, b: Company) => sortText(a.phone, b.phone),
       render: (v: string) => oneLineCell(v),
     },
     ...(isAdmin
@@ -123,26 +173,15 @@ export default function CompaniesList() {
           {
             title: "Created By",
             key: "createdBy",
-            sorter: (a: Company, b: Company) =>
-              sortText(
-                typeof a.userId === "object" ? a.userId?.name || a.userId?.email : "",
-                typeof b.userId === "object" ? b.userId?.name || b.userId?.email : ""
-              ),
-            render: (_: unknown, company: Company) => {
-              const owner = company.userId;
-              if (!owner || typeof owner === "string") return "-";
-              const ownerDisplayName = owner.name?.trim() || "-";
-              const ownerEmail = owner.email?.trim();
-              return oneLineCell(ownerEmail ? `${ownerDisplayName} (${ownerEmail})` : ownerDisplayName);
-            },
+            sorter: createNameSorter((row: Company) => getCreatedByStoreLabel(row)),
+            render: (_: unknown, company: Company) => oneLineCell(getCreatedByStoreLabel(company)),
           },
         ]
       : []),
     {
       title: "Created / Updated",
       key: "createdUpdatedAt",
-      sorter: (a: Company, b: Company) =>
-        sortDateTime((a as any).updatedAt || (a as any).createdAt, (b as any).updatedAt || (b as any).createdAt),
+      sorter: createDateSorter((row: Company) => (row as any).updatedAt || (row as any).createdAt),
       render: (_: unknown, company: Company) => {
         const created = formatDateTime((company as any).createdAt);
         const updated = formatDateTime((company as any).updatedAt);
@@ -202,7 +241,7 @@ export default function CompaniesList() {
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => navigate(ROUTES.CREATE_COMPANY)}
-            className="!border-0 !bg-hero-gradient"
+            className="border-0! bg-hero-gradient!"
           >
             Add Company
           </Button>
@@ -226,11 +265,11 @@ export default function CompaniesList() {
                 allowClear
                 showSearch
                 optionFilterProp="label"
-                placeholder="Filter by user"
-                value={filters.createdBy || undefined}
-                options={userOptions}
+                placeholder="Filter by medical store"
+                value={filters.medicalStoreId || undefined}
+                options={medicalStoreOptions}
                 onChange={(value) =>
-                  setFilters((prev) => ({ ...prev, page: 1, createdBy: value || "" }))
+                  setFilters((prev) => ({ ...prev, page: 1, medicalStoreId: value || "" }))
                 }
                 style={{ width: 220 }}
               />
@@ -263,4 +302,3 @@ export default function CompaniesList() {
     </PageShell>
   );
 }
-

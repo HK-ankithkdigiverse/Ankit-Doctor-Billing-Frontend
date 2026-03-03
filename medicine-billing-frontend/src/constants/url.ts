@@ -30,6 +30,11 @@ export const USERS_API = {
   ME_PASSWORD: "/users/me/password",
 };
 
+export const MEDICAL_STORES_API = {
+  ROOT: "/medical-stores",
+  BY_ID: (id: string) => `/medical-stores/${id}`,
+};
+
 export const PRODUCTS_API = {
   ROOT: "/products",
   BY_ID: (id: string) => `/products/${id}`,

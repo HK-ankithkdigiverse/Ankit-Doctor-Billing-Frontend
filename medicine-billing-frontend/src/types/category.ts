@@ -2,6 +2,12 @@ export interface Category {
   _id: string;
   name: string;
   description?: string;
+  medicalStoreId?:
+    | string
+    | {
+        _id?: string;
+        name?: string;
+      };
   isActive?: boolean;
   isDeleted?: boolean;
   createdAt?: string;
@@ -17,6 +23,8 @@ export interface Category {
 export interface CreateCategoryPayload {
   name: string;
   description?: string;
+  userId?: string;
+  medicalStoreId?: string;
 }
 
 export interface CategoryDropdownItem {

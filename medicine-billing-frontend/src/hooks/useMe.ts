@@ -1,27 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/axios";
-import { AUTH_API, QUERY_KEYS, STORAGE_KEYS } from "../constants";
+import { useAppSelector } from "../store/hooks";
+import { selectAuthLoading, selectAuthUser } from "../store/slices/authSlice";
 
 export const useMe = () => {
-  const token =
-    localStorage.getItem(STORAGE_KEYS.TOKEN) || localStorage.getItem("token");
+  const data = useAppSelector(selectAuthUser);
+  const isLoading = useAppSelector(selectAuthLoading);
 
-  return useQuery({
-    queryKey: QUERY_KEYS.ME,
-    queryFn: async () => {
-      try {
-        const res = await api.get(AUTH_API.ME);
-        const payload = res.data as any;
-        // Support both response shapes: { ...user } and { user: {...user} }
-        return payload?.user ?? payload;
-      } catch {
-        return null;
-      }
-    },
-    enabled: Boolean(token),
-    retry: false,
-    staleTime: 60 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+  return {
+    data,
+    isLoading,
+  };
 };

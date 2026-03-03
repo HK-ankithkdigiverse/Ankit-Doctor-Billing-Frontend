@@ -11,6 +11,7 @@ import {
   FileTextOutlined,
   IdcardOutlined,
   PlusSquareFilled,
+  ShopOutlined,
 } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
 import { useMe } from "../../hooks/useMe";
@@ -63,6 +64,12 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           key: ROUTES.USERS,
           icon: <TeamOutlined />,
           label: "Users",
+          roles: ["ADMIN"],
+        },
+        {
+          key: ROUTES.MEDICAL_STORES,
+          icon: <ShopOutlined />,
+          label: "Medical Stores",
           roles: ["ADMIN"],
         },
         {

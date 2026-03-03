@@ -31,9 +31,10 @@ export type BillFormInitialValues = {
 
 export const DATE_FILTER_OPTIONS: { value: DateFilterType; label: string }[] = [
   { value: "all", label: "All Dates" },
-  { value: "today", label: "Today" },
+  { value: "day", label: "Day" },
   { value: "week", label: "This Week" },
   { value: "month", label: "This Month" },
+  { value: "year", label: "This Year" },
   { value: "custom", label: "Custom Range" },
 ];
 
@@ -54,6 +55,22 @@ const toId = (value: unknown) => {
     return String((value as { _id?: unknown })._id || "");
   }
   return "";
+};
+
+const toMedicalStore = (value: unknown) => {
+  if (!value || typeof value !== "object") return null;
+  const store = value as Record<string, unknown>;
+  return {
+    _id: toId(store._id),
+    name: typeof store.name === "string" ? store.name : "",
+    phone: typeof store.phone === "string" ? store.phone : "",
+    address: typeof store.address === "string" ? store.address : "",
+    state: typeof store.state === "string" ? store.state : "",
+    city: typeof store.city === "string" ? store.city : "",
+    pincode: typeof store.pincode === "string" ? store.pincode : "",
+    gstNumber: typeof store.gstNumber === "string" ? store.gstNumber : "",
+    panCardNumber: typeof store.panCardNumber === "string" ? store.panCardNumber : "",
+  };
 };
 
 export const formatBillCurrency = (value: unknown, options?: { withPrefix?: boolean }) => {
@@ -124,6 +141,32 @@ export const getBillCreator = (bill: Bill | Record<string, any> | undefined | nu
 export const getBillCreatorId = (bill: Bill | Record<string, any> | undefined | null) =>
   getBillCreator(bill)?._id || "";
 
+export const getBillMedicalStoreId = (bill: Bill | Record<string, any> | undefined | null) => {
+  const directStoreId = toId((bill as Record<string, any> | undefined)?.medicalStoreId);
+  if (directStoreId) return directStoreId;
+
+  const creatorStoreId = toId(getBillCreator(bill)?.medicalStoreId);
+  if (creatorStoreId) return creatorStoreId;
+
+  const companyStoreId = toId((bill as Record<string, any> | undefined)?.companyId?.medicalStoreId);
+  if (companyStoreId) return companyStoreId;
+
+  return "";
+};
+
+export const getBillMedicalStoreName = (bill: Bill | Record<string, any> | undefined | null) => {
+  const directStore = toMedicalStore((bill as Record<string, any> | undefined)?.medicalStoreId);
+  if (directStore?.name?.trim()) return directStore.name.trim();
+
+  const creatorStore = toMedicalStore(getBillCreator(bill)?.medicalStoreId);
+  if (creatorStore?.name?.trim()) return creatorStore.name.trim();
+
+  const companyStore = toMedicalStore((bill as Record<string, any> | undefined)?.companyId?.medicalStoreId);
+  if (companyStore?.name?.trim()) return companyStore.name.trim();
+
+  return "-";
+};
+
 export const getBillCreatorLabel = (bill: Bill | Record<string, any> | undefined | null) => {
   const creator = getBillCreator(bill);
   const name = creator?.name || "";
@@ -137,16 +180,56 @@ export const getBillCompanyName = (bill: Bill | Record<string, any> | undefined 
 
 export const getBillUserProfile = (bill: Bill | Record<string, any> | undefined | null) => {
   const creator = getBillCreator(bill);
+  const creatorStore = toMedicalStore(creator?.medicalStoreId);
+  const billStore = toMedicalStore((bill as Record<string, unknown> | undefined)?.medicalStoreId);
+  const medicalStore = creatorStore?._id ? creatorStore : billStore;
+
   return {
     name: creator?.name || "-",
-    medicalName: creator?.medicalName || "",
+    medicalName: creator?.medicalName || medicalStore?.name || "",
     email: creator?.email || "-",
-    phone: creator?.phone || "-",
-    address: creator?.address || "-",
+    phone: creator?.phone || medicalStore?.phone || "-",
+    address: creator?.address || medicalStore?.address || "-",
     signature: creator?.signature || "",
-    gstNumber: creator?.gstNumber || "-",
-    panCardNumber: creator?.panCardNumber || "-",
+    gstNumber: creator?.gstNumber || medicalStore?.gstNumber || "-",
+    panCardNumber: creator?.panCardNumber || medicalStore?.panCardNumber || "-",
   };
+};
+
+export const getBillDateValue = (
+  bill: Bill | Record<string, any> | undefined | null,
+  field: "created" | "updated" = "created"
+) => {
+  const candidates =
+    field === "created"
+      ? [
+          bill?.createdAt,
+          (bill as Record<string, any> | undefined)?.createdDate,
+          (bill as Record<string, any> | undefined)?.date,
+          (bill as Record<string, any> | undefined)?.billDate,
+          (bill as Record<string, any> | undefined)?.bill?.createdAt,
+          (bill as Record<string, any> | undefined)?.bill?.date,
+        ]
+      : [
+          bill?.updatedAt,
+          (bill as Record<string, any> | undefined)?.updatedDate,
+          bill?.createdAt,
+          (bill as Record<string, any> | undefined)?.createdDate,
+          (bill as Record<string, any> | undefined)?.bill?.updatedAt,
+          (bill as Record<string, any> | undefined)?.bill?.createdAt,
+        ];
+
+  return candidates.find((value) => value !== undefined && value !== null && String(value).trim() !== "");
+};
+
+export const getBillDate = (
+  bill: Bill | Record<string, any> | undefined | null,
+  field: "created" | "updated" = "created"
+) => {
+  const raw = getBillDateValue(bill, field);
+  if (!raw) return null;
+  const parsed = dayjs(raw);
+  return parsed.isValid() ? parsed : null;
 };
 
 export const isBillInDateFilter = (
@@ -155,10 +238,10 @@ export const isBillInDateFilter = (
   customRange: BillingDateRange = null
 ) => {
   if (dateFilter === "all") return true;
-  const createdAt = bill?.createdAt ? dayjs(bill.createdAt) : null;
-  if (!createdAt || !createdAt.isValid()) return false;
+  const createdAt = getBillDate(bill, "created");
+  if (!createdAt) return false;
 
-  if (dateFilter === "today") return createdAt.isSame(dayjs(), "day");
+  if (dateFilter === "day" || dateFilter === "today") return createdAt.isSame(dayjs(), "day");
 
   if (dateFilter === "week") {
     const { start, end } = getCurrentWeekRange();
@@ -168,6 +251,12 @@ export const isBillInDateFilter = (
   if (dateFilter === "month") {
     const start = dayjs().startOf("month");
     const end = dayjs().endOf("month");
+    return !createdAt.isBefore(start) && !createdAt.isAfter(end);
+  }
+
+  if (dateFilter === "year") {
+    const start = dayjs().startOf("year");
+    const end = dayjs().endOf("year");
     return !createdAt.isBefore(start) && !createdAt.isAfter(end);
   }
 
@@ -186,30 +275,40 @@ export const filterBills = <T extends Bill | Record<string, any>>(
   {
     isAdmin,
     createdBy,
+    medicalStoreId,
     dateFilter,
     customRange,
   }: {
     isAdmin: boolean;
     createdBy?: string;
+    medicalStoreId?: string;
     dateFilter: DateFilterType;
     customRange?: BillingDateRange;
   }
 ) =>
   bills.filter((bill) => {
     const userOk = !isAdmin || !createdBy || getBillCreatorId(bill) === createdBy;
+    const medicalStoreOk = !isAdmin || !medicalStoreId || getBillMedicalStoreId(bill) === medicalStoreId;
     const dateOk = isBillInDateFilter(bill, dateFilter, customRange ?? null);
-    return userOk && dateOk;
+    return userOk && medicalStoreOk && dateOk;
   });
 
 export const sortBillsByCreatedAt = <T extends Bill | Record<string, any>>(bills: T[], sortOrder: BillSortType) =>
   [...bills].sort((a, b) => {
-    const ta = dayjs(a?.createdAt).isValid() ? dayjs(a.createdAt).valueOf() : 0;
-    const tb = dayjs(b?.createdAt).isValid() ? dayjs(b.createdAt).valueOf() : 0;
+    const ta = getBillDate(a, "created")?.valueOf() ?? 0;
+    const tb = getBillDate(b, "created")?.valueOf() ?? 0;
     return sortOrder === "newest" ? tb - ta : ta - tb;
   });
 
 export const mapUsersToSelectOptions = (
-  users: Array<{ _id?: string; name?: string; email?: string }> | undefined,
+  users:
+    | Array<{
+        _id?: string;
+        name?: string;
+        email?: string;
+        medicalStoreId?: string | { _id?: string } | null;
+      }>
+    | undefined,
   includeEmailWithName = false
 ): BillUserOption[] =>
   (users ?? [])
@@ -218,7 +317,11 @@ export const mapUsersToSelectOptions = (
       const name = user.name || "";
       const email = user.email || "";
       const label = includeEmailWithName ? (name ? `${name} (${email})` : email) : name || email;
-      return { value: user._id as string, label };
+      const medicalStoreId =
+        typeof user.medicalStoreId === "string"
+          ? user.medicalStoreId
+          : user.medicalStoreId?._id;
+      return { value: user._id as string, label, medicalStoreId };
     });
 
 export const EMPTY_BILL_ITEM: BillFormItem = {

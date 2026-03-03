@@ -5,8 +5,8 @@ import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuth";
 import type { LoginPayload } from "../../types";
 import { ROUTES } from "../../constants";
-import { emailRule, passwordMinRule, requiredRule } from "../../utils/formRules";
-import { readPostLoginRedirect } from "../../utils/authRedirect";
+import { emailRule, passwordMinRule, requiredRule } from "../../common/helpers/formRules";
+import { readPostLoginRedirect } from "../../common/helpers/authRedirect";
 import AuthCard from "../../components/auth/AuthCard";
 
 export default function Login() {
@@ -87,4 +87,5 @@ export default function Login() {
     </AuthCard>
   );
 }
+
 

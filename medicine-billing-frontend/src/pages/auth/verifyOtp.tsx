@@ -4,13 +4,13 @@ import { MailOutlined, SafetyOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/useAuth";
 import type { VerifyOtpPayload } from "../../types";
 import { ROUTES } from "../../constants";
-import { otpRule, requiredRule } from "../../utils/formRules";
+import { otpRule, requiredRule } from "../../common/helpers/formRules";
 import { useThemeMode } from "../../contexts/themeMode";
 import {
   clearPostLoginRedirect,
   readPostLoginRedirect,
   storePostLoginRedirect,
-} from "../../utils/authRedirect";
+} from "../../common/helpers/authRedirect";
 import AuthCard from "../../components/auth/AuthCard";
 
 export default function VerifyOtp() {
@@ -102,4 +102,5 @@ export default function VerifyOtp() {
     </AuthCard>
   );
 }
+
 

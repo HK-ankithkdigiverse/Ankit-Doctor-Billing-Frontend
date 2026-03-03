@@ -11,20 +11,11 @@ type ThemeModeContextValue = {
 
 const ThemeModeContext = createContext<ThemeModeContextValue | undefined>(undefined);
 
-const isThemeMode = (value: string | null): value is ThemeMode =>
-  value === "light" || value === "dark";
-
 const resolveInitialMode = (): ThemeMode => {
   if (typeof window === "undefined") return "light";
-
-  const saved = localStorage.getItem(STORAGE_KEYS.THEME_MODE);
-  if (isThemeMode(saved)) {
-    document.documentElement.setAttribute("data-theme", saved);
-    return saved;
-  }
-
   const initial: ThemeMode = "light";
   document.documentElement.setAttribute("data-theme", initial);
+  localStorage.setItem(STORAGE_KEYS.THEME_MODE, initial);
   return initial;
 };
 
@@ -32,16 +23,20 @@ export const ThemeModeProvider = ({ children }: { children: ReactNode }) => {
   const [mode, setModeState] = useState<ThemeMode>(() => resolveInitialMode());
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", mode);
-    localStorage.setItem(STORAGE_KEYS.THEME_MODE, mode);
+    // Light mode only
+    document.documentElement.setAttribute("data-theme", "light");
+    localStorage.setItem(STORAGE_KEYS.THEME_MODE, "light");
+    if (mode !== "light") {
+      setModeState("light");
+    }
   }, [mode]);
 
-  const setMode = useCallback((nextMode: ThemeMode) => {
-    setModeState(nextMode);
+  const setMode = useCallback((_nextMode: ThemeMode) => {
+    setModeState("light");
   }, []);
 
   const toggleMode = useCallback(() => {
-    setModeState((prev) => (prev === "light" ? "dark" : "light"));
+    setModeState("light");
   }, []);
 
   const value = useMemo(

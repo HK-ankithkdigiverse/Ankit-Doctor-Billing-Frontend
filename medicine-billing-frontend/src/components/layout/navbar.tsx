@@ -18,6 +18,15 @@ export default function Navbar({ compact = false }: NavbarProps) {
   const confirmDialog = useConfirmDialog();
   const { mode } = useThemeMode();
   const isDark = mode === "dark";
+  const role = String(me?.role || profile?.role || "USER").toUpperCase();
+  const isAdmin = role === "ADMIN";
+  const medicalStoreName =
+    profile?.medicalName ||
+    me?.medicalName ||
+    (typeof profile?.medicalStoreId === "object" ? profile?.medicalStoreId?.name : "") ||
+    (typeof me?.medicalStoreId === "object" ? me?.medicalStoreId?.name : "") ||
+    "Medical Store";
+  const headerTitle = isAdmin ? "Medicine Billing Management" : medicalStoreName;
 
   const handleLogout = () => {
     confirmDialog({
@@ -76,7 +85,7 @@ export default function Navbar({ compact = false }: NavbarProps) {
             textOverflow: "ellipsis",
           }}
         >
-          {compact ? "MedBill" : "Medicine Billing Management"}
+          {compact ? "MedBill" : headerTitle}
         </Typography.Title>
       </Space>
 

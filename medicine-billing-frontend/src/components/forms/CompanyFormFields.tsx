@@ -1,15 +1,48 @@
-import { Button, Form, Input, Upload } from "antd";
+import { Button, Form, Input, Select, Upload } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
-import { emailRule, gstRule, phoneRule, requiredRule } from "../../utils/formRules";
+import { emailRule, gstRule, phoneRule, requiredRule } from "../../common/helpers/formRules";
 
 interface CompanyFormFieldsProps {
   showLogo?: boolean;
   onLogoSelect?: (file: File | null) => void;
+  showUserSelect?: boolean;
+  userSelectRequired?: boolean;
+  userOptions?: Array<{ label: string; value: string }>;
+  userSelectLoading?: boolean;
 }
 
-export default function CompanyFormFields({ showLogo = false, onLogoSelect }: CompanyFormFieldsProps) {
+export default function CompanyFormFields({
+  showLogo = false,
+  onLogoSelect,
+  showUserSelect = false,
+  userSelectRequired = false,
+  userOptions = [],
+  userSelectLoading = false,
+}: CompanyFormFieldsProps) {
   return (
     <>
+      {showUserSelect && (
+        <Form.Item
+          name="userId"
+          label="User"
+          rules={userSelectRequired ? [requiredRule("User")] : []}
+          extra={
+            !userSelectLoading && userOptions.length === 0
+              ? "No active users found."
+              : undefined
+          }
+        >
+          <Select
+            showSearch
+            optionFilterProp="label"
+            placeholder={userSelectLoading ? "Loading users..." : "Select user"}
+            options={userOptions}
+            loading={userSelectLoading}
+            allowClear={!userSelectRequired}
+          />
+        </Form.Item>
+      )}
+
       <Form.Item name="companyName" label="Company Name" rules={[requiredRule("Company name")]}>
         <Input style={{ borderRadius: 10 }} />
       </Form.Item>
@@ -57,3 +90,4 @@ export default function CompanyFormFields({ showLogo = false, onLogoSelect }: Co
     </>
   );
 }
+

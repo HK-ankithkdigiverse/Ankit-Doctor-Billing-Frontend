@@ -20,6 +20,9 @@ import EditProfile from "../pages/Profile/editProfile";
 import Users from "../pages/admin/users";
 import CreateUser from "../pages/admin/createUser";
 import EditUser from "../pages/admin/editUser";
+import MedicalStoresList from "../pages/medicalStores/medicalStoresList";
+import CreateMedicalStore from "../pages/medicalStores/createMedicalStore";
+import EditMedicalStore from "../pages/medicalStores/editMedicalStore";
 
 // Auth
 import Login from "../pages/auth/login";
@@ -159,12 +162,24 @@ export const PageRoutes = [
                 element: <Users />,
               },
               {
+                path: ROUTES.MEDICAL_STORES,
+                element: <MedicalStoresList />,
+              },
+              {
                 path: ROUTES.CREATE_USER,
                 element: <CreateUser />,
               },
               {
+                path: ROUTES.CREATE_MEDICAL_STORE,
+                element: <CreateMedicalStore />,
+              },
+              {
                 path: ROUTES.USER_EDIT,
                 element: <EditUser />,
+              },
+              {
+                path: ROUTES.MEDICAL_STORE_EDIT,
+                element: <EditMedicalStore />,
               },
             ],
           },

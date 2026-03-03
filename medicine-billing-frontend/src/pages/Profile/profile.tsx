@@ -8,18 +8,15 @@ import {
   LockOutlined,
   LogoutOutlined,
   MailOutlined,
-  MoonOutlined,
   NumberOutlined,
   PhoneOutlined,
   ShopOutlined,
-  SunOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
 import { useProfile } from "../../hooks/useProfile";
 import { useAuth } from "../../hooks/useAuth";
 import { useConfirmDialog } from "../../utils/confirmDialog";
-import { useThemeMode } from "../../contexts/themeMode";
 import { getUploadFileUrl } from "../../utils/company";
 
 type InfoItem = {
@@ -41,7 +38,6 @@ export default function Profile() {
   const { data: user, isLoading } = useProfile();
   const { logout, loading: authLoading } = useAuth();
   const confirmDialog = useConfirmDialog();
-  const { mode, toggleMode } = useThemeMode();
 
   if (isLoading) return <p>Loading...</p>;
   if (!user) return null;
@@ -275,19 +271,6 @@ export default function Profile() {
       </Card>
 
       <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <Button
-          icon={mode === "dark" ? <SunOutlined /> : <MoonOutlined />}
-          onClick={toggleMode}
-          style={{
-            borderRadius: 10,
-            borderColor: mode === "dark" ? "#38BDF8" : "#2563eb",
-            color: mode === "dark" ? "#38BDF8" : "#2563eb",
-            fontWeight: 600,
-          }}
-        >
-          {mode === "dark" ? "Light Mode" : "Dark Mode"}
-        </Button>
-
         <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(ROUTES.EDITPROFILE)} style={{ borderRadius: 10 }}>
           Edit Profile
         </Button>

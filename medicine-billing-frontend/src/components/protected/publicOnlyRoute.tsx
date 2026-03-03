@@ -1,15 +1,34 @@
+import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Spin } from "antd";
-import { useMe } from "../../hooks/useMe";
 import NotFound from "../../pages/notFound";
-import { ROUTES, STORAGE_KEYS } from "../../constants";
-import { clearPostLoginRedirect, readPostLoginRedirect } from "../../utils/authRedirect";
+import { ROUTES } from "../../constants";
+import { clearStoredToken } from "../../common/helpers/tokenStorage";
+import { clearPostLoginRedirect, readPostLoginRedirect } from "../../common/helpers/authRedirect";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import {
+  clearAuth,
+  selectAuthInitialized,
+  selectAuthLoading,
+  selectAuthUser,
+} from "../../store/slices/authSlice";
 
 export default function PublicOnlyRoute() {
   const location = useLocation();
-  const { data: me, isLoading } = useMe();
+  const dispatch = useAppDispatch();
+  const me = useAppSelector(selectAuthUser);
+  const isLoading = useAppSelector(selectAuthLoading);
+  const isInitialized = useAppSelector(selectAuthInitialized);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (me?.isActive === false) {
+      clearStoredToken();
+      clearPostLoginRedirect();
+      dispatch(clearAuth());
+    }
+  }, [dispatch, me?.isActive]);
+
+  if (!isInitialized || isLoading) {
     return (
       <div
         style={{
@@ -25,8 +44,6 @@ export default function PublicOnlyRoute() {
   }
 
   if (me?.isActive === false) {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem("token");
     clearPostLoginRedirect();
     return <Outlet />;
   }
@@ -42,3 +59,4 @@ export default function PublicOnlyRoute() {
 
   return <Outlet />;
 }
+

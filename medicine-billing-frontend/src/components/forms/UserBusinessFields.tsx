@@ -1,6 +1,6 @@
 import { Col, Form, Input, Row } from "antd";
-import { gstRule, requiredRule } from "../../utils/formRules";
-import { nonWhitespaceRule, panRule, pincodeRule } from "../../utils/userForm";
+import { gstRule, requiredRule } from "../../common/helpers/formRules";
+import { nonWhitespaceRule, panRule, pincodeRule } from "../../common/helpers/userForm";
 
 interface UserBusinessFieldsProps {
   required?: boolean;
@@ -89,3 +89,4 @@ export default function UserBusinessFields({ required = false, disabled = false 
     </>
   );
 }
+

@@ -1,5 +1,17 @@
-export type DateFilterType = "all" | "today" | "week" | "month" | "custom";
+export type DateFilterType = "all" | "day" | "today" | "week" | "month" | "year" | "custom";
 export type BillSortType = "newest" | "oldest";
+
+export interface BillMedicalStore {
+  _id?: string;
+  name?: string;
+  phone?: string;
+  address?: string;
+  state?: string;
+  city?: string;
+  pincode?: string;
+  gstNumber?: string;
+  panCardNumber?: string;
+}
 
 export interface BillItem {
   _id?: string;
@@ -26,6 +38,7 @@ export interface BillItem {
 export interface BillCompany {
   _id?: string;
   userId?: string | { _id?: string };
+  medicalStoreId?: string | BillMedicalStore;
   companyName?: string;
   name?: string;
   gstNumber?: string;
@@ -40,6 +53,7 @@ export interface BillUser {
   _id?: string;
   name?: string;
   medicalName?: string;
+  medicalStoreId?: string | BillMedicalStore;
   email?: string;
   signature?: string;
   phone?: string;
@@ -55,6 +69,7 @@ export interface Bill {
   companyId?: BillCompany;
   userId?: BillUser;
   createdBy?: BillUser;
+  medicalStoreId?: string | BillMedicalStore;
   createdAt?: string;
   updatedAt?: string;
   subTotal?: number;
@@ -85,6 +100,7 @@ export interface BillFormRow extends BillFormItem {
 export interface BillUserOption {
   value: string;
   label: string;
+  medicalStoreId?: string;
 }
 
 export interface BillPayload {

@@ -20,7 +20,7 @@ import {
   toBillPayloadItems,
   validateBillForm,
 } from "../../utils/billing";
-import { sortNumber, sortText } from "../../utils/tableSort";
+import { createNameSorter } from "../../common/helpers/tableSort";
 
 type BillFormProps = {
   title: string;
@@ -73,14 +73,19 @@ export default function BillForm({
   }, [initialUserId, initialCompanyId, initialDiscount, initialItems]);
 
   const companyOptions = useMemo(() => {
-    const isOwnedBySelectedUser = (company: any) => {
+    const selectedUserStoreId = users.find((option) => option.value === userId)?.medicalStoreId || "";
+
+    const isVisibleForSelectedUser = (company: any) => {
       if (!isAdmin) return true;
-      if (!userId) return false;
-      const ownerId = typeof company?.userId === "object" ? company?.userId?._id : company?.userId;
-      return String(ownerId || "") === String(userId);
+      if (!userId || !selectedUserStoreId) return false;
+      const companyStoreId =
+        typeof company?.medicalStoreId === "object"
+          ? company?.medicalStoreId?._id
+          : company?.medicalStoreId;
+      return String(companyStoreId || "") === String(selectedUserStoreId);
     };
 
-    const options = companies.filter(isOwnedBySelectedUser).map((company: any) => ({
+    const options = companies.filter(isVisibleForSelectedUser).map((company: any) => ({
       value: company._id,
       label: company.companyName || company.name || company.email || company._id,
     }));
@@ -94,7 +99,7 @@ export default function BillForm({
     }
 
     return options;
-  }, [companies, initialCompanyId, initialCompanyName, isAdmin, userId]);
+  }, [companies, initialCompanyId, initialCompanyName, isAdmin, userId, users]);
 
   const getProduct = (id: string) => products.find((product: any) => product._id === id);
   const getProductName = (id: string) => getProduct(id)?.name || "";
@@ -172,7 +177,7 @@ export default function BillForm({
     {
       title: "Product",
       key: "product",
-      sorter: (a: BillFormRow, b: BillFormRow) => sortText(getProductName(a.productId), getProductName(b.productId)),
+      sorter: createNameSorter((row: BillFormRow) => getProductName(row.productId)),
       render: (_: unknown, item: BillFormRow) => (
         <Select
           value={item.productId || undefined}
@@ -188,7 +193,6 @@ export default function BillForm({
     {
       title: "Qty",
       key: "qty",
-      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.qty, b.qty),
       render: (_: unknown, item: BillFormRow) => (
         <InputNumber
           min={1}
@@ -200,7 +204,6 @@ export default function BillForm({
     {
       title: "Free",
       key: "freeQty",
-      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.freeQty, b.freeQty),
       render: (_: unknown, item: BillFormRow) => (
         <InputNumber
           min={0}
@@ -212,25 +215,21 @@ export default function BillForm({
     {
       title: "Rate",
       key: "rate",
-      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.rate, b.rate),
       render: (_: unknown, item: BillFormRow) => Number(item.rate || 0).toFixed(2),
     },
     {
       title: "MRP",
       key: "mrp",
-      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.mrp, b.mrp),
       render: (_: unknown, item: BillFormRow) => Number(item.mrp || 0).toFixed(2),
     },
     {
       title: "GST %",
       key: "tax",
-      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.taxPercent, b.taxPercent),
       render: (_: unknown, item: BillFormRow) => Number(item.taxPercent || 0),
     },
     {
       title: "Disc %",
       key: "discount",
-      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(a.discount, b.discount),
       render: (_: unknown, item: BillFormRow) => (
         <InputNumber
           min={0}
@@ -243,7 +242,6 @@ export default function BillForm({
     {
       title: "Total",
       key: "total",
-      sorter: (a: BillFormRow, b: BillFormRow) => sortNumber(rowTotals[a.rowId]?.total, rowTotals[b.rowId]?.total),
       render: (_: unknown, item: BillFormRow) => `Rs ${(rowTotals[item.rowId]?.total || 0).toFixed(2)}`,
     },
     {
@@ -347,3 +345,4 @@ export default function BillForm({
     </Card>
   );
 }
+

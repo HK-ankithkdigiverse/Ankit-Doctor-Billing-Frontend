@@ -21,4 +21,8 @@ export const QUERY_KEYS = {
 
   USERS: ["users"],
   USERS_LIST: (params?: any) => ["users", params],
+
+  MEDICAL_STORES: ["medical-stores"],
+  MEDICAL_STORES_LIST: (params?: any) => ["medical-stores", params],
+  MEDICAL_STORE: (id: string) => ["medical-store", id],
 };

@@ -1,12 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { loginApi, verifyOtpApi, logoutApi } from "../api/auth.api";
-import { QUERY_KEYS, ROUTES, STORAGE_KEYS } from "../constants";
+import { loginApi, logoutApi, verifyOtpApi } from "../modules/auth/api";
+import { ROUTES } from "../constants";
+import { clearStoredToken, setStoredToken } from "../common/helpers/tokenStorage";
+import { useAppDispatch } from "../store/hooks";
+import { clearAuth, hydrateAuth, setToken } from "../store/slices/authSlice";
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-
 
   const login = useMutation({
     mutationFn: loginApi,
@@ -14,23 +17,20 @@ export const useAuth = () => {
 
   const verifyOtp = useMutation({
     mutationFn: verifyOtpApi,
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       if (!data?.token) return;
 
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-      localStorage.setItem("token", data.token);
-
-      // 🔁 refetch logged-in user
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.ME });
+      setStoredToken(data.token);
+      dispatch(setToken(data.token));
+      queryClient.clear();
+      await dispatch(hydrateAuth());
     },
   });
 
   const clearAuthState = () => {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem("token");
-
-    queryClient.removeQueries({ queryKey: QUERY_KEYS.ME });
-    queryClient.removeQueries({ queryKey: QUERY_KEYS.PROFILE });
+    clearStoredToken();
+    dispatch(clearAuth());
+    queryClient.clear();
   };
 
   const logout = useMutation({
@@ -50,7 +50,8 @@ export const useAuth = () => {
     login: login.mutateAsync,
     verifyOtp: verifyOtp.mutateAsync,
     logout: logout.mutateAsync,
-
     loading: login.isPending || verifyOtp.isPending || logout.isPending,
   };
 };
+
+

@@ -6,7 +6,7 @@ import {
   updateProductApi,
   deleteProductApi,
   getProductByIdApi,
-} from "../api/productApi";
+} from "../modules/products/api";
 import { QUERY_KEYS } from "../constants";
 
 const isValidObjectId = (id?: string) => !!id && /^[a-fA-F0-9]{24}$/.test(id);
@@ -20,7 +20,7 @@ export const useProducts = (
     category?: string;
     productType?: string;
     companyId?: string;
-    createdBy?: string;
+    medicalStoreId?: string;
     enabled?: boolean;
   }
 ) => {
@@ -32,7 +32,7 @@ export const useProducts = (
       category: filters?.category,
       productType: filters?.productType,
       companyId: filters?.companyId,
-      createdBy: filters?.createdBy,
+      medicalStoreId: filters?.medicalStoreId,
     }),
     queryFn: () =>
       getProductsApi({
@@ -42,7 +42,7 @@ export const useProducts = (
         category: filters?.category,
         productType: filters?.productType,
         companyId: filters?.companyId,
-        createdBy: filters?.createdBy,
+        medicalStoreId: filters?.medicalStoreId,
       }),
     enabled: filters?.enabled ?? true,
 
@@ -102,3 +102,5 @@ export const useDeleteProduct = () => {
     },
   });
 };
+
+

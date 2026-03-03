@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -13,13 +13,14 @@ import {
 } from "antd";
 import { DeleteOutlined, EditOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { useDeleteProduct, useProducts } from "../../hooks/useProducts";
-import { useUsers } from "../../hooks/useUsers";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { ROLE, ROUTES } from "../../constants";
 import type { Product } from "../../types/product";
 import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
-import { sortNumber, sortText } from "../../utils/tableSort";
+import { formatDateTime } from "../../common/helpers/dateTime";
+import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
 
 export default function ProductsList() {
   const { message } = App.useApp();
@@ -28,26 +29,62 @@ export default function ProductsList() {
     page: 1,
     limit: 10,
     search: "",
-    createdBy: "",
+    medicalStoreId: "",
   });
   const debouncedSearch = useDebouncedValue(filters.search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
-  const hasAdminFilter = isAdmin && !!filters.createdBy;
+  const hasAdminFilter = isAdmin && !!filters.medicalStoreId;
   const queryPage = hasAdminFilter ? 1 : filters.page;
   const queryLimit = hasAdminFilter ? 1000 : filters.limit;
 
   const { data, isPending, isFetching } = useProducts(queryPage, queryLimit, debouncedSearch);
-  const { data: usersFilterData } = useUsers(1, 1000, "", "all");
+  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", {
+    enabled: isAdmin,
+  });
   const searchLoading = filters.search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteProduct, isPending: deletePending } = useDeleteProduct();
   const confirmDialog = useConfirmDialog();
   const productsRaw: Product[] = data?.products ?? [];
-  const getCreatedById = (product: Product) =>
-    typeof product.createdBy === "object" ? product.createdBy?._id : (product.createdBy as unknown as string);
+  const getProductMedicalStoreId = (product: Product) => {
+    if (typeof product.medicalStoreId === "string") return product.medicalStoreId;
+    if (typeof product.medicalStoreId === "object" && product.medicalStoreId?._id) {
+      return product.medicalStoreId._id;
+    }
+    if (typeof product.createdBy?.medicalStoreId === "string") {
+      return product.createdBy.medicalStoreId;
+    }
+    if (
+      typeof product.createdBy?.medicalStoreId === "object" &&
+      product.createdBy.medicalStoreId?._id
+    ) {
+      return product.createdBy.medicalStoreId._id;
+    }
+    return "";
+  };
+  const medicalStoreNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (medicalStoresData?.medicalStores ?? []).forEach((store) => {
+      const storeId = store?._id ? String(store._id) : "";
+      const storeName = store?.name ? String(store.name).trim() : "";
+      if (storeId && storeName) {
+        map.set(storeId, storeName);
+      }
+    });
+    return map;
+  }, [medicalStoresData?.medicalStores]);
+  const getProductMedicalStoreName = (product: Product) => {
+    if (typeof product.medicalStoreId === "object") {
+      const storeName = product.medicalStoreId?.name?.trim();
+      if (storeName) return storeName;
+    }
+    const medicalStoreId = getProductMedicalStoreId(product);
+    if (!medicalStoreId) return "-";
+    return medicalStoreNameById.get(medicalStoreId) || "-";
+  };
   const matchesAdminFilters = (product: Product) => {
-    const userOk = !filters.createdBy || getCreatedById(product) === filters.createdBy;
-    return userOk;
+    const storeId = getProductMedicalStoreId(product);
+    return !filters.medicalStoreId || storeId === filters.medicalStoreId;
   };
   const filteredProducts: Product[] = isAdmin ? productsRaw.filter(matchesAdminFilters) : productsRaw;
   const products: Product[] = hasAdminFilter
@@ -62,10 +99,10 @@ export default function ProductsList() {
     { label: "100 / page", value: 100 },
     ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
   ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
-  const userOptions =
-    usersFilterData?.users?.map((user) => ({
-      value: user._id,
-      label: user.name || user.email,
+  const medicalStoreOptions =
+    (medicalStoresData?.medicalStores ?? []).map((store) => ({
+      value: store._id,
+      label: store.name || store._id,
     })) ?? [];
   const handleDelete = async (id: string) => {
     try {
@@ -74,6 +111,31 @@ export default function ProductsList() {
     } catch {
       message.error("Failed to delete product");
     }
+  };
+  const objectIdToDate = (id?: string): Date | null => {
+    if (!id || id.length < 8) return null;
+    const epochSeconds = Number.parseInt(id.slice(0, 8), 16);
+    if (!Number.isFinite(epochSeconds)) return null;
+    const parsed = new Date(epochSeconds * 1000);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+  const pickProductDate = (product: Product, field: "created" | "updated"): string | Date | null => {
+    const fallbackFromId = objectIdToDate(product._id);
+    const candidates =
+      field === "created"
+        ? [product.createdAt, (product as any).createdDate, (product as any).date, fallbackFromId]
+        : [
+            product.updatedAt,
+            (product as any).updatedDate,
+            product.createdAt,
+            (product as any).createdDate,
+            fallbackFromId,
+          ];
+    const value = candidates.find((candidate) => {
+      if (candidate instanceof Date) return !Number.isNaN(candidate.getTime());
+      return candidate !== undefined && candidate !== null && String(candidate).trim() !== "";
+    });
+    return (value as string | Date | undefined) ?? null;
   };
 
   const columns = [
@@ -87,45 +149,34 @@ export default function ProductsList() {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      sorter: (a: Product, b: Product) => sortText(a.name, b.name),
+      sorter: createNameSorter((row: Product) => row.name),
     },
     {
       title: "Category",
       dataIndex: "category",
       key: "category",
-      sorter: (a: Product, b: Product) => sortText(a.category, b.category),
     },
     {
       title: "Type",
       dataIndex: "productType",
       key: "productType",
-      sorter: (a: Product, b: Product) => sortText(a.productType, b.productType),
     },
     {
       title: "Company",
       key: "company",
-      sorter: (a: Product, b: Product) =>
-        sortText(
-          (a.companyId as any)?.companyName || (a.companyId as any)?.name || "",
-          (b.companyId as any)?.companyName || (b.companyId as any)?.name || ""
-        ),
+      sorter: createNameSorter(
+        (row: Product) => (row.companyId as any)?.companyName || (row.companyId as any)?.name || ""
+      ),
       render: (_: any, product: Product) =>
         (product.companyId as any)?.companyName || (product.companyId as any)?.name || "-",
     },
     ...(isAdmin
       ? [
           {
-            title: "Created By",
-            key: "createdBy",
-            sorter: (a: Product, b: Product) =>
-              sortText(
-                typeof a.createdBy === "object" ? a.createdBy?.name || a.createdBy?.email : "",
-                typeof b.createdBy === "object" ? b.createdBy?.name || b.createdBy?.email : ""
-              ),
-            render: (_: any, product: Product) => {
-              const createdBy = product.createdBy;
-              return createdBy?.name || createdBy?.email || "-";
-            },
+            title: "Medical Store",
+            key: "medicalStore",
+            sorter: createNameSorter((row: Product) => getProductMedicalStoreName(row)),
+            render: (_: any, product: Product) => getProductMedicalStoreName(product),
           },
         ]
       : []),
@@ -133,22 +184,31 @@ export default function ProductsList() {
       title: "Stock",
       key: "stock",
       align: "right" as const,
-      sorter: (a: Product, b: Product) => sortNumber(a.stock, b.stock),
       render: (_: any, product: Product) => product.stock ?? 0,
     },
     {
       title: "MRP",
       key: "mrp",
       align: "right" as const,
-      sorter: (a: Product, b: Product) => sortNumber(a.mrp, b.mrp),
       render: (_: any, product: Product) => `Rs ${Number(product.mrp || 0).toFixed(2)}`,
     },
     {
       title: "Price",
       key: "price",
       align: "right" as const,
-      sorter: (a: Product, b: Product) => sortNumber(a.price, b.price),
       render: (_: any, product: Product) => `Rs ${Number(product.price || 0).toFixed(2)}`,
+    },
+    {
+      title: "Date (Created Date, Updated Date)",
+      key: "createdUpdatedAt",
+      sorter: createDateSorter((row: Product) => pickProductDate(row, "updated")),
+      render: (_: any, product: Product) => (
+        <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
+          {formatDateTime(pickProductDate(product, "created"))}
+          <br />
+          {formatDateTime(pickProductDate(product, "updated"))}
+        </span>
+      ),
     },
     {
       title: "Action",
@@ -198,7 +258,7 @@ export default function ProductsList() {
       <div style={{ marginBottom: 16 }}>
         <Space wrap>
           <Input
-            placeholder="Search by name, category or type..."
+            placeholder="Search by name, category, type..."
             allowClear
             prefix={<SearchOutlined />}
             suffix={searchLoading ? <LoadingOutlined spin /> : null}
@@ -209,20 +269,18 @@ export default function ProductsList() {
             style={{ width: 360, maxWidth: "100%" }}
           />
           {isAdmin && (
-            <>
-              <Select
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                placeholder="Filter by user"
-                value={filters.createdBy || undefined}
-                options={userOptions}
-                onChange={(value) =>
-                  setFilters((prev) => ({ ...prev, page: 1, createdBy: value || "" }))
-                }
-                style={{ width: 220 }}
-              />
-            </>
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Filter by medical store"
+              value={filters.medicalStoreId || undefined}
+              options={medicalStoreOptions}
+              onChange={(value) =>
+                setFilters((prev) => ({ ...prev, page: 1, medicalStoreId: value || "" }))
+              }
+              style={{ width: 240 }}
+            />
           )}
         </Space>
       </div>
@@ -251,3 +309,4 @@ export default function ProductsList() {
     </Card>
   );
 }
+

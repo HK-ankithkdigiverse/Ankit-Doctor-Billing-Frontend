@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { App, Button, Card, Input, Pagination, Space, Table, Typography } from "antd";
 import {
@@ -11,13 +11,14 @@ import {
   StopOutlined,
 } from "@ant-design/icons";
 import { useUsers, useUpdateUser, useDeleteUser } from "../../hooks/useUsers";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { ROUTES } from "../../constants";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { User } from "../../types";
 import { useMe } from "../../hooks/useMe";
 import { useConfirmDialog } from "../../utils/confirmDialog";
-import { formatDateTime } from "../../utils/dateTime";
-import { sortDateTime, sortText } from "../../utils/tableSort";
+import { formatDateTime } from "../../common/helpers/dateTime";
+import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
 
 export default function Users() {
   const { message } = App.useApp();
@@ -29,16 +30,48 @@ export default function Users() {
   const navigate = useNavigate();
   const { data: me } = useMe();
   const confirmDialog = useConfirmDialog();
+  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", { enabled: true });
 
   const { data, isLoading, isFetching } = useUsers(page, limit, debouncedSearch, statusFilter);
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
+  const medicalStoreNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (medicalStoresData?.medicalStores ?? []).forEach((store) => {
+      const storeId = store?._id ? String(store._id) : "";
+      const storeName = store?.name ? String(store.name).trim() : "";
+      if (storeId && storeName) {
+        map.set(storeId, storeName);
+      }
+    });
+    return map;
+  }, [medicalStoresData?.medicalStores]);
 
   if (isLoading) return <p>Loading users...</p>;
   if (!data) return <p>No access</p>;
 
   const { users: usersRaw, pagination } = data;
+  const getMedicalStoreId = (user: User) =>
+    user.medicineId ||
+    (typeof user.medicalStoreId === "string"
+      ? user.medicalStoreId
+      : user.medicalStoreId?._id) ||
+    "";
+  const getMedicalStoreName = (user: User) => {
+    const populatedStoreName =
+      typeof user.medicalStoreId === "object"
+        ? (user.medicalStoreId?.name || "").trim()
+        : "";
+    if (populatedStoreName) return populatedStoreName;
+
+    const fallbackName = (user.medicalName || "").trim();
+    if (fallbackName) return fallbackName;
+
+    const storeId = getMedicalStoreId(user);
+    if (!storeId) return "-";
+    return medicalStoreNameById.get(storeId) || "-";
+  };
   const matchesStatus = (user: User) =>
     statusFilter === "active" ? user.isActive !== false : user.isActive === false;
   const query = debouncedSearch.trim().toLowerCase();
@@ -95,7 +128,7 @@ export default function Users() {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      sorter: (a: User, b: User) => sortText(a.name, b.name),
+      sorter: createNameSorter((row: User) => row.name),
       render: (value: string, user: User) => (
         <span style={{ color: (user.isActive ?? true) ? undefined : "#94a3b8" }}>
           {value}
@@ -106,20 +139,17 @@ export default function Users() {
       title: "Email",
       dataIndex: "email",
       key: "email",
-      sorter: (a: User, b: User) => sortText(a.email, b.email),
     },
     {
-      title: "Phone",
-      dataIndex: "phone",
-      key: "phone",
-      sorter: (a: User, b: User) => sortText(a.phone, b.phone),
-      render: (v: string) => v || "-",
+      title: "Medical Store",
+      key: "medicalStore",
+      sorter: createNameSorter((row: User) => getMedicalStoreName(row)),
+      render: (_: any, user: User) => getMedicalStoreName(user),
     },
     {
       title: "Date (Created Date, Updated Date)",
       key: "createdUpdatedAt",
-      sorter: (a: User, b: User) =>
-        sortDateTime(a.updatedAt || a.createdAt, b.updatedAt || b.createdAt),
+      sorter: createDateSorter((row: User) => row.updatedAt || row.createdAt),
       render: (_: any, user: User) => (
         <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
           {formatDateTime(user.createdAt)}
@@ -142,11 +172,11 @@ export default function Users() {
             }
           />
           <Button
-            icon={(user.isActive ?? true) ? <CheckCircleOutlined /> : <StopOutlined />}
+            icon={(user.isActive ?? true) ? <StopOutlined /> : <CheckCircleOutlined />}
             loading={isPending}
             title={(user.isActive ?? true) ? "Deactivate" : "Activate"}
             aria-label={(user.isActive ?? true) ? "Deactivate" : "Activate"}
-            style={{ color: (user.isActive ?? true) ? "#16a34a" : "#dc2626" }}
+            style={{ color: (user.isActive ?? true) ? "#dc2626" : "#16a34a" }}
             disabled={user._id === me?._id}
             onClick={() =>
               confirmDialog({
@@ -211,7 +241,7 @@ export default function Users() {
         >
           <Space wrap align="center" style={{ justifyContent: "flex-start" }}>
             <Input
-              placeholder="Search by name, email, phone, address..."
+              placeholder="Search by name, email, medical store..."
               allowClear
               prefix={<SearchOutlined />}
               suffix={searchLoading ? <LoadingOutlined spin /> : null}
@@ -275,3 +305,4 @@ export default function Users() {
     </Card>
   );
 }
+

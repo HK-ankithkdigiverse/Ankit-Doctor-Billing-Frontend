@@ -3,12 +3,14 @@ export interface User {
   name: string;
   email: string;
   role: "ADMIN" | "USER";
+  medicalStoreId?: string | { _id?: string };
 }
 
 export interface Company {
   _id: string;
   companyName?: string;
   name?: string;
+  medicalStoreId?: string | { _id?: string; name?: string };
 }
 
 export interface Product {
@@ -20,7 +22,10 @@ export interface Product {
   stock: number;
   mrp: number;
   taxPercent?: number;
+  createdAt?: string;
+  updatedAt?: string;
 
   companyId?: Company;
+  medicalStoreId?: string | { _id?: string; name?: string };
   createdBy?: User;
 }

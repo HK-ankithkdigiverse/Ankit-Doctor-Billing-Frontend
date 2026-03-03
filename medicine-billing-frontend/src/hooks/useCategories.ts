@@ -6,16 +6,17 @@ import {
   getCategoryDropdownApi,
   getCategoriesApi,
   updateCategoryApi,
-} from "../api/categoryApi";
+} from "../modules/categories/api";
 import { QUERY_KEYS } from "../constants";
 
 export const useCategories = (page: number, limit: number, search: string) => {
+  const safeLimit = Math.max(limit || 1, 1);
   return useQuery({
-    queryKey: QUERY_KEYS.CATEGORIES_LIST({ page, limit, search }),
+    queryKey: QUERY_KEYS.CATEGORIES_LIST({ page, limit: safeLimit, search }),
     queryFn: () =>
       getCategoriesApi({
         page,
-        limit,
+        limit: safeLimit,
         search: search || undefined,
       }),
     placeholderData: (prev) => prev,
@@ -72,3 +73,5 @@ export const useDeleteCategory = () => {
     },
   });
 };
+
+

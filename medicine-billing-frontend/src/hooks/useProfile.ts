@@ -1,12 +1,12 @@
 import { useQuery,useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProfileApi, updateProfileApi, changePasswordApi } from "../api/userApi";
-import { QUERY_KEYS, STORAGE_KEYS } from "../constants";
+import { getProfileApi, updateProfileApi, changePasswordApi } from "../modules/users/api";
+import { QUERY_KEYS } from "../constants";
+import { getStoredToken } from "../common/helpers/tokenStorage";
 
 
 
 export const useProfile = () => {
-  const token =
-    localStorage.getItem(STORAGE_KEYS.TOKEN) || localStorage.getItem("token");
+  const token = getStoredToken();
 
   return useQuery({
     queryKey: QUERY_KEYS.PROFILE,
@@ -38,3 +38,5 @@ export const useChangePassword = () => {
     },
   });
 };
+
+

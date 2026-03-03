@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllUsersApi, updateUserApi, createUserApi, deleteUserApi } from "../api/userApi";
+import { getAllUsersApi, updateUserApi, createUserApi, deleteUserApi, type UpdateUserPayload } from "../modules/users/api";
 import { useMe } from "./useMe";
 import { QUERY_KEYS } from "../constants";
 
@@ -28,10 +28,12 @@ export const useUsers = (
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: updateUserApi,
+
+  return useMutation<any, Error, { id: string; data: UpdateUserPayload }>({
+    mutationFn: ({ id, data }) => updateUserApi(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USERS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.MEDICAL_STORES });
     },
   });
 };
@@ -43,6 +45,7 @@ export const useCreateUser = () => {
     mutationFn: createUserApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USERS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.MEDICAL_STORES });
     },
   });
 };
@@ -57,3 +60,5 @@ export const useDeleteUser = () => {
     },
   });
 };
+
+

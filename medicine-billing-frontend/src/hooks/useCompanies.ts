@@ -5,7 +5,7 @@ import {
   createCompanyApi,
   updateCompanyApi,
   deleteCompanyApi,
-} from "../api/companyApi";
+} from "../modules/companies/api";
 import { QUERY_KEYS } from "../constants";
 
 const isValidObjectId = (id?: string) => !!id && /^[a-fA-F0-9]{24}$/.test(id);
@@ -85,3 +85,5 @@ export const useDeleteCompany = () => {
     },
   });
 };
+
+

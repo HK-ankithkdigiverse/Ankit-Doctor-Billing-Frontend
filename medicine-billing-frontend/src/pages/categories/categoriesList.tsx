@@ -1,26 +1,25 @@
-import { useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
   Input,
   Pagination,
-  Select,
   Space,
   Table,
   Typography,
   App,
 } from "antd";
 import { DeleteOutlined, EditOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { ROLE, ROUTES } from "../../constants";
+import { ROUTES } from "../../constants";
 import { useCategories, useDeleteCategory } from "../../hooks/useCategories";
-import { useUsers } from "../../hooks/useUsers";
 import { useMe } from "../../hooks/useMe";
+import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Category } from "../../types/category";
 import { useConfirmDialog } from "../../utils/confirmDialog";
-import { formatDateTime } from "../../utils/dateTime";
-import { sortDateTime, sortText } from "../../utils/tableSort";
+import { formatDateTime } from "../../common/helpers/dateTime";
+import { createDateSorter, createNameSorter } from "../../common/helpers/tableSort";
 
 export default function CategoriesList() {
   const { message } = App.useApp();
@@ -29,36 +28,26 @@ export default function CategoriesList() {
     page: 1,
     limit: 10,
     search: "",
-    createdBy: "",
   });
   const debouncedSearch = useDebouncedValue(filters.search, 500);
   const { data: me } = useMe();
-  const isAdmin = me?.role === ROLE.ADMIN;
-  const hasAdminUserFilter = isAdmin && !!filters.createdBy;
-  const queryPage = hasAdminUserFilter ? 1 : filters.page;
-  const queryLimit = hasAdminUserFilter ? 1000 : filters.limit;
+  const isAdmin = String(me?.role || "").toUpperCase() === "ADMIN";
 
   const { data, isLoading, isFetching, error } = useCategories(
-    queryPage,
-    queryLimit,
+    filters.page,
+    filters.limit,
     debouncedSearch
   );
-  const { data: usersFilterData } = useUsers(1, 1000, "", "all");
+  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", {
+    enabled: isAdmin,
+  });
   const searchLoading = filters.search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteCategory, isPending } = useDeleteCategory();
   const confirmDialog = useConfirmDialog();
 
-  const categoriesRaw = data?.categories ?? [];
-  const getCreatedById = (category: Category) =>
-    typeof category.createdBy === "object" ? category.createdBy?._id : category.createdBy;
-  const filteredCategories = isAdmin
-    ? categoriesRaw.filter((category) => !filters.createdBy || getCreatedById(category) === filters.createdBy)
-    : categoriesRaw;
-  const categories = hasAdminUserFilter
-    ? filteredCategories.slice((filters.page - 1) * filters.limit, filters.page * filters.limit)
-    : filteredCategories;
+  const categories = data?.categories ?? [];
   const pagination = data?.pagination;
-  const totalRecords = hasAdminUserFilter ? filteredCategories.length : pagination?.total || 0;
+  const totalRecords = pagination?.total || 0;
   const pageSizeSelectOptions = [
     { label: "10 / page", value: 10 },
     { label: "30 / page", value: 30 },
@@ -66,11 +55,35 @@ export default function CategoriesList() {
     { label: "100 / page", value: 100 },
     ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
   ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
-  const userOptions =
-    usersFilterData?.users?.map((user) => ({
-      value: user._id,
-      label: user.name || user.email,
-    })) ?? [];
+
+  const medicalStoreNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (medicalStoresData?.medicalStores ?? []).forEach((store) => {
+      const storeId = store?._id ? String(store._id) : "";
+      const storeName = store?.name ? String(store.name).trim() : "";
+      if (storeId && storeName) {
+        map.set(storeId, storeName);
+      }
+    });
+    return map;
+  }, [medicalStoresData?.medicalStores]);
+
+  const getMedicalStoreId = (category: Category) =>
+    typeof category.medicalStoreId === "string"
+      ? category.medicalStoreId
+      : category.medicalStoreId?._id || "";
+
+  const getMedicalStoreName = (category: Category) => {
+    const populatedStoreName =
+      typeof category.medicalStoreId === "object"
+        ? (category.medicalStoreId?.name || "").trim()
+        : "";
+    if (populatedStoreName) return populatedStoreName;
+    const storeId = getMedicalStoreId(category);
+    if (!storeId) return "-";
+    return medicalStoreNameById.get(storeId) || "-";
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await deleteCategory(id);
@@ -92,40 +105,22 @@ export default function CategoriesList() {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      sorter: (a: Category, b: Category) => sortText(a.name, b.name),
+      sorter: createNameSorter((row: Category) => row.name),
     },
-    {
-      title: "Description",
-      dataIndex: "description",
-      key: "description",
-      sorter: (a: Category, b: Category) => sortText(a.description, b.description),
-      render: (value: string) => value || "-",
-    },
-    ...(me?.role === "ADMIN"
+    ...(isAdmin
       ? [
           {
-            title: "Created By",
-            key: "createdBy",
-            sorter: (a: Category, b: Category) =>
-              sortText(
-                typeof a.createdBy === "object" ? a.createdBy?.name || a.createdBy?.email : "",
-                typeof b.createdBy === "object" ? b.createdBy?.name || b.createdBy?.email : ""
-              ),
-            render: (_: unknown, category: Category) => {
-              const createdBy = category.createdBy;
-              if (!createdBy || typeof createdBy === "string") return "-";
-              const createdByName = createdBy.name?.trim() || "-";
-              const createdByEmail = createdBy.email?.trim();
-              return createdByEmail ? `${createdByName} (${createdByEmail})` : createdByName;
-            },
+            title: "Medical Store",
+            key: "medicalStore",
+            sorter: createNameSorter((row: Category) => getMedicalStoreName(row)),
+            render: (_: unknown, category: Category) => getMedicalStoreName(category),
           },
         ]
       : []),
     {
       title: "Date (Created Date, Updated Date)",
       key: "createdUpdatedAt",
-      sorter: (a: Category, b: Category) =>
-        sortDateTime(a.updatedAt || a.createdAt, b.updatedAt || b.createdAt),
+      sorter: createDateSorter((row: Category) => row.updatedAt || row.createdAt),
       render: (_: unknown, category: Category) => (
         <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
           {formatDateTime(category.createdAt)}
@@ -200,20 +195,6 @@ export default function CategoriesList() {
             }}
             style={{ width: 360, maxWidth: "100%" }}
           />
-          {isAdmin && (
-            <Select
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              placeholder="Filter by user"
-              value={filters.createdBy || undefined}
-              options={userOptions}
-              onChange={(value) =>
-                setFilters((prev) => ({ ...prev, page: 1, createdBy: value || "" }))
-              }
-              style={{ width: 220 }}
-            />
-          )}
         </Space>
       </div>
 
@@ -241,3 +222,4 @@ export default function CategoriesList() {
     </Card>
   );
 }
+
