@@ -23,7 +23,9 @@ import {
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
+import { buildPageSizeSelectOptions } from "../../utils/pagination";
 import { createDateSorter, createNameSorter } from "../../utils/tableSort";
+import { getSerialNumber, paginateByPage } from "../../utils/tablePagination";
 import { getErrorMessage } from "../../utils/userForm";
 
 type StoreStatusFilter = "all" | "active" | "inactive";
@@ -67,23 +69,12 @@ export default function MedicalStoresList() {
     return true;
   });
   const stores = hasStatusFilter
-    ? storesFilteredByStatus.slice(
-        (filters.page - 1) * filters.limit,
-        filters.page * filters.limit
-      )
+    ? paginateByPage(storesFilteredByStatus, filters.page, filters.limit)
     : storesFilteredByStatus;
   const totalRecords = hasStatusFilter
     ? storesFilteredByStatus.length
     : data?.pagination?.total || 0;
-  const pageSizeSelectOptions = [
-    { label: "10 / page", value: 10 },
-    { label: "30 / page", value: 30 },
-    { label: "50 / page", value: 50 },
-    { label: "100 / page", value: 100 },
-    ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
-  ].filter(
-    (option, index, arr) => arr.findIndex((x) => x.value === option.value) === index
-  );
+  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
 
   const handleToggleStatus = async (store: MedicalStore) => {
     const nextIsActive = store.isActive === false;
@@ -114,7 +105,7 @@ export default function MedicalStoresList() {
       key: "serial",
       width: 80,
       render: (_: unknown, __: MedicalStore, index: number) =>
-        (filters.page - 1) * filters.limit + index + 1,
+        getSerialNumber(filters.page, filters.limit, index),
     },
     {
       title: "Medical Store Name",
@@ -271,4 +262,3 @@ export default function MedicalStoresList() {
     </PageShell>
   );
 }
-

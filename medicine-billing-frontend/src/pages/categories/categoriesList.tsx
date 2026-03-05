@@ -19,7 +19,10 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { Category } from "../../types/category";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
+import { buildMedicalStoreNameById } from "../../utils/medicalStore";
+import { buildPageSizeSelectOptions } from "../../utils/pagination";
 import { createDateSorter, createNameSorter } from "../../utils/tableSort";
+import { getSerialNumber } from "../../utils/tablePagination";
 
 export default function CategoriesList() {
   const { message } = App.useApp();
@@ -48,25 +51,12 @@ export default function CategoriesList() {
   const categories = data?.categories ?? [];
   const pagination = data?.pagination;
   const totalRecords = pagination?.total || 0;
-  const pageSizeSelectOptions = [
-    { label: "10 / page", value: 10 },
-    { label: "30 / page", value: 30 },
-    { label: "50 / page", value: 50 },
-    { label: "100 / page", value: 100 },
-    ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
-  ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
+  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
 
-  const medicalStoreNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    (medicalStoresData?.medicalStores ?? []).forEach((store) => {
-      const storeId = store?._id ? String(store._id) : "";
-      const storeName = store?.name ? String(store.name).trim() : "";
-      if (storeId && storeName) {
-        map.set(storeId, storeName);
-      }
-    });
-    return map;
-  }, [medicalStoresData?.medicalStores]);
+  const medicalStoreNameById = useMemo(
+    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
+    [medicalStoresData?.medicalStores]
+  );
 
   const getMedicalStoreId = (category: Category) =>
     typeof category.medicalStoreId === "string"
@@ -99,7 +89,7 @@ export default function CategoriesList() {
       key: "serial",
       width: 80,
       render: (_: unknown, __: Category, index: number) =>
-        (filters.page - 1) * filters.limit + index + 1,
+        getSerialNumber(filters.page, filters.limit, index),
     },
     {
       title: "Name",
@@ -222,4 +212,3 @@ export default function CategoriesList() {
     </Card>
   );
 }
-

@@ -22,6 +22,8 @@ import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { useProducts } from "../../hooks/useProducts";
 import { useUsers } from "../../hooks/useUsers";
 import { formatDateTime } from "../../utils/dateTime";
+import { toEntityId } from "../../utils/id";
+import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../../utils/medicalStore";
 import { createDateSorter, createNameSorter } from "../../utils/tableSort";
 import type { BillSortType, DateFilterType } from "../../types/bill";
 import {
@@ -29,21 +31,13 @@ import {
   BILL_SORT_OPTIONS,
   DATE_FILTER_OPTIONS,
   filterBills,
+  isBillInDateFilter,
   getBillDateValue,
   getBillCompanyName,
   getBillMedicalStoreId,
   getBillMedicalStoreName,
   sortBillsByCreatedAt,
 } from "../../utils/billing";
-
-const toId = (value: unknown): string => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "object" && "_id" in (value as Record<string, unknown>)) {
-    return String((value as { _id?: unknown })._id || "");
-  }
-  return "";
-};
 
 const toDashboardLimit = (total?: number) => {
   const parsed = Number(total);
@@ -68,7 +62,7 @@ export default function Dashboard() {
 
   const isAdmin = user?.role === ROLE.ADMIN;
   const meMedicalStoreId =
-    toId(user?.medicalStoreId) || (typeof user?.medicineId === "string" ? user.medicineId : "");
+    toEntityId(user?.medicalStoreId) || (typeof user?.medicineId === "string" ? user.medicineId : "");
   const effectiveMedicalStoreId = isAdmin ? medicalStoreFilter : meMedicalStoreId;
 
   const companiesQuery = useCompanies(1, companiesLimit, "");
@@ -108,31 +102,18 @@ export default function Dashboard() {
   if (isLoading) return <div>Loading...</div>;
   if (!user) return null;
 
-  const getUserMedicalStoreId = (targetUser: any) => {
-    const directStoreId = toId(targetUser?.medicalStoreId);
-    if (directStoreId) return directStoreId;
-    return typeof targetUser?.medicineId === "string" ? targetUser.medicineId : "";
-  };
-
   const usersRaw = usersQuery.data?.users ?? [];
   const userMedicalStoreIdByUserId = new Map<string, string>(
     usersRaw
-      .map((targetUser: any) => [toId(targetUser?._id), getUserMedicalStoreId(targetUser)] as const)
+      .map((targetUser: any) => [toEntityId(targetUser?._id), getUserMedicalStoreId(targetUser)] as const)
       .filter(([userId, storeId]: [string, string]) => !!userId && !!storeId)
   );
-  const currentUserId = toId(user?._id);
+  const currentUserId = toEntityId(user?._id);
   if (currentUserId && meMedicalStoreId && !userMedicalStoreIdByUserId.has(currentUserId)) {
     userMedicalStoreIdByUserId.set(currentUserId, meMedicalStoreId);
   }
 
-  const medicalStoreNameById = new Map<string, string>();
-  (medicalStoresQuery.data?.medicalStores ?? []).forEach((store) => {
-    const storeId = store?._id ? String(store._id) : "";
-    const storeName = store?.name ? String(store.name).trim() : "";
-    if (storeId && storeName) {
-      medicalStoreNameById.set(storeId, storeName);
-    }
-  });
+  const medicalStoreNameById = buildMedicalStoreNameById(medicalStoresQuery.data?.medicalStores);
 
   usersRaw.forEach((targetUser: any) => {
     const storeId = getUserMedicalStoreId(targetUser);
@@ -170,35 +151,35 @@ export default function Dashboard() {
   };
 
   const getCompanyMedicalStoreId = (company: any) => {
-    const directStoreId = toId(company?.medicalStoreId);
+    const directStoreId = toEntityId(company?.medicalStoreId);
     if (directStoreId) return directStoreId;
     if (typeof company?.userId === "object") {
-      const ownerStoreId = toId((company.userId as any)?.medicalStoreId);
+      const ownerStoreId = toEntityId((company.userId as any)?.medicalStoreId);
       if (ownerStoreId) return ownerStoreId;
     }
-    const ownerId = toId(company?.userId);
+    const ownerId = toEntityId(company?.userId);
     if (ownerId) return resolveStoreIdByUserId(ownerId);
     return "";
   };
 
   const getProductMedicalStoreId = (product: any) => {
-    const directStoreId = toId(product?.medicalStoreId);
+    const directStoreId = toEntityId(product?.medicalStoreId);
     if (directStoreId) return directStoreId;
-    const legacyStoreId = toId(product?.medicineId);
+    const legacyStoreId = toEntityId(product?.medicineId);
     if (legacyStoreId) return legacyStoreId;
-    const nestedStoreId = toId(product?.medicalStore);
+    const nestedStoreId = toEntityId(product?.medicalStore);
     if (nestedStoreId) return nestedStoreId;
-    const creatorStoreId = toId(product?.createdBy?.medicalStoreId);
+    const creatorStoreId = toEntityId(product?.createdBy?.medicalStoreId);
     if (creatorStoreId) return creatorStoreId;
-    const creatorLegacyStoreId = toId(product?.createdBy?.medicineId);
+    const creatorLegacyStoreId = toEntityId(product?.createdBy?.medicineId);
     if (creatorLegacyStoreId) return creatorLegacyStoreId;
-    const creatorId = toId(product?.createdBy) || toId(product?.userId);
+    const creatorId = toEntityId(product?.createdBy) || toEntityId(product?.userId);
     if (creatorId) return resolveStoreIdByUserId(creatorId);
-    const companyStoreId = toId(product?.companyId?.medicalStoreId);
+    const companyStoreId = toEntityId(product?.companyId?.medicalStoreId);
     if (companyStoreId) return companyStoreId;
-    const companyOwnerId = toId(product?.companyId?.userId);
+    const companyOwnerId = toEntityId(product?.companyId?.userId);
     if (companyOwnerId) return resolveStoreIdByUserId(companyOwnerId);
-    const companyRefId = toId(product?.companyId);
+    const companyRefId = toEntityId(product?.companyId);
     if (companyRefId) {
       const mappedStoreId = companyMedicalStoreIdByCompanyId.get(companyRefId);
       if (mappedStoreId) return mappedStoreId;
@@ -207,14 +188,16 @@ export default function Dashboard() {
   };
 
   const getCategoryMedicalStoreId = (category: any) => {
-    const directStoreId = toId(category?.medicalStoreId);
+    const directStoreId = toEntityId(category?.medicalStoreId);
     if (directStoreId) return directStoreId;
-    const creatorStoreId = toId(category?.createdBy?.medicalStoreId);
+    const creatorStoreId = toEntityId(category?.createdBy?.medicalStoreId);
     if (creatorStoreId) return creatorStoreId;
-    const creatorId = toId(category?.createdBy);
+    const creatorId = toEntityId(category?.createdBy);
     if (!creatorId) return "";
     return resolveStoreIdByUserId(creatorId);
   };
+  const applySelectedDateFilter = <T extends Record<string, any>>(records: T[]) =>
+    records.filter((record) => isBillInDateFilter(record as any, dateFilter, customRange));
 
   const companiesRaw = companiesQuery.data?.companies ?? [];
   const productsRaw = productsQuery.data?.products ?? [];
@@ -222,13 +205,13 @@ export default function Dashboard() {
   const billsRaw = billsQuery.data?.data ?? [];
   const companyMedicalStoreIdByCompanyId = new Map<string, string>(
     companiesRaw
-      .map((company: any) => [toId(company?._id), getCompanyMedicalStoreId(company)] as const)
+      .map((company: any) => [toEntityId(company?._id), getCompanyMedicalStoreId(company)] as const)
       .filter(([companyId, storeId]) => !!companyId && !!storeId)
   );
   const getBillResolvedMedicalStoreId = (bill: any) => {
     const directStoreId = getBillMedicalStoreId(bill);
     if (directStoreId) return directStoreId;
-    const creatorId = toId(bill?.userId) || toId(bill?.createdBy);
+    const creatorId = toEntityId(bill?.userId) || toEntityId(bill?.createdBy);
     if (!creatorId) return "";
     return resolveStoreIdByUserId(creatorId);
   };
@@ -248,42 +231,40 @@ export default function Dashboard() {
   const filteredBillsForStore = hasEffectiveMedicalStoreFilter
     ? billsRaw.filter((bill: any) => getBillResolvedMedicalStoreId(bill) === effectiveMedicalStoreId)
     : billsRaw;
+  const medicalStores = medicalStoresQuery.data?.medicalStores ?? [];
+  const scopedMedicalStores = hasEffectiveMedicalStoreFilter
+    ? medicalStores.filter((store) => String(store?._id || "") === String(effectiveMedicalStoreId))
+    : medicalStores;
+  const filteredCompaniesByDate = applySelectedDateFilter(filteredCompanies);
+  const filteredProductsByDate = applySelectedDateFilter(filteredProducts);
+  const filteredCategoriesByDate = applySelectedDateFilter(filteredCategories);
+  const filteredUsersByDate = applySelectedDateFilter(filteredUsers);
+  const filteredMedicalStoresByDate = applySelectedDateFilter(scopedMedicalStores);
+  const filteredBillsByDate = filterBills(filteredBillsForStore, {
+    isAdmin,
+    dateFilter,
+    customRange,
+  });
+  const isScoped = hasEffectiveMedicalStoreFilter || dateFilter !== "all";
+  const resolveScopedTotal = (filteredCount: number, total?: number) =>
+    isScoped ? filteredCount : total ?? 0;
 
-  const totalCompanies = hasEffectiveMedicalStoreFilter
-    ? filteredCompanies.length
-    : companiesQuery.data?.pagination?.total ?? 0;
-  const totalProducts = hasEffectiveMedicalStoreFilter
-    ? filteredProducts.length
-    : productsQuery.data?.pagination?.total ?? 0;
-  const totalCategories = hasEffectiveMedicalStoreFilter
-    ? filteredCategories.length
-    : categoriesQuery.data?.pagination?.total ?? 0;
-  const totalBills = hasEffectiveMedicalStoreFilter
-    ? filteredBillsForStore.length
-    : billsQuery.data?.pagination?.total ?? 0;
+  const totalCompanies = resolveScopedTotal(filteredCompaniesByDate.length, companiesQuery.data?.pagination?.total);
+  const totalProducts = resolveScopedTotal(filteredProductsByDate.length, productsQuery.data?.pagination?.total);
+  const totalCategories = resolveScopedTotal(filteredCategoriesByDate.length, categoriesQuery.data?.pagination?.total);
+  const totalBills = resolveScopedTotal(filteredBillsByDate.length, billsQuery.data?.pagination?.total);
   const totalUsers = isAdmin
-    ? hasEffectiveMedicalStoreFilter
-      ? filteredUsers.length
-      : usersQuery.data?.pagination?.total ?? 0
+    ? resolveScopedTotal(filteredUsersByDate.length, usersQuery.data?.pagination?.total)
     : 0;
   const totalMedicalStores = isAdmin
-    ? medicalStoreFilter
-      ? 1
-      : medicalStoresQuery.data?.pagination?.total ?? 0
+    ? resolveScopedTotal(filteredMedicalStoresByDate.length, medicalStoresQuery.data?.pagination?.total)
     : 0;
-  const totalBillAmount = filteredBillsForStore.reduce(
+  const totalBillAmount = filteredBillsByDate.reduce(
     (sum: number, bill: any) => sum + Number(bill?.grandTotal || 0),
     0
   );
 
-  const recentBills = sortBillsByCreatedAt(
-    filterBills(filteredBillsForStore, {
-      isAdmin,
-      dateFilter,
-      customRange,
-    }),
-    sortOrder
-  ).slice(0, 5);
+  const recentBills = sortBillsByCreatedAt(filteredBillsByDate, sortOrder).slice(0, 5);
 
   const getBillMedicalStoreLabel = (bill: any) => {
     const directName = getBillMedicalStoreName(bill);
@@ -481,6 +462,8 @@ export default function Dashboard() {
                 setDateFilter(value);
                 if (value !== "custom") setCustomRange(null);
               }}
+              className="date-filter-select"
+              popupClassName="date-filter-dropdown"
               style={{ width: 160 }}
               options={DATE_FILTER_OPTIONS}
             />

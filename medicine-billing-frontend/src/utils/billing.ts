@@ -1,4 +1,5 @@
 import dayjs, { type Dayjs } from "dayjs";
+import { toEntityId } from "./id";
 import type {
   Bill,
   BillFormItem,
@@ -36,7 +37,7 @@ export type BillFormInitialValues = {
 
 export const DATE_FILTER_OPTIONS: { value: DateFilterType; label: string }[] = [
   { value: "all", label: "All Dates" },
-  { value: "day", label: "Day" },
+  { value: "day", label: "Today" },
   { value: "week", label: "This Week" },
   { value: "month", label: "This Month" },
   { value: "year", label: "This Year" },
@@ -63,20 +64,11 @@ const getBillTotalTax = (bill: BillLike) => {
   return hasSplitTaxTotals ? splitTax : toNumber(totals?.totalTax ?? bill?.totalTax);
 };
 
-const toId = (value: unknown) => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "object" && "_id" in (value as Record<string, unknown>)) {
-    return String((value as { _id?: unknown })._id || "");
-  }
-  return "";
-};
-
 const toMedicalStore = (value: unknown) => {
   if (!value || typeof value !== "object") return null;
   const store = value as Record<string, unknown>;
   return {
-    _id: toId(store._id),
+    _id: toEntityId(store._id),
     name: typeof store.name === "string" ? store.name : "",
     phone: typeof store.phone === "string" ? store.phone : "",
     address: typeof store.address === "string" ? store.address : "",
@@ -96,9 +88,9 @@ export const formatBillCurrency = (value: unknown, options?: { withPrefix?: bool
 
 export const formatBillPercent = (value: unknown, digits = 2) => `${toNumber(value).toFixed(digits)}%`;
 
-export const getBillCompanyId = (bill: BillLike) => toId(bill?.companyId);
+export const getBillCompanyId = (bill: BillLike) => toEntityId(bill?.companyId);
 
-export const getBillAssignedUserId = (bill: BillLike) => toId(bill?.userId || getBillCreator(bill));
+export const getBillAssignedUserId = (bill: BillLike) => toEntityId(bill?.userId || getBillCreator(bill));
 
 export const resolveBillDiscountPercent = (bill: BillLike) => {
   const totals = (bill as Record<string, any> | undefined)?.totals;
@@ -227,13 +219,13 @@ export const getBillCreatorId = (bill: Bill | Record<string, any> | undefined | 
   getBillCreator(bill)?._id || "";
 
 export const getBillMedicalStoreId = (bill: Bill | Record<string, any> | undefined | null) => {
-  const directStoreId = toId((bill as Record<string, any> | undefined)?.medicalStoreId);
+  const directStoreId = toEntityId((bill as Record<string, any> | undefined)?.medicalStoreId);
   if (directStoreId) return directStoreId;
 
-  const creatorStoreId = toId(getBillCreator(bill)?.medicalStoreId);
+  const creatorStoreId = toEntityId(getBillCreator(bill)?.medicalStoreId);
   if (creatorStoreId) return creatorStoreId;
 
-  const companyStoreId = toId((bill as Record<string, any> | undefined)?.companyId?.medicalStoreId);
+  const companyStoreId = toEntityId((bill as Record<string, any> | undefined)?.companyId?.medicalStoreId);
   if (companyStoreId) return companyStoreId;
 
   return "";
@@ -595,7 +587,7 @@ export const validateBillForm = ({
 };
 
 export const toBillPayloadItems = (items: BillFormRow[]): BillPayloadItem[] =>
-  items.map(({ rowId: _rowId, ...item }) => ({
+  items.map((item) => ({
     productId: item.productId,
     qty: toNumber(item.qty),
     ...(toNumber(item.freeQty) > 0 ? { freeQty: toNumber(item.freeQty) } : {}),

@@ -8,6 +8,7 @@ import { useCategories } from "../../hooks/useCategories";
 import { useMe } from "../../hooks/useMe";
 import ProductFormFields from "../../components/forms/ProductFormFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
+import { toEntityId } from "../../utils/id";
 
 const toProductPayload = (values: any) => ({
   ...values,
@@ -16,18 +17,9 @@ const toProductPayload = (values: any) => ({
   stock: Number(values.stock || 0),
 });
 
-const toId = (value: unknown) => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "object" && "_id" in (value as Record<string, unknown>)) {
-    return String((value as { _id?: unknown })._id || "");
-  }
-  return "";
-};
+const getCompanyMedicalStoreId = (company: any) => toEntityId(company?.medicalStoreId);
 
-const getCompanyMedicalStoreId = (company: any) => toId(company?.medicalStoreId);
-
-const getCategoryMedicalStoreId = (category: any) => toId(category?.medicalStoreId);
+const getCategoryMedicalStoreId = (category: any) => toEntityId(category?.medicalStoreId);
 
 export default function UpdateProduct() {
   const { message } = App.useApp();

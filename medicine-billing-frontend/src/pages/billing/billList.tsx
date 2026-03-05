@@ -19,7 +19,10 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { formatDateTime } from "../../utils/dateTime";
+import { buildMedicalStoreNameById } from "../../utils/medicalStore";
+import { buildPageSizeSelectOptions } from "../../utils/pagination";
 import { createDateSorter, createNameSorter } from "../../utils/tableSort";
+import { getSerialNumber, paginateByPage } from "../../utils/tablePagination";
 import type { DateFilterType } from "../../types/bill";
 import {
   type BillingDateRange,
@@ -57,17 +60,10 @@ export default function BillList() {
   const searchLoading = filters.search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteBill } = useDeleteBill();
   const confirmDialog = useConfirmDialog();
-  const medicalStoreNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    (medicalStoresData?.medicalStores ?? []).forEach((store) => {
-      const storeId = store?._id ? String(store._id) : "";
-      const storeName = store?.name ? String(store.name).trim() : "";
-      if (storeId && storeName) {
-        map.set(storeId, storeName);
-      }
-    });
-    return map;
-  }, [medicalStoresData?.medicalStores]);
+  const medicalStoreNameById = useMemo(
+    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
+    [medicalStoresData?.medicalStores]
+  );
   const getBillMedicalStoreLabel = (bill: any) => {
     const embeddedName = getBillMedicalStoreName(bill);
     if (embeddedName !== "-") return embeddedName;
@@ -85,17 +81,11 @@ export default function BillList() {
     customRange,
   });
   const rows = hasLocalFilter
-    ? filteredRows.slice((filters.page - 1) * filters.limit, filters.page * filters.limit)
+    ? paginateByPage(filteredRows, filters.page, filters.limit)
     : filteredRows;
   const pagination = data?.pagination;
   const totalRecords = hasLocalFilter ? filteredRows.length : pagination?.total || 0;
-  const pageSizeSelectOptions = [
-    { label: "10 / page", value: 10 },
-    { label: "30 / page", value: 30 },
-    { label: "50 / page", value: 50 },
-    { label: "100 / page", value: 100 },
-    ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
-  ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
+  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
   const medicalStoreOptions =
     (medicalStoresData?.medicalStores ?? []).map((store) => ({
       value: store._id,
@@ -107,7 +97,7 @@ export default function BillList() {
       title: "S.No",
       key: "serial",
       width: 80,
-      render: (_: any, __: any, index: number) => (filters.page - 1) * filters.limit + index + 1,
+      render: (_: any, __: any, index: number) => getSerialNumber(filters.page, filters.limit, index),
     },
     {
       title: "Bill No",
@@ -240,6 +230,8 @@ export default function BillList() {
               setDateFilter(value);
               if (value !== "custom") setCustomRange(null);
             }}
+            className="date-filter-select"
+            popupClassName="date-filter-dropdown"
             style={{ width: 180 }}
             options={DATE_FILTER_OPTIONS}
           />

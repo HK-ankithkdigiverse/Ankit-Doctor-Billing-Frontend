@@ -18,7 +18,10 @@ import type { User } from "../../types";
 import { useMe } from "../../hooks/useMe";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
+import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../../utils/medicalStore";
+import { buildPageSizeSelectOptions } from "../../utils/pagination";
 import { createDateSorter, createNameSorter } from "../../utils/tableSort";
+import { getSerialNumber } from "../../utils/tablePagination";
 
 export default function Users() {
   const { message } = App.useApp();
@@ -36,28 +39,16 @@ export default function Users() {
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
-  const medicalStoreNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    (medicalStoresData?.medicalStores ?? []).forEach((store) => {
-      const storeId = store?._id ? String(store._id) : "";
-      const storeName = store?.name ? String(store.name).trim() : "";
-      if (storeId && storeName) {
-        map.set(storeId, storeName);
-      }
-    });
-    return map;
-  }, [medicalStoresData?.medicalStores]);
+  const medicalStoreNameById = useMemo(
+    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
+    [medicalStoresData?.medicalStores]
+  );
 
   if (isLoading) return <p>Loading users...</p>;
   if (!data) return <p>No access</p>;
 
   const { users: usersRaw, pagination } = data;
-  const getMedicalStoreId = (user: User) =>
-    user.medicineId ||
-    (typeof user.medicalStoreId === "string"
-      ? user.medicalStoreId
-      : user.medicalStoreId?._id) ||
-    "";
+  const getMedicalStoreId = (user: User) => getUserMedicalStoreId(user);
   const getMedicalStoreName = (user: User) => {
     const populatedStoreName =
       typeof user.medicalStoreId === "object"
@@ -97,13 +88,7 @@ export default function Users() {
       : backendAlreadyFiltered
         ? pagination?.total || 0
         : users.length;
-  const pageSizeSelectOptions = [
-    { label: "10 / page", value: 10 },
-    { label: "30 / page", value: 30 },
-    { label: "50 / page", value: 50 },
-    { label: "100 / page", value: 100 },
-    ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
-  ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
+  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
   const handleToggleStatus = async (user: User) => {
     const nextIsActive = !(user.isActive ?? true);
     try {
@@ -122,7 +107,7 @@ export default function Users() {
       title: "S.No",
       key: "serial",
       width: 80,
-      render: (_: any, __: User, index: number) => (page - 1) * limit + index + 1,
+      render: (_: any, __: User, index: number) => getSerialNumber(page, limit, index),
     },
     {
       title: "Name",
@@ -305,4 +290,3 @@ export default function Users() {
     </Card>
   );
 }
-

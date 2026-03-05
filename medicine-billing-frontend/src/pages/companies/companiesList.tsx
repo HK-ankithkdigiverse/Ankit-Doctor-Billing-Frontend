@@ -21,7 +21,10 @@ import type { Company } from "../../types/company";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { getCompanyDisplayName } from "../../utils/company";
 import { formatDateTime } from "../../utils/dateTime";
+import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../../utils/medicalStore";
+import { buildPageSizeSelectOptions } from "../../utils/pagination";
 import { createDateSorter, createNameSorter } from "../../utils/tableSort";
+import { getSerialNumber, paginateByPage } from "../../utils/tablePagination";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -49,11 +52,6 @@ export default function CompaniesList() {
   const { mutateAsync: deleteCompany, isPending } = useDeleteCompany();
   const confirmDialog = useConfirmDialog();
   const companiesRaw: Company[] = data?.companies ?? [];
-  const getUserMedicalStoreId = (user: User) => {
-    const storeId = user.medicalStoreId;
-    if (!storeId) return "";
-    return typeof storeId === "string" ? storeId : storeId?._id || "";
-  };
   const getOwnerId = (company: Company) =>
     typeof company.userId === "object" ? company.userId?._id : company.userId;
   const userStoreIdById = new Map<string, string>(
@@ -69,11 +67,9 @@ export default function CompaniesList() {
     if (!ownerId) return "";
     return userStoreIdById.get(ownerId) || "";
   };
-  const medicalStoreNameById = new Map<string, string>(
-    (medicalStoresData?.medicalStores ?? [])
-      .map((store: MedicalStore) => [store._id, store.name?.trim() || store._id] as const)
-      .filter(([storeId]) => !!storeId)
-  );
+  const medicalStoreNameById = buildMedicalStoreNameById(medicalStoresData?.medicalStores, {
+    fallbackToId: true,
+  });
   const filteredCompanies = isAdmin
     ? companiesRaw.filter(
         (company) =>
@@ -81,17 +77,11 @@ export default function CompaniesList() {
       )
     : companiesRaw;
   const companies = hasAdminStoreFilter
-    ? filteredCompanies.slice((filters.page - 1) * filters.limit, filters.page * filters.limit)
+    ? paginateByPage(filteredCompanies, filters.page, filters.limit)
     : filteredCompanies;
   const pagination = data?.pagination;
   const totalRecords = hasAdminStoreFilter ? filteredCompanies.length : pagination?.total || 0;
-  const pageSizeSelectOptions = [
-    { label: "10 / page", value: 10 },
-    { label: "30 / page", value: 30 },
-    { label: "50 / page", value: 50 },
-    { label: "100 / page", value: 100 },
-    ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
-  ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
+  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
   const oneLineCell = (value?: string) => (
     <span style={{ whiteSpace: "nowrap" }} title={value || "-"}>
       {value || "-"}
@@ -142,7 +132,7 @@ export default function CompaniesList() {
       key: "serial",
       width: 80,
       render: (_: unknown, __: Company, index: number) =>
-        (filters.page - 1) * filters.limit + index + 1,
+        getSerialNumber(filters.page, filters.limit, index),
     },
     {
       title: "Company",

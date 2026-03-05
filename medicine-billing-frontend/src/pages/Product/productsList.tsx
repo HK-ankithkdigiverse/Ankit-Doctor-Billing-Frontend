@@ -20,7 +20,10 @@ import { useMe } from "../../hooks/useMe";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
+import { buildMedicalStoreNameById } from "../../utils/medicalStore";
+import { buildPageSizeSelectOptions } from "../../utils/pagination";
 import { createDateSorter, createNameSorter } from "../../utils/tableSort";
+import { getSerialNumber, paginateByPage } from "../../utils/tablePagination";
 
 export default function ProductsList() {
   const { message } = App.useApp();
@@ -62,17 +65,10 @@ export default function ProductsList() {
     }
     return "";
   };
-  const medicalStoreNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    (medicalStoresData?.medicalStores ?? []).forEach((store) => {
-      const storeId = store?._id ? String(store._id) : "";
-      const storeName = store?.name ? String(store.name).trim() : "";
-      if (storeId && storeName) {
-        map.set(storeId, storeName);
-      }
-    });
-    return map;
-  }, [medicalStoresData?.medicalStores]);
+  const medicalStoreNameById = useMemo(
+    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
+    [medicalStoresData?.medicalStores]
+  );
   const getProductMedicalStoreName = (product: Product) => {
     if (typeof product.medicalStoreId === "object") {
       const storeName = product.medicalStoreId?.name?.trim();
@@ -88,17 +84,11 @@ export default function ProductsList() {
   };
   const filteredProducts: Product[] = isAdmin ? productsRaw.filter(matchesAdminFilters) : productsRaw;
   const products: Product[] = hasAdminFilter
-    ? filteredProducts.slice((filters.page - 1) * filters.limit, filters.page * filters.limit)
+    ? paginateByPage(filteredProducts, filters.page, filters.limit)
     : filteredProducts;
   const pagination = data?.pagination;
   const totalRecords = hasAdminFilter ? filteredProducts.length : pagination?.total || 0;
-  const pageSizeSelectOptions = [
-    { label: "10 / page", value: 10 },
-    { label: "30 / page", value: 30 },
-    { label: "50 / page", value: 50 },
-    { label: "100 / page", value: 100 },
-    ...(totalRecords > 0 ? [{ label: "All / page", value: totalRecords }] : []),
-  ].filter((option, index, arr) => arr.findIndex((x) => x.value === option.value) === index);
+  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
   const medicalStoreOptions =
     (medicalStoresData?.medicalStores ?? []).map((store) => ({
       value: store._id,
@@ -143,7 +133,7 @@ export default function ProductsList() {
       title: "S.No",
       key: "serial",
       width: 80,
-      render: (_: any, __: Product, index: number) => (filters.page - 1) * filters.limit + index + 1,
+      render: (_: any, __: Product, index: number) => getSerialNumber(filters.page, filters.limit, index),
     },
     {
       title: "Name",
@@ -309,4 +299,3 @@ export default function ProductsList() {
     </Card>
   );
 }
-
