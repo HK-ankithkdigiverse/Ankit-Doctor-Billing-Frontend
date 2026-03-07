@@ -19,6 +19,10 @@
   ],
   "rewrites": [
     {
+      "source": "/dashboard-summary",
+      "destination": "/api/dashboard-summary"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "https://ankit-doctor-billing-backend.vercel.app/api/$1"
     },

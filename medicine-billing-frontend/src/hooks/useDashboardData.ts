@@ -5,6 +5,7 @@ import {
   getAllBillsApi,
   getAllCategoriesApi,
   getAllCompaniesApi,
+  getDashboardSummaryApi,
   getAllMedicalStoresApi,
   getAllProductsApi,
 } from "../api/resourceApi";
@@ -45,105 +46,120 @@ export const useDashboardData = () => {
   const selectedMedicalStore = effectiveMedicalStoreId || "";
 
   const {
-    data: billsData,
-    refetch: refetchBills,
-    isFetching: isBillsFetching,
+    data: dashboardSummaryData,
+    refetch: refetchDashboardSummary,
+    isFetching: isDashboardSummaryFetching,
+  } = useQuery({
+    queryKey: [QUERY_KEYS.DASHBOARD_SUMMARY, selectedMedicalStore],
+    queryFn: async () => {
+      try {
+        return await getDashboardSummaryApi({
+          medicalStoreId: selectedMedicalStore || undefined,
+        });
+      } catch {
+        const [bills, products, companies, categories, users, medicalStores] = await Promise.all([
+          getAllBillsApi({
+            medicalStoreId: selectedMedicalStore || undefined,
+          }),
+          getAllProductsApi({
+            medicalStoreId: selectedMedicalStore || undefined,
+          }),
+          getAllCompaniesApi({
+            medicalStoreId: selectedMedicalStore || undefined,
+          }),
+          getAllCategoriesApi({
+            medicalStoreId: selectedMedicalStore || undefined,
+          }),
+          getAllUsersApi(),
+          getAllMedicalStoresApi(),
+        ]);
+
+        return {
+          bills,
+          products,
+          companies,
+          categories,
+          users,
+          medicalStores,
+        };
+      }
+    },
+    enabled: canLoadAdminOnlyData,
+  });
+
+  const {
+    data: billsDataQuery,
+    refetch: refetchBillsQuery,
+    isFetching: isBillsFetchingQuery,
   } = useQuery({
     queryKey: [QUERY_KEYS.BILLS, "dashboard", selectedMedicalStore],
     queryFn: () =>
       getAllBillsApi({
         medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
       }),
-    enabled: canLoadDashboardData,
+    enabled: canLoadDashboardData && !isAdmin,
   });
 
   const {
-    data: productsData,
-    refetch: refetchProducts,
-    isFetching: isProductsFetching,
-  } = useQuery({
-    queryKey: [QUERY_KEYS.PRODUCTS, "dashboard", selectedMedicalStore],
-    queryFn: () =>
-      getAllProductsApi({
-        medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
-      }),
-    enabled: canLoadAdminOnlyData,
-  });
-
-  const {
-    data: companiesData,
-    refetch: refetchCompanies,
-    isFetching: isCompaniesFetching,
+    data: companiesDataQuery,
+    refetch: refetchCompaniesQuery,
+    isFetching: isCompaniesFetchingQuery,
   } = useQuery({
     queryKey: [QUERY_KEYS.COMPANIES, "dashboard", selectedMedicalStore],
     queryFn: () =>
       getAllCompaniesApi({
         medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
       }),
-    enabled: canLoadDashboardData,
+    enabled: canLoadDashboardData && !isAdmin,
   });
 
   const {
-    data: categoriesData,
-    refetch: refetchCategories,
-    isFetching: isCategoriesFetching,
+    data: categoriesDataQuery,
+    refetch: refetchCategoriesQuery,
+    isFetching: isCategoriesFetchingQuery,
   } = useQuery({
     queryKey: [QUERY_KEYS.CATEGORIES, "dashboard", selectedMedicalStore],
     queryFn: () =>
       getAllCategoriesApi({
         medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
       }),
-    enabled: canLoadDashboardData,
+    enabled: canLoadDashboardData && !isAdmin,
   });
 
-  const {
-    data: usersData,
-    refetch: refetchUsers,
-    isFetching: isUsersFetching,
-  } = useQuery({
-    queryKey: [QUERY_KEYS.USERS, "dashboard", selectedMedicalStore],
-    queryFn: () => getAllUsersApi(),
-    enabled: canLoadAdminOnlyData,
-  });
-
-  const {
-    data: medicalStoresData,
-    refetch: refetchMedicalStores,
-    isFetching: isMedicalStoresFetching,
-  } = useQuery({
-    queryKey: [QUERY_KEYS.MEDICAL_STORES, "dashboard", selectedMedicalStore],
-    queryFn: () => getAllMedicalStoresApi(),
-    enabled: canLoadAdminOnlyData,
-  });
+  const billsData = isAdmin ? dashboardSummaryData?.bills : billsDataQuery;
+  const productsData = isAdmin ? dashboardSummaryData?.products : undefined;
+  const companiesData = isAdmin ? dashboardSummaryData?.companies : companiesDataQuery;
+  const categoriesData = isAdmin ? dashboardSummaryData?.categories : categoriesDataQuery;
+  const usersData = isAdmin ? dashboardSummaryData?.users : undefined;
+  const medicalStoresData = isAdmin ? dashboardSummaryData?.medicalStores : undefined;
 
   const refreshDashboardData = useCallback(() => {
     if (!isDashboardRoute) return;
 
-    const requests = [refetchCompanies(), refetchCategories(), refetchBills()];
-
     if (isAdmin) {
-      requests.push(refetchProducts());
-      requests.push(refetchUsers(), refetchMedicalStores());
+      void refetchDashboardSummary();
+      return;
     }
 
-    void Promise.all(requests);
+    void Promise.all([
+      refetchCompaniesQuery(),
+      refetchCategoriesQuery(),
+      refetchBillsQuery(),
+    ]);
   }, [
     isDashboardRoute,
     isAdmin,
-    refetchCompanies,
-    refetchProducts,
-    refetchCategories,
-    refetchBills,
-    refetchUsers,
-    refetchMedicalStores,
+    refetchDashboardSummary,
+    refetchCompaniesQuery,
+    refetchCategoriesQuery,
+    refetchBillsQuery,
   ]);
 
   const isDashboardFetching =
-    isCompaniesFetching ||
-    isProductsFetching ||
-    isCategoriesFetching ||
-    isBillsFetching ||
-    (isAdmin && (isUsersFetching || isMedicalStoresFetching));
+    (isAdmin && isDashboardSummaryFetching) ||
+    isCompaniesFetchingQuery ||
+    isCategoriesFetchingQuery ||
+    isBillsFetchingQuery;
 
   useEffect(() => {
     const handleDashboardRefresh = () => refreshDashboardData();
@@ -230,7 +246,7 @@ export const useDashboardData = () => {
   const medicalStores = medicalStoresData?.medicalStores ?? [];
   const scopedMedicalStores = effectiveMedicalStoreId
     ? medicalStores.filter(
-        (store) => String(store?._id || "") === String(effectiveMedicalStoreId)
+        (store: any) => String(store?._id || "") === String(effectiveMedicalStoreId)
       )
     : medicalStores;
 

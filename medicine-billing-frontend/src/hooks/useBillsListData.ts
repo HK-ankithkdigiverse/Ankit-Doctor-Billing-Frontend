@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import type { DateFilterType } from "../types/bill";
+import type { Bill, DateFilterType } from "../types/bill";
 import {
   type BillingDateRange,
   DATE_FILTER_OPTIONS,
@@ -65,7 +65,7 @@ export const useBillsListData = () => {
     return medicalStoreNameById.get(storeId) || storeId;
   };
 
-  const rowsRaw = data?.data ?? [];
+  const rowsRaw: Bill[] = data?.data ?? [];
   const filteredRows = filterBills(rowsRaw, {
     isAdmin,
     medicalStoreId,
@@ -90,7 +90,7 @@ export const useBillsListData = () => {
       buildMedicalStoreOptions(medicalStoresData?.medicalStores, {
         includeInactive: true,
         fallbackToId: true,
-        includeIds: rowsRaw.map((bill: any) => getBillMedicalStoreId(bill)).filter(Boolean),
+        includeIds: rowsRaw.map((bill) => getBillMedicalStoreId(bill)).filter(Boolean),
         sort: false,
       }),
     [rowsRaw, medicalStoresData?.medicalStores]

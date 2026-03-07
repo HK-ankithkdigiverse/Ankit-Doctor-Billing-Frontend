@@ -1,6 +1,7 @@
 export const QUERY_KEYS = {
   ME: "me",
   PROFILE: "profile",
+  DASHBOARD_SUMMARY: "dashboard-summary",
 
   PRODUCTS: "products",
   PRODUCT: "product",

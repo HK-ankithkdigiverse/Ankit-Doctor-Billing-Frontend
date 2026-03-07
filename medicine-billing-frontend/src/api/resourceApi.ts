@@ -317,3 +317,33 @@ export const searchProductsApi = async (search: string) => {
   const response = await getProductsApi({ page: 1, search });
   return response?.products || [];
 };
+
+export const getDashboardSummaryApi = async (params?: { medicalStoreId?: string }) => {
+  const { data } = await api.get("/dashboard-summary", {
+    baseURL: "",
+    params: buildQueryParams(params),
+  });
+
+  const isSummaryResponse =
+    data &&
+    typeof data === "object" &&
+    "bills" in data &&
+    "products" in data &&
+    "companies" in data &&
+    "categories" in data &&
+    "users" in data &&
+    "medicalStores" in data;
+
+  if (!isSummaryResponse) {
+    throw new Error("Invalid dashboard summary response");
+  }
+
+  return data as {
+    bills: any;
+    products: any;
+    companies: any;
+    categories: any;
+    users: any;
+    medicalStores: any;
+  };
+};
