@@ -54,33 +54,18 @@ export default defineConfig(({ mode }) => {
               }
             }
 
-            if (moduleId.includes("/src/api/")) {
-              return "app-api";
-            }
-
-            if (moduleId.includes("/src/services/")) {
-              return "app-api";
-            }
-
-            if (moduleId.includes("/src/hooks/")) {
-              return "app-hooks";
-            }
-
-            if (moduleId.includes("/src/components/")) {
-              return "app-components";
-            }
-
-            if (moduleId.includes("/src/store/")) {
-              return "app-store";
-            }
-
             if (
+              moduleId.includes("/src/api/") ||
+              moduleId.includes("/src/services/") ||
+              moduleId.includes("/src/hooks/") ||
+              moduleId.includes("/src/components/") ||
+              moduleId.includes("/src/store/") ||
               moduleId.includes("/src/utils/") ||
               moduleId.includes("/src/constants/") ||
               moduleId.includes("/src/query/") ||
               moduleId.includes("/src/theme/")
             ) {
-              return "app-core";
+              return "app-common";
             }
 
             return undefined;
