@@ -115,7 +115,7 @@ export default function MedicalStoresList() {
       render: (value: string) => value || "-",
     },
     {
-      title: "Date (Created, Updated)",
+      title: "Created At",
       key: "createdUpdatedAt",
       sorter: true,
       sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),

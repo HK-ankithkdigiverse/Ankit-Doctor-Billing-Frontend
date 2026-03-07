@@ -244,6 +244,30 @@ body {
   font-weight: 600;
 }
 
+@media (max-width: 768px) {
+  .app-range-picker-dropdown .ant-picker-panel-container {
+    max-width: calc(100vw - 16px);
+  }
+
+  .app-range-picker-dropdown .ant-picker-panels {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-range-picker-dropdown .ant-picker-panels > * {
+    width: 100%;
+  }
+
+  .app-range-picker-dropdown .ant-picker-panels > *:not(:first-child) {
+    border-inline-start: 0 !important;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .app-range-picker-dropdown .ant-picker-body {
+    padding-inline: 10px;
+  }
+}
+
 .bill-form-card {
   border-radius: 16px !important;
 }

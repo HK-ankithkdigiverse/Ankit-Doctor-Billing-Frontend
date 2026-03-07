@@ -209,6 +209,7 @@ export default function BillList() {
               onChange={(values) => {
                 setCustomRange(values as BillingDateRange);
               }}
+              popupClassName="app-range-picker-dropdown"
             />
           )}
         </Space>

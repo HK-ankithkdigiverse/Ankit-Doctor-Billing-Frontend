@@ -188,6 +188,7 @@ export default function DashboardPage() {
               value={customRange}
               onChange={(values) => setCustomRange(values as BillingDateRange)}
               className="dashboard-control dashboard-range-picker"
+              popupClassName="app-range-picker-dropdown"
               allowClear
             />
           ) : null}

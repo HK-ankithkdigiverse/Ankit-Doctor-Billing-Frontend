@@ -85,7 +85,7 @@ export default function CompaniesList() {
         ]
       : []),
     {
-      title: "Created / Updated",
+      title: "Created At",
       key: "createdUpdatedAt",
       sorter: true,
       sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),
