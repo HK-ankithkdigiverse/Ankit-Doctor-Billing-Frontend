@@ -21,7 +21,7 @@ export default function CompaniesList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const confirmDialog = useConfirmDialog();
-  const {isAdmin,page,limit,search,medicalStoreId,sortState,companies,totalRecords,pageSizeSelectOptions,medicalStoreOptions,searchLoading,isLoading,isPending,setPagination,setSearch,setMedicalStoreId,setSort,getCreatedByStoreLabel,deleteCompany,} = useCompaniesListData();
+  const {isAdmin,page,limit,search,medicalStoreId,sortState,companies,totalRecords,pageSizeSelectOptions,medicalStoreOptions,requestMedicalStoreOptions,searchLoading,isLoading,isPending,setPagination,setSearch,setMedicalStoreId,setSort,getCreatedByStoreLabel,deleteCompany,} = useCompaniesListData();
 
   const oneLineCell = (value?: string) => (
     <span style={{ whiteSpace: "nowrap" }} title={value || "-"}>
@@ -176,6 +176,9 @@ export default function CompaniesList() {
                 placeholder="Filter by medical store"
                 value={medicalStoreId || undefined}
                 options={medicalStoreOptions}
+                onOpenChange={(open) => {
+                  if (open) requestMedicalStoreOptions();
+                }}
                 onChange={(value) => setMedicalStoreId(value || "")}
                 style={{ width: 220 }}
               />

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Product } from "../types/product";
 import { ROLE } from "../constants";
 import { useDeleteProduct, useProducts } from "./useProducts";
@@ -29,13 +29,15 @@ export const useProductsListData = () => {
   const debouncedSearch = useDebouncedValue(search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
+  const [shouldLoadMedicalStores, setShouldLoadMedicalStores] = useState(false);
   const hasAdminFilter = isAdmin && !!medicalStoreId;
+  const canLoadMedicalStores = isAdmin && (hasAdminFilter || shouldLoadMedicalStores);
   const queryPage = hasAdminFilter ? 1 : page;
   const queryLimit = hasAdminFilter ? 1000 : limit;
 
   const { data, isPending, isFetching } = useProducts(queryPage, queryLimit, debouncedSearch);
   const { data: medicalStoresData } = useAllMedicalStores({
-    enabled: isAdmin,
+    enabled: canLoadMedicalStores,
   });
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteProduct, isPending: deletePending } = useDeleteProduct();
@@ -54,7 +56,7 @@ export const useProductsListData = () => {
     }
     const targetMedicalStoreId = getProductMedicalStoreId(product);
     if (!targetMedicalStoreId) return "-";
-    return medicalStoreNameById.get(targetMedicalStoreId) || "-";
+    return medicalStoreNameById.get(targetMedicalStoreId) || targetMedicalStoreId;
   };
 
   const matchesAdminFilters = (product: Product) => {
@@ -119,6 +121,9 @@ export const useProductsListData = () => {
       }),
     [medicalStoresData?.medicalStores]
   );
+  const requestMedicalStoreOptions = useCallback(() => {
+    setShouldLoadMedicalStores(true);
+  }, []);
 
   return {
     isAdmin,
@@ -131,6 +136,7 @@ export const useProductsListData = () => {
     totalRecords,
     pageSizeSelectOptions,
     medicalStoreOptions,
+    requestMedicalStoreOptions,
     searchLoading,
     isPending,
     deletePending,

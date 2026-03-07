@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Company } from "../types/company";
 import { ROLE } from "../constants";
 import { useCompanies, useDeleteCompany } from "./useCompanies";
@@ -30,7 +30,9 @@ export const useCompaniesListData = () => {
   const debouncedSearch = useDebouncedValue(search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
+  const [shouldLoadMedicalStores, setShouldLoadMedicalStores] = useState(false);
   const hasAdminStoreFilter = isAdmin && !!medicalStoreId;
+  const canLoadMedicalStores = isAdmin && (hasAdminStoreFilter || shouldLoadMedicalStores);
   const queryPage = hasAdminStoreFilter ? 1 : page;
   const queryLimit = hasAdminStoreFilter ? 1000 : limit;
 
@@ -39,7 +41,7 @@ export const useCompaniesListData = () => {
     queryLimit,
     debouncedSearch
   );
-  const { data: medicalStoresData } = useAllMedicalStores({ enabled: isAdmin });
+  const { data: medicalStoresData } = useAllMedicalStores({ enabled: canLoadMedicalStores });
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteCompany, isPending } = useDeleteCompany();
   const companiesRaw: Company[] = data?.companies ?? [];
@@ -95,6 +97,10 @@ export const useCompaniesListData = () => {
     [companiesRaw, medicalStoresData?.medicalStores]
   );
 
+  const requestMedicalStoreOptions = useCallback(() => {
+    setShouldLoadMedicalStores(true);
+  }, []);
+
   return {
     isAdmin,
     page,
@@ -106,6 +112,7 @@ export const useCompaniesListData = () => {
     totalRecords,
     pageSizeSelectOptions,
     medicalStoreOptions,
+    requestMedicalStoreOptions,
     searchLoading,
     isLoading,
     isPending,

@@ -14,7 +14,7 @@ export default function ProductsList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const confirmDialog = useConfirmDialog();
-  const {isAdmin,page,limit,search,medicalStoreId,sortState,products,totalRecords,pageSizeSelectOptions,medicalStoreOptions,searchLoading,isPending,deletePending,setPagination,setSearch,setMedicalStoreId,setSort,getProductMedicalStoreName,pickProductDate,deleteProduct,} = useProductsListData();
+  const {isAdmin,page,limit,search,medicalStoreId,sortState,products,totalRecords,pageSizeSelectOptions,medicalStoreOptions,requestMedicalStoreOptions,searchLoading,isPending,deletePending,setPagination,setSearch,setMedicalStoreId,setSort,getProductMedicalStoreName,pickProductDate,deleteProduct,} = useProductsListData();
 
   const handleDelete = async (id: string) => {
     try {
@@ -165,6 +165,9 @@ export default function ProductsList() {
               placeholder="Filter by medical store"
               value={medicalStoreId || undefined}
               options={medicalStoreOptions}
+              onOpenChange={(open) => {
+                if (open) requestMedicalStoreOptions();
+              }}
               onChange={(value) => setMedicalStoreId(value || "")}
               style={{ width: 240 }}
             />

@@ -42,6 +42,7 @@ export default function BillList() {
     totalRecords,
     pageSizeSelectOptions,
     medicalStoreOptions,
+    requestMedicalStoreOptions,
     searchLoading,
     isLoading,
     setPagination,
@@ -185,6 +186,9 @@ export default function BillList() {
               placeholder="Filter by medical store"
               value={medicalStoreId || undefined}
               options={medicalStoreOptions}
+              onOpenChange={(open) => {
+                if (open) requestMedicalStoreOptions();
+              }}
               onChange={(value) => setMedicalStoreId(value || "")}
               style={{ width: 240 }}
             />

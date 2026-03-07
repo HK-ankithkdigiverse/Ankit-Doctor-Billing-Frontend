@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { DateFilterType } from "../types/bill";
 import {
   type BillingDateRange,
@@ -36,7 +36,9 @@ export const useBillsListData = () => {
   const debouncedSearch = useDebouncedValue(search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
+  const [shouldLoadMedicalStores, setShouldLoadMedicalStores] = useState(false);
   const hasAdminMedicalStoreFilter = isAdmin && !!medicalStoreId;
+  const canLoadMedicalStores = isAdmin && (hasAdminMedicalStoreFilter || shouldLoadMedicalStores);
   const hasDateFilter = dateFilter !== "all";
   const hasLocalFilter = hasAdminMedicalStoreFilter || hasDateFilter;
   const queryPage = hasLocalFilter ? 1 : page;
@@ -44,7 +46,7 @@ export const useBillsListData = () => {
 
   const { data, isLoading, isFetching } = useBills(queryPage, queryLimit, debouncedSearch);
   const { data: medicalStoresData } = useAllMedicalStores({
-    enabled: isAdmin,
+    enabled: canLoadMedicalStores,
   });
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteBill } = useDeleteBill();
@@ -60,7 +62,7 @@ export const useBillsListData = () => {
 
     const storeId = getBillMedicalStoreId(bill);
     if (!storeId) return "-";
-    return medicalStoreNameById.get(storeId) || "-";
+    return medicalStoreNameById.get(storeId) || storeId;
   };
 
   const rowsRaw = data?.data ?? [];
@@ -88,10 +90,14 @@ export const useBillsListData = () => {
       buildMedicalStoreOptions(medicalStoresData?.medicalStores, {
         includeInactive: true,
         fallbackToId: true,
+        includeIds: rowsRaw.map((bill) => getBillMedicalStoreId(bill)).filter(Boolean),
         sort: false,
       }),
-    [medicalStoresData?.medicalStores]
+    [rowsRaw, medicalStoresData?.medicalStores]
   );
+  const requestMedicalStoreOptions = useCallback(() => {
+    setShouldLoadMedicalStores(true);
+  }, []);
 
   return {
     page,
@@ -106,6 +112,7 @@ export const useBillsListData = () => {
     totalRecords,
     pageSizeSelectOptions,
     medicalStoreOptions,
+    requestMedicalStoreOptions,
     searchLoading,
     isLoading,
     setPagination,
