@@ -26,7 +26,8 @@ export const useUsersListData = () => {
   const { data: me } = useMe();
 
   const { data: medicalStoresData } = useAllMedicalStores();
-  const normalizedSortOrder = sortOrder === "asc" || sortOrder === "desc" ? sortOrder : undefined;
+  const normalizedSortOrder =
+    sortOrder === "ascend" ? "asc" : sortOrder === "descend" ? "desc" : undefined;
   const normalizedSortBy = normalizedSortOrder ? sortField : undefined;
 
   const { data, isLoading, isFetching } = useUsers(
