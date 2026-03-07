@@ -11,7 +11,8 @@ const isAbsoluteApiUrl = /^https?:\/\//i.test(rawApiUrl);
 const apiOriginFromEnv = isAbsoluteApiUrl ? rawApiUrl.replace(/\/api$/i, "") : "";
 
 export const API_ORIGIN = apiOriginFromEnv || DEFAULT_API_ORIGIN;
-export const API_BASE_URL = import.meta.env.DEV ? "/api" : `${API_ORIGIN}/api`;
+// Use same-origin /api by default so production avoids CORS preflight requests.
+export const API_BASE_URL = isAbsoluteApiUrl ? `${API_ORIGIN}/api` : "/api";
 
 export const AUTH_API = {
   SIGNUP: "/auth/signup",
