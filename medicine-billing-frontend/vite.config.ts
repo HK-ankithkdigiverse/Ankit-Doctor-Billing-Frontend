@@ -58,13 +58,24 @@ export default defineConfig(({ mode }) => {
               return "app-api";
             }
 
+            if (moduleId.includes("/src/hooks/")) {
+              return "app-hooks";
+            }
+
+            if (moduleId.includes("/src/components/")) {
+              return "app-components";
+            }
+
             if (
               moduleId.includes("/src/utils/") ||
               moduleId.includes("/src/constants/") ||
               moduleId.includes("/src/query/") ||
+              moduleId.includes("/src/store/") ||
+              moduleId.includes("/src/services/") ||
+              moduleId.includes("/src/theme/") ||
               moduleId.includes("/src/hooks/queryHelpers.ts")
             ) {
-              return "app-shared";
+              return "app-core";
             }
 
             return undefined;

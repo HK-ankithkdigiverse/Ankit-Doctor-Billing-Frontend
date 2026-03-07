@@ -5,16 +5,14 @@
   "outputDirectory": "medicine-billing-frontend/dist",
   "headers": [
     {
-      "source": "/",
-      "headers": [
+      "source": "/(.*)",
+      "has": [
         {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
+          "type": "header",
+          "key": "accept",
+          "value": ".*text/html.*"
         }
-      ]
-    },
-    {
-      "source": "/index.html",
+      ],
       "headers": [
         {
           "key": "Cache-Control",
