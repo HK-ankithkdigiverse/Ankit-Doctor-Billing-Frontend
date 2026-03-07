@@ -23,6 +23,7 @@ import {
   validateBillForm,
 } from "../../utils/billing";
 import { createNameSorter } from "../../utils/tableSort";
+import { normalizePercent, resolveBillTaxMode, resolveStoreGstPercent, toBackendTaxType } from "../../utils/tax";
 
 type BillFormProps = {
   title: string;
@@ -37,6 +38,7 @@ type BillFormProps = {
   initialDiscount?: number;
   initialGstPercent?: number;
   initialItems?: BillFormItem[];
+  autoApplyStoreGstPercent?: boolean;
   onSubmit: (payload: BillPayload) => Promise<void>;
   onCancel: () => void;
 };
@@ -60,6 +62,14 @@ const hasInvalidPercentText = (input: string | undefined) => {
 };
 const getCompanyMedicalStoreId = (company: any) =>
   typeof company?.medicalStoreId === "object" ? company?.medicalStoreId?._id : company?.medicalStoreId;
+const DEFAULT_BILL_GST_PERCENT = 18;
+const formatTaxPercent = (value: number) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "0";
+  const rounded = Math.round(numeric * 100) / 100;
+  if (Number.isInteger(rounded)) return String(rounded);
+  return rounded.toFixed(2).replace(/\.?0+$/, "");
+};
 
 export default function BillForm({
   title,
@@ -72,8 +82,9 @@ export default function BillForm({
   initialCompanyId = "",
   initialCompanyName = "",
   initialDiscount = 0,
-  initialGstPercent = 0,
+  initialGstPercent = DEFAULT_BILL_GST_PERCENT,
   initialItems,
+  autoApplyStoreGstPercent = true,
   onSubmit,
   onCancel,
 }: BillFormProps) {
@@ -84,7 +95,9 @@ export default function BillForm({
   const [gstPercent, setGstPercent] = useState(normalizeWholePercent(initialGstPercent));
   const [items, setItems] = useState<BillFormRow[]>(normalizeBillFormRows(initialItems));
   const { data: me } = useMe();
-  const { data: medicalStoresData } = useAllMedicalStores();
+  // Ensure medical stores are loaded so we can resolve GST data
+  // even when the current user is not an admin (me.medicalStoreId may be an ID string).
+  const { data: medicalStoresData } = useAllMedicalStores({ enabled: true });
 
   const { data: productData, isLoading: productsLoading } = useAllProducts({
     companyId: companyId || undefined,
@@ -145,14 +158,18 @@ export default function BillForm({
     }
   }, [isAdmin, storeOptions, userId, users]);
 
+  const meMedicalStoreId =
+    typeof me?.medicalStoreId === "string"
+      ? me.medicalStoreId
+      : me?.medicalStoreId?._id || me?.medicineId || "";
   const companyOptions = useMemo(() => {
     const selectedUserStoreId = storeOptions.find((option) => option.value === userId)?.medicalStoreId || "";
+    const targetMedicalStoreId = isAdmin ? selectedUserStoreId : meMedicalStoreId;
 
     const isVisibleForSelectedUser = (company: any) => {
-      if (!isAdmin) return true;
-      if (!userId || !selectedUserStoreId) return false;
+      if (!targetMedicalStoreId) return false;
       const companyStoreId = getCompanyMedicalStoreId(company);
-      return String(companyStoreId || "") === String(selectedUserStoreId);
+      return String(companyStoreId || "") === String(targetMedicalStoreId);
     };
 
     const options = companies.filter(isVisibleForSelectedUser).map((company: any) => ({
@@ -169,16 +186,11 @@ export default function BillForm({
     }
 
     return options;
-  }, [companies, initialCompanyId, initialCompanyName, isAdmin, storeOptions, userId]);
+  }, [companies, initialCompanyId, initialCompanyName, isAdmin, meMedicalStoreId, storeOptions, userId]);
 
   const getProduct = (id: string) => products.find((product: any) => product._id === id);
   const getProductName = (id: string) => getProduct(id)?.name || "";
   const selectedUserOption = storeOptions.find((option) => option.value === userId);
-
-  const meMedicalStoreId =
-    typeof me?.medicalStoreId === "string"
-      ? me.medicalStoreId
-      : me?.medicalStoreId?._id || me?.medicineId || "";
   const selectedUserMedicalStoreId = selectedUserOption?.medicalStoreId || "";
   const selectedMedicalStoreId = isAdmin ? selectedUserMedicalStoreId : meMedicalStoreId;
 
@@ -191,19 +203,24 @@ export default function BillForm({
       return me.medicalStoreId as any;
     }
 
-    return null;
-  }, [medicalStoresData?.medicalStores, me?.medicalStoreId, selectedMedicalStoreId]);
+    if (typeof (me as any)?.medicalStore === "object" && (me as any)?.medicalStore?._id === selectedMedicalStoreId) {
+      return (me as any).medicalStore;
+    }
 
-  const resolvedTaxMode: BillTaxMode =
-    (selectedMedicalStore as any)?.gstType === "IGST" ||
-    (selectedMedicalStore as any)?.taxType === "INTER"
-      ? "IGST"
-      : "CGST_SGST";
+    return null;
+  }, [medicalStoresData?.medicalStores, me?.medicalStore, me?.medicalStoreId, selectedMedicalStoreId]);
+
+  const resolvedTaxMode: BillTaxMode = resolveBillTaxMode(selectedMedicalStore as any);
+  const selectedStoreGstPercent = resolveStoreGstPercent(selectedMedicalStore as any);
   const resolvedStoreState =
     (selectedMedicalStore as any)?.state ||
     selectedUserOption?.medicalStoreState ||
     (typeof me?.state === "string" ? me.state : "") ||
     (typeof me?.medicalStoreId === "object" ? (me.medicalStoreId as any)?.state || "" : "");
+    useEffect(() => {
+  console.log("Selected Store ID", selectedMedicalStoreId);
+  console.log("Selected Store Data", selectedMedicalStore);
+}, [selectedMedicalStoreId, selectedMedicalStore]);
 
   const handleCompanyChange = (value: string) => {
     setCompanyId(value);
@@ -215,6 +232,39 @@ export default function BillForm({
     setCompanyId("");
     setItems([toBillFormRow()]);
   };
+
+  useEffect(() => {
+    if (!autoApplyStoreGstPercent) return;
+    const nextGstPercent =
+      selectedStoreGstPercent > 0 ? selectedStoreGstPercent : DEFAULT_BILL_GST_PERCENT;
+    setGstPercent(normalizePercent(nextGstPercent));
+  }, [autoApplyStoreGstPercent, selectedStoreGstPercent, selectedMedicalStoreId]);
+
+  useEffect(() => {
+    if (!products.length) return;
+    setItems((prev) => {
+      let hasChanges = false;
+      const next = prev.map((row) => {
+        if (!row.productId) return row;
+        const product = products.find((entry: any) => String(entry?._id) === String(row.productId));
+        if (!product) return row;
+
+        const currentRate = Number(row.rate || 0);
+        const currentMrp = Number(row.mrp || 0);
+        const resolvedRate = currentRate > 0 ? currentRate : Number(product.price || 0);
+        const resolvedMrp = currentMrp > 0 ? currentMrp : Number(product.mrp || 0);
+
+        if (resolvedRate === currentRate && resolvedMrp === currentMrp) return row;
+        hasChanges = true;
+        return {
+          ...row,
+          rate: resolvedRate,
+          mrp: resolvedMrp,
+        };
+      });
+      return hasChanges ? next : prev;
+    });
+  }, [products]);
 
   const updateItem = (rowId: string, key: keyof BillFormItem, value: string | number) => {
     setItems((prev) =>
@@ -263,6 +313,7 @@ export default function BillForm({
     event.preventDefault();
     message.error(`${label} % accepts only numbers`);
   };
+  const effectiveGstPercent = Number(gstPercent) > 0 ? Number(gstPercent) : Number(selectedStoreGstPercent || 0);
 
   const {
     subTotal,
@@ -277,16 +328,33 @@ export default function BillForm({
     () =>
       getBillSummary(items, discountPercent, {
         taxMode: resolvedTaxMode,
-        gstPercent,
+        gstPercent: effectiveGstPercent,
       }),
-    [discountPercent, gstPercent, items, resolvedTaxMode]
+    [discountPercent, effectiveGstPercent, items, resolvedTaxMode]
   );
+  const displayGstPercent = effectiveGstPercent;
+  const splitDisplayGstPercent = displayGstPercent / 2;
 
   const submit = async () => {
     if (isAdmin && userId && !selectedUserMedicalStoreId) {
       message.error("Selected store is invalid");
       return;
     }
+
+    // Debug info to trace why GST might be missing
+    // Logs: selectedMedicalStoreId, selectedMedicalStore object, resolvedTaxMode, selectedStoreGstPercent
+    // and currently computed gstPercent before submit.
+    // This will help identify if store data is not loaded or lacks GST fields.
+    // eslint-disable-next-line no-console
+    console.log("Bill submit debug", {
+      selectedMedicalStoreId,
+      selectedMedicalStore,
+      resolvedTaxMode,
+      selectedStoreGstPercent,
+      gstPercent,
+      companyId,
+      company: companies.find((c: any) => String(c._id) === String(companyId)),
+    });
 
     if (isAdmin && userId && selectedUserMedicalStoreId && companyId) {
       const selectedCompany = companies.find((company: any) => String(company?._id || "") === String(companyId));
@@ -297,11 +365,15 @@ export default function BillForm({
       }
     }
 
+    // derive payload GST values: prefer user-edited `gstPercent`, else store's configured percent
+    const payloadGstPercent = effectiveGstPercent;
+    const payloadGstType: BillTaxMode = resolvedTaxMode || (selectedMedicalStore as any)?.gstType || "CGST_SGST";
+
     const validationMessage = validateBillForm({
       isAdmin,
       userId,
       companyId,
-      gstPercent,
+      gstPercent: payloadGstPercent,
       discount: discountPercent,
       items,
     });
@@ -316,8 +388,11 @@ export default function BillForm({
       companyId,
       // Backend currently persists `discount` as amount.
       discount: discountAmount,
-      gstPercent,
+      gstType: payloadGstType,
+      taxType: toBackendTaxType(payloadGstType),
+      gstPercent: payloadGstPercent,
       items: toBillPayloadItems(items),
+      ...(selectedMedicalStoreId ? { medicalStoreId: selectedMedicalStoreId } : {}),
     });
   };
 
@@ -455,12 +530,14 @@ export default function BillForm({
             <Typography.Text className="bill-summary-label">Sub Total</Typography.Text>
             <Typography.Text className="bill-summary-value">Rs {subTotal.toFixed(2)}</Typography.Text>
           </div>
-          <div className="bill-summary-row">
+          <div className="bill-summary-row bill-summary-row-gst">
             <Typography.Text className="bill-summary-label">GST (%)</Typography.Text>
             <InputNumber
+              className="bill-summary-input app-percent-input"
               min={0}
               max={100}
               value={gstPercent}
+              disabled
               onChange={(value: number | null) => setGstPercent(normalizeWholePercent(value || 0))}
               onBlur={handlePercentBlur("GST", setGstPercent)}
               onKeyDown={handlePercentKeyDown("GST")}
@@ -470,28 +547,38 @@ export default function BillForm({
               precision={0}
               addonAfter="%"
             />
-          </div>
-          <div className="bill-summary-row">
-            <Typography.Text className="bill-summary-label">GST Amount</Typography.Text>
-            <Typography.Text className="bill-summary-value">Rs {totalTax.toFixed(2)}</Typography.Text>
+            <div className="bill-summary-note" style={{ marginTop: 6 }}>
+              {selectedStoreGstPercent > 0 && gstPercent === 0 ? (
+                <Typography.Text type="secondary">Store GST available: {selectedStoreGstPercent}% — it will be applied automatically.</Typography.Text>
+              ) : null}
+              {selectedStoreGstPercent === 0 && subTotal === 0 ? (
+                <Typography.Text type="secondary">GST is 0 because there are no priced items yet.</Typography.Text>
+              ) : null}
+              {selectedStoreGstPercent === 0 && subTotal > 0 && gstPercent === 0 ? (
+                <Typography.Text type="secondary">Selected store has no GST configured.</Typography.Text>
+              ) : null}
+            </div>
           </div>
           {resolvedTaxMode === "IGST" ? (
             <div className="bill-summary-row">
-              <Typography.Text className="bill-summary-label">IGST</Typography.Text>
+              <Typography.Text className="bill-summary-label">IGST ({formatTaxPercent(displayGstPercent)}%)</Typography.Text>
               <Typography.Text className="bill-summary-value">Rs {totalIgst.toFixed(2)}</Typography.Text>
             </div>
           ) : (
-            <>
-              <div className="bill-summary-row">
-                <Typography.Text className="bill-summary-label">CGST</Typography.Text>
-                <Typography.Text className="bill-summary-value">Rs {totalCgst.toFixed(2)}</Typography.Text>
-              </div>
-              <div className="bill-summary-row">
-                <Typography.Text className="bill-summary-label">SGST</Typography.Text>
-                <Typography.Text className="bill-summary-value">Rs {totalSgst.toFixed(2)}</Typography.Text>
-              </div>
-            </>
+            <div className="bill-summary-row">
+              <Typography.Text className="bill-summary-label">
+                CGST/SGST ({formatTaxPercent(splitDisplayGstPercent)}% + {formatTaxPercent(splitDisplayGstPercent)}%)
+              </Typography.Text>
+              <Typography.Text className="bill-summary-value">
+                Rs {totalCgst.toFixed(2)} + Rs {totalSgst.toFixed(2)}
+              </Typography.Text>
+            </div>
           )}
+          <div className="bill-summary-row">
+            <Typography.Text className="bill-summary-label">Total GST ({formatTaxPercent(displayGstPercent)}%)</Typography.Text>
+
+            <Typography.Text className="bill-summary-value">Rs {totalTax.toFixed(2)}</Typography.Text>
+          </div>
           <div className="bill-summary-row">
             <Typography.Text className="bill-summary-label">Total Amount</Typography.Text>
             <Typography.Text className="bill-summary-value">Rs {totalBeforeDiscount.toFixed(2)}</Typography.Text>
@@ -499,6 +586,7 @@ export default function BillForm({
           <div className="bill-summary-row">
             <Typography.Text className="bill-summary-label">Discount (%)</Typography.Text>
             <InputNumber
+              className="bill-summary-input app-percent-input"
               min={0}
               max={100}
               value={discountPercent}

@@ -1,0 +1,61 @@
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dashboard-title-block {
+  min-width: 220px;
+}
+
+.dashboard-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  align-items: center;
+  width: min(100%, 860px);
+}
+
+.dashboard-control {
+  width: 100%;
+}
+
+.dashboard-control .ant-select-selector,
+.dashboard-range-picker {
+  min-height: 42px;
+}
+
+.dashboard-range-picker {
+  width: 100%;
+}
+
+.dashboard-cards-wrap {
+  max-width: 1240px;
+}
+
+.dashboard-stat-col {
+  display: flex;
+}
+
+.dashboard-bills-card .ant-table-thead > tr > th {
+  font-weight: 600 !important;
+}
+
+@media (max-width: 768px) {
+  .dashboard-toolbar {
+    align-items: stretch;
+  }
+
+  .dashboard-controls {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+}

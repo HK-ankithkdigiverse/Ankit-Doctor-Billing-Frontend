@@ -54,6 +54,7 @@ export default function EditBill() {
       initialDiscount={initialDiscountPercent}
       initialGstPercent={initialGstPercent}
       initialItems={initialItems}
+      autoApplyStoreGstPercent={false}
       onSubmit={handleSubmit}
       onCancel={() => navigate(ROUTES.BILL_DETAILS(id))}
     />

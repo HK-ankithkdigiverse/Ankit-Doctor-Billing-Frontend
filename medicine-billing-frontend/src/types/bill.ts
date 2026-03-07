@@ -12,6 +12,9 @@ export interface BillMedicalStore {
   pincode?: string;
   gstNumber?: string;
   panCardNumber?: string;
+  gstType?: BillTaxMode;
+  taxType?: "INTER" | "INTRA";
+  gstPercent?: number;
 }
 
 export interface BillItem {
@@ -80,6 +83,7 @@ export interface Bill {
   discountPercent?: number;
   grandTotal?: number;
   gstType?: BillTaxMode;
+  taxType?: "INTER" | "INTRA";
   gstPercent?: number;
   cgstTotal?: number;
   sgstTotal?: number;
@@ -93,6 +97,7 @@ export interface BillTotals {
   discountAmount?: number;
   taxableAmount?: number;
   gstType?: BillTaxMode;
+  taxType?: "INTER" | "INTRA";
   gstPercent?: number;
   igst?: number;
   cgst?: number;
@@ -143,6 +148,8 @@ export interface BillPayload {
   companyId: string;
   discount?: number;
   discountPercent?: number;
+  gstType?: BillTaxMode;
+  taxType?: "INTER" | "INTRA";
   gstPercent?: number;
   items: BillPayloadItem[];
 }
@@ -150,6 +157,8 @@ export interface BillPayload {
 export interface BillUpdatePayload {
   discount?: number;
   discountPercent?: number;
+  gstType?: BillTaxMode;
+  taxType?: "INTER" | "INTRA";
   gstPercent?: number;
   userId?: string;
   companyId?: string;

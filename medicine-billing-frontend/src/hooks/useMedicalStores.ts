@@ -8,13 +8,13 @@ import {
   createMedicalStoreApi,
   deleteMedicalStoreApi,
   getAllMedicalStoresApi,
-  getMedicalStoreByIdApi,
   getMedicalStoresApi,
   updateMedicalStoreApi,
 } from "../api/resourceApi";
 import { QUERY_KEYS } from "../constants/queryKeys";
 import { useMe } from "./useMe";
 import { invalidateQueryKeys, parsePaginatedListArgs } from "./queryHelpers";
+import { isObjectId } from "../utils/common";
 
 type MedicalStoresQueryOptions = {
   enabled?: boolean;
@@ -26,7 +26,6 @@ export const useMedicalStores = (
   searchOrOptions: string | MedicalStoresQueryOptions = "",
   optionsArg?: MedicalStoresQueryOptions
 ) => {
-  const { data: me } = useMe();
   const { isPaginated, limit, search, options } = parsePaginatedListArgs(
     page,
     limitOrSearch,
@@ -47,19 +46,17 @@ export const useMedicalStores = (
             search: search || undefined,
           })
         : getAllMedicalStoresApi(),
-    enabled: (options?.enabled ?? true) && me?.role === "ADMIN",
+    enabled: options?.enabled ?? true, // ✅ removed role check
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
   });
 };
 
 export const useAllMedicalStores = (options?: MedicalStoresQueryOptions) => {
-  const { data: me } = useMe();
-
   return useQuery({
     queryKey: [QUERY_KEYS.MEDICAL_STORES, "all"],
     queryFn: () => getAllMedicalStoresApi(),
-    enabled: (options?.enabled ?? true) && me?.role === "ADMIN",
+    enabled: options?.enabled ?? true,
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
   });
@@ -67,14 +64,21 @@ export const useAllMedicalStores = (options?: MedicalStoresQueryOptions) => {
 
 export const useMedicalStore = (id?: string) => {
   const { data: me } = useMe();
+  const normalizedId = typeof id === "string" ? id.trim() : "";
 
   return useQuery({
-    queryKey: [QUERY_KEYS.MEDICAL_STORE, id],
+    queryKey: [QUERY_KEYS.MEDICAL_STORE, normalizedId],
     queryFn: async () => {
-      const payload = await getMedicalStoreByIdApi(id as string);
-      return (payload as any)?.medicalStore ?? payload;
+      const payload = await getAllMedicalStoresApi();
+      const stores = (payload as any)?.medicalStores ?? [];
+      return stores.find((store: any) => String(store?._id || "") === normalizedId) ?? null;
     },
-    enabled: Boolean(id) && me?.role === "ADMIN",
+    enabled: isObjectId(normalizedId) && me?.role === "ADMIN",
+    retry: 0,
+    retryOnMount: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
 

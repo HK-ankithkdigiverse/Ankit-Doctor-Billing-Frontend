@@ -31,6 +31,8 @@ export interface MedicalStore {
   gstNumber?: string;
   panCardNumber?: string;
   gstType?: "IGST" | "CGST_SGST";
+  gstPercent?: number;
+  taxType?: "INTER" | "INTRA";
   isActive?: boolean;
   isDeleted?: boolean;
   createdAt?: string;

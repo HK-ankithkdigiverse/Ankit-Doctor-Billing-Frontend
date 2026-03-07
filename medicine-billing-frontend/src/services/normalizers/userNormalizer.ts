@@ -1,5 +1,6 @@
 import type { MedicalStore, User } from "../../types";
 import { clean, isObjectId } from "../../utils/common";
+import { resolveBillTaxMode, resolveStoreGstPercent } from "../../utils/tax";
 
 export type UserWithMedical = User & { medicalStore?: MedicalStore | null };
 
@@ -26,9 +27,9 @@ export const toMedicalStore = (value: any): MedicalStore | undefined => {
     pincode: clean(value.pincode),
     gstNumber: clean(value.gstNumber),
     panCardNumber: clean(value.panCardNumber),
-    gstType:
-      value.gstType ||
-      (value.taxType === "INTER" ? "IGST" : value.taxType === "INTRA" ? "CGST_SGST" : undefined),
+    gstType: resolveBillTaxMode(value),
+    gstPercent: resolveStoreGstPercent(value),
+    taxType: value.taxType === "INTER" ? "INTER" : value.taxType === "INTRA" ? "INTRA" : undefined,
     isActive: typeof value.isActive === "boolean" ? value.isActive : undefined,
   };
 };

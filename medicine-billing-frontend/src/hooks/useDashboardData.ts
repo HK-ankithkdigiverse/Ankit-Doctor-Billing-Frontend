@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import {
@@ -13,13 +13,13 @@ import { getAllUsersApi } from "../api/userApi";
 import { QUERY_KEYS, ROLE, ROUTES } from "../constants";
 import { toEntityId } from "../utils/id";
 import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../utils/medicalStore";
+import { DATE_FILTER_OPTIONS, filterBills } from "../utils/billing";
 import {
   buildCompanyMedicalStoreIdByCompanyId,
   buildUserMedicalStoreIdByUserId,
   createStoreIdResolver,
   enrichMedicalStoreNameByIdFromUsers,
   filterByMedicalStore,
-  getBillResolvedMedicalStoreIdForDashboard,
   getCategoryMedicalStoreIdForDashboard,
   getCompanyMedicalStoreIdForDashboard,
   getProductMedicalStoreIdForDashboard,
@@ -27,10 +27,17 @@ import {
   toMedicalStoreOptionsFromNameMap,
 } from "../utils/dashboard";
 import { useMe } from "./useMe";
+import { useViewState } from "./useViewState";
 
 export const useDashboardData = () => {
   const location = useLocation();
-  const [medicalStoreFilter, setMedicalStoreFilter] = useState("");
+  const {
+    view: { medicalStoreId: medicalStoreFilter, dateFilter },
+    customRange,
+    setMedicalStoreId,
+    setDateFilter,
+    setCustomRange,
+  } = useViewState("dashboard");
   const { data: user, isLoading } = useMe();
 
   const isAdmin = user?.role === ROLE.ADMIN;
@@ -236,11 +243,20 @@ export const useDashboardData = () => {
     (targetUser: any) => getUserMedicalStoreId(targetUser)
   );
 
-  const filteredBillsForStore = filterByMedicalStore(
-    billsRaw,
-    effectiveMedicalStoreId,
-    (bill: any) =>
-      getBillResolvedMedicalStoreIdForDashboard(bill, resolveStoreIdByUserId)
+  const filteredBillsForStore = filterBills(billsRaw, {
+    isAdmin,
+    medicalStoreId: isAdmin ? effectiveMedicalStoreId : undefined,
+    dateFilter,
+    customRange,
+  });
+  const sortedBillsForStore = useMemo(
+    () =>
+      [...filteredBillsForStore].sort(
+        (a: any, b: any) =>
+          new Date(b?.createdAt || b?.updatedAt || 0).getTime() -
+          new Date(a?.createdAt || a?.updatedAt || 0).getTime()
+      ),
+    [filteredBillsForStore]
   );
 
   const medicalStores = medicalStoresData?.medicalStores ?? [];
@@ -255,7 +271,12 @@ export const useDashboardData = () => {
     isLoading,
     isAdmin,
     medicalStoreFilter,
-    setMedicalStoreFilter,
+    setMedicalStoreFilter: setMedicalStoreId,
+    dateFilter,
+    customRange,
+    setDateFilter,
+    setCustomRange,
+    dateFilterOptions: DATE_FILTER_OPTIONS,
     effectiveMedicalStoreId,
     currentUserMedicalStoreName,
     medicalStoreOptions,
@@ -264,6 +285,7 @@ export const useDashboardData = () => {
     filteredCategories,
     filteredUsers,
     filteredBillsForStore,
+    sortedBillsForStore,
     scopedMedicalStores,
     companiesData,
     productsData,

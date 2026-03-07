@@ -10,6 +10,9 @@ import {
   createDateSorter,
   createNameSorter,
 } from "../utils/tableSort";
+import { useAllMedicalStores } from "./useMedicalStores";
+import { useMemo } from "react";
+import { resolveBillTaxMode } from "../utils/tax";
 
 export const useUsersListData = () => {
   const {
@@ -22,7 +25,15 @@ export const useUsersListData = () => {
   const debouncedSearch = useDebouncedValue(search, 500);
   const { data: me } = useMe();
 
-  const { data, isLoading, isFetching } = useUsers(page, limit, debouncedSearch, userStatus);
+  const { data: medicalStoresData } = useAllMedicalStores();
+
+  const { data, isLoading, isFetching } = useUsers(
+    page,
+    limit,
+    debouncedSearch,
+    userStatus,
+    { sortBy: sortField, sortOrder }
+  );
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
@@ -44,6 +55,25 @@ export const useUsersListData = () => {
     const storeId = getMedicalStoreId(user);
     if (!storeId) return "-";
     return storeId;
+  };
+
+  const medicalStoreGstMap = useMemo(() => {
+    const map = new Map<string, string | undefined>();
+    (medicalStoresData?.medicalStores ?? []).forEach((store: any) => {
+      const id = String(store?._id || "").trim();
+      if (!id) return;
+      map.set(id, store.gstType || resolveBillTaxMode(store));
+    });
+    return map;
+  }, [medicalStoresData?.medicalStores]);
+
+  const getMedicalStoreGstType = (user: User) => {
+    if (typeof user.medicalStoreId === "object") {
+      return (user.medicalStoreId as any)?.gstType || resolveBillTaxMode(user.medicalStore as any);
+    }
+    const storeId = getMedicalStoreId(user);
+    if (!storeId) return undefined;
+    return medicalStoreGstMap.get(storeId) || undefined;
   };
   const matchesStatus = (user: User) =>
     userStatus === "active" ? user.isActive !== false : user.isActive === false;
@@ -94,6 +124,7 @@ export const useUsersListData = () => {
     setUserStatus,
     setSort,
     getMedicalStoreName,
+    getMedicalStoreGstType,
     updateUser,
     deleteUser,
   };

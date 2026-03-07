@@ -199,7 +199,7 @@ export default function BillList() {
               setDateFilter(value);
             }}
             className="date-filter-select"
-            popupClassName="date-filter-dropdown"
+            classNames={{ popup: { root: "date-filter-dropdown" } }}
             style={{ width: 180 }}
             options={DATE_FILTER_OPTIONS}
           />

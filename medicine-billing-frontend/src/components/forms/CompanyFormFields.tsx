@@ -44,15 +44,15 @@ export default function CompanyFormFields({
       )}
 
       <Form.Item name="companyName" label="Company Name" rules={[requiredRule("Company name")]}>
-        <Input style={{ borderRadius: 10 }} />
+        <Input />
       </Form.Item>
 
       <Form.Item name="gstNumber" label="GST Number" rules={[requiredRule("GST number"), gstRule]}>
-        <Input style={{ textTransform: "uppercase", borderRadius: 10 }} />
+        <Input style={{ textTransform: "uppercase" }} />
       </Form.Item>
 
       <Form.Item name="email" label="Email" rules={[emailRule]}>
-        <Input style={{ borderRadius: 10 }} />
+        <Input />
       </Form.Item>
 
       <Form.Item
@@ -61,15 +61,15 @@ export default function CompanyFormFields({
         rules={[phoneRule]}
         normalize={(value?: string) => (value || "").replace(/\D/g, "")}
       >
-        <Input style={{ borderRadius: 10 }} maxLength={10} inputMode="numeric" />
+        <Input maxLength={10} inputMode="numeric" />
       </Form.Item>
 
       <Form.Item name="state" label="State" rules={[{ max: 80, message: "State must be 80 characters or less" }]}>
-        <Input style={{ borderRadius: 10 }} />
+        <Input />
       </Form.Item>
 
       <Form.Item name="address" label="Address" rules={[{ max: 500, message: "Address must be 500 characters or less" }]}>
-        <Input.TextArea rows={4} style={{ borderRadius: 10 }} />
+        <Input.TextArea rows={4} />
       </Form.Item>
 
       {showLogo && (
@@ -81,7 +81,7 @@ export default function CompanyFormFields({
             }}
             maxCount={1}
           >
-            <Button icon={<UploadOutlined />} style={{ borderRadius: 10 }}>
+            <Button icon={<UploadOutlined />}>
               Select Logo
             </Button>
           </Upload>

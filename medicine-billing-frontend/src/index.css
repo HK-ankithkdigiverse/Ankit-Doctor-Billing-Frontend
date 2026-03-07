@@ -272,6 +272,16 @@ body {
   width: 100% !important;
 }
 
+/* Limit width for summary inputs (GST/Discount) so label, input and % stay on one line */
+.bill-summary-row .bill-summary-input,
+.bill-summary-row .ant-input-number {
+  width: 120px !important;
+}
+
+.bill-summary-row .ant-input-number-group-addon {
+  padding: 0 10px;
+}
+
 .bill-summary-card .ant-typography {
   margin: 0 !important;
 }
@@ -284,7 +294,58 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 12px;
+}
+
+.bill-summary-row-gst {
+  flex-wrap: wrap;
+}
+
+.bill-summary-row-gst .bill-summary-note {
+  flex: 0 0 100%;
+}
+
+.medical-store-gst-type .ant-select-selector {
+  min-height: 42px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.app-percent-input.ant-input-number-group-wrapper {
+  width: 100%;
+}
+
+.app-percent-input .ant-input-number-group {
+  width: 100%;
+  border-radius: 12px !important;
+  overflow: hidden;
+  border: 1px solid #d5dbe3;
+}
+
+.app-percent-input .ant-input-number-group .ant-input-number {
+  width: 100% !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.app-percent-input .ant-input-number-input-wrap,
+.app-percent-input .ant-input-number-input {
+  height: 42px;
+  line-height: 42px;
+}
+
+.app-percent-input .ant-input-number-group-addon {
+  min-width: 44px;
+  text-align: center;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 0 !important;
+  border-left: 1px solid #d5dbe3 !important;
+  padding: 0 12px;
 }
 
 .bill-summary-label,
@@ -294,7 +355,14 @@ body {
   color: #0f172a !important;
 }
 
+.bill-summary-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
 .bill-summary-value {
+  flex: 0 0 auto;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -344,4 +412,3 @@ body {
     padding: 6px;
   }
 }
-

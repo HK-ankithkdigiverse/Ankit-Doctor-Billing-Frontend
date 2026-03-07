@@ -1,5 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import { toEntityId } from "./id";
+import { resolveBillTaxMode } from "./tax";
 import type {
   Bill,
   BillFormItem,
@@ -205,12 +206,12 @@ export const getBillInvoiceBreakdown = (
     totals?.igst ?? items.reduce((sum, item) => sum + toNumber((item as Record<string, any>)?.igst), 0)
   );
   const taxType =
-    totals?.gstType === "IGST" ||
-    (bill as Record<string, any> | undefined)?.gstType === "IGST" ||
-    (bill as Record<string, any> | undefined)?.taxType === "INTER" ||
     rawIgstTotal > 0
       ? ("IGST" as const)
-      : ("CGST_SGST" as const);
+      : resolveBillTaxMode({
+          gstType: totals?.gstType ?? (bill as Record<string, any> | undefined)?.gstType,
+          taxType: totals?.taxType ?? (bill as Record<string, any> | undefined)?.taxType,
+        });
   const igstTotal = taxType === "IGST" ? totalTax : 0;
   const cgstTotal = taxType === "IGST" ? 0 : totalTax / 2;
   const sgstTotal = taxType === "IGST" ? 0 : totalTax / 2;

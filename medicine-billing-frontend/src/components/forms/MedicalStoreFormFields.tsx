@@ -1,16 +1,14 @@
-import { Col, Form, Input, Row, Select, Switch } from "antd";
+import { Col, Form, Input, InputNumber, Row, Select } from "antd";
 import { nonWhitespaceRule } from "../../utils/userForm";
 import { phoneRule, requiredRule } from "../../utils/formRules";
 import UserBusinessFields from "./UserBusinessFields";
 
 type MedicalStoreFormFieldsProps = {
   disabled?: boolean;
-  showStatus?: boolean;
 };
 
 export default function MedicalStoreFormFields({
   disabled = false,
-  showStatus = true,
 }: MedicalStoreFormFieldsProps) {
   return (
     <>
@@ -43,13 +41,13 @@ export default function MedicalStoreFormFields({
 
       <UserBusinessFields required disabled={disabled} />
 
-      <Row gutter={16}>
+      <Row gutter={16} className="medical-store-gst-row">
         <Col xs={24} md={12}>
           <Form.Item
             name="gstType"
             label="GST Type"
             rules={[requiredRule("GST Type")]}
-            initialValue="CGST_SGST"
+            className="medical-store-gst-type"
           >
             <Select
               disabled={disabled}
@@ -60,13 +58,27 @@ export default function MedicalStoreFormFields({
             />
           </Form.Item>
         </Col>
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="gstPercent"
+            label="GST Percentage (%)"
+            rules={[requiredRule("GST Percentage")]}
+            className="medical-store-gst-percent"
+          >
+            <InputNumber
+              className="medical-store-gst-input app-percent-input"
+              min={0}
+              max={100}
+              step={1}
+              precision={0}
+              addonAfter="%"
+              style={{ width: "100%" }}
+              disabled={disabled}
+            />
+          </Form.Item>
+        </Col>
       </Row>
 
-      {showStatus ? (
-        <Form.Item name="isActive" label="Status" valuePropName="checked">
-          <Switch checkedChildren="Active" unCheckedChildren="Inactive" disabled={disabled} />
-        </Form.Item>
-      ) : null}
     </>
   );
 }

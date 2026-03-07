@@ -17,7 +17,7 @@ import { useMe } from "./useMe";
 import { invalidateQueryKeys } from "./queryHelpers";
 
 type UserStatus = "all" | "active" | "inactive";
-type UsersQueryOptions = { enabled?: boolean };
+type UsersQueryOptions = { enabled?: boolean; sortBy?: string; sortOrder?: "asc" | "desc" };
 
 const isUserStatus = (value: unknown): value is UserStatus =>
   value === "all" || value === "active" || value === "inactive";
@@ -69,9 +69,11 @@ export const useUsers = (
             limit,
             search: search || undefined,
             isActive: status === "all" || !status ? undefined : status === "active",
+            sortBy: options?.sortBy,
+            sortOrder: options?.sortOrder,
           })
         : getAllUsersApi({
-            isActive: status === "all" || !status ? undefined : status === "active",
+      
           }),
     enabled: (options?.enabled ?? true) && isAdmin,
     placeholderData: keepPreviousData,

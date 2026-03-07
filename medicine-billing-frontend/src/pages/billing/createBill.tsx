@@ -14,11 +14,14 @@ export default function CreateBill() {
 
   const handleSubmit = async (payload: BillPayload) => {
     try {
+      console.log("Create Bill Payload", payload);
       await mutateAsync(payload);
       message.success("Bill created successfully");
       navigate(ROUTES.BILLING);
     } catch (error: any) {
-      message.error(error?.message || "Failed to create bill");
+      console.error("Create Bill Error", error?.response || error);
+      const serverMsg = error?.response?.data?.message || error?.response?.data || error?.message;
+      message.error(serverMsg || "Failed to create bill");
     }
   };
 

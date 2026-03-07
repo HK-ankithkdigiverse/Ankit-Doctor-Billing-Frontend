@@ -8,6 +8,7 @@ import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
 import { ROUTES } from "../../constants";
 import { useCreateMedicalStore } from "../../hooks/useMedicalStores";
+import { normalizePercent } from "../../utils/tax";
 import { getErrorMessage, trimIfString } from "../../utils/userForm";
 
 interface MedicalStoreFormValues {
@@ -20,6 +21,7 @@ interface MedicalStoreFormValues {
   gstNumber: string;
   panCardNumber: string;
   gstType: "IGST" | "CGST_SGST";
+  gstPercent: number;
 }
 
 const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => {
@@ -32,6 +34,7 @@ const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => {
     pincode: trimIfString(values.pincode) || "",
     gstNumber: (trimIfString(values.gstNumber) || "").toUpperCase(),
     panCardNumber: (trimIfString(values.panCardNumber) || "").toUpperCase(),
+    gstPercent: normalizePercent(values.gstPercent),
     gstType: values.gstType,
     isActive: true,
   };
@@ -64,9 +67,9 @@ export default function CreateMedicalStore() {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          initialValues={{ gstType: "CGST_SGST" }}
+          initialValues={{ gstType: "CGST_SGST", gstPercent: 0 }}
         >
-          <MedicalStoreFormFields disabled={isPending} showStatus={false} />
+          <MedicalStoreFormFields disabled={isPending} />
           <FormActionButtons
             submitText="Create Medical Store"
             loading={isPending}

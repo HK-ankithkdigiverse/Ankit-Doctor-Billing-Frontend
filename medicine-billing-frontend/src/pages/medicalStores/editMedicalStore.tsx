@@ -9,6 +9,7 @@ import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
 import { ROUTES } from "../../constants";
 import { useMedicalStore, useUpdateMedicalStore } from "../../hooks/useMedicalStores";
+import { normalizePercent, resolveBillTaxMode, resolveStoreGstPercent } from "../../utils/tax";
 import { getErrorMessage, trimIfString } from "../../utils/userForm";
 
 interface MedicalStoreFormValues {
@@ -21,7 +22,7 @@ interface MedicalStoreFormValues {
   gstNumber: string;
   panCardNumber: string;
   gstType: "IGST" | "CGST_SGST";
-  isActive?: boolean;
+  gstPercent: number;
 }
 
 const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => {
@@ -34,8 +35,8 @@ const buildPayload = (values: MedicalStoreFormValues): MedicalStorePayload => {
     pincode: trimIfString(values.pincode) || "",
     gstNumber: (trimIfString(values.gstNumber) || "").toUpperCase(),
     panCardNumber: (trimIfString(values.panCardNumber) || "").toUpperCase(),
+    gstPercent: normalizePercent(values.gstPercent),
     gstType: values.gstType,
-    isActive: values.isActive !== false,
   };
 };
 
@@ -43,8 +44,10 @@ export default function EditMedicalStore() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const normalizedId = typeof id === "string" ? id.trim() : "";
+  const isValidMedicalStoreId = /^[a-fA-F0-9]{24}$/.test(normalizedId);
   const [form] = Form.useForm<MedicalStoreFormValues>();
-  const { data: medicalStore, isLoading } = useMedicalStore(id);
+  const { data: medicalStore, isLoading } = useMedicalStore(normalizedId || undefined);
   const { mutateAsync: updateMedicalStore, isPending } = useUpdateMedicalStore();
 
   useEffect(() => {
@@ -58,12 +61,8 @@ export default function EditMedicalStore() {
       pincode: medicalStore.pincode || "",
       gstNumber: medicalStore.gstNumber || "",
       panCardNumber: medicalStore.panCardNumber || "",
-      gstType:
-        (medicalStore as any).gstType === "IGST" ||
-        (medicalStore as any).taxType === "INTER"
-          ? "IGST"
-          : "CGST_SGST",
-      isActive: medicalStore.isActive !== false,
+      gstType: resolveBillTaxMode(medicalStore),
+      gstPercent: resolveStoreGstPercent(medicalStore),
     });
   }, [form, medicalStore]);
 
@@ -84,11 +83,13 @@ export default function EditMedicalStore() {
 
   if (isLoading) return <p>Loading...</p>;
 
-  if (!medicalStore) {
+  if (!isValidMedicalStoreId || !medicalStore) {
     return (
       <SectionCard style={{ maxWidth: 900, margin: "0 auto" }}>
         <Typography.Title level={4}>Edit Medical Store</Typography.Title>
-        <Typography.Paragraph>Medical Store not found.</Typography.Paragraph>
+        <Typography.Paragraph>
+          {isValidMedicalStoreId ? "Medical Store not found." : "Invalid Medical Store ID."}
+        </Typography.Paragraph>
         <Button onClick={() => navigate(ROUTES.MEDICAL_STORES)}>
           Back to Medical Stores
         </Button>
@@ -104,7 +105,7 @@ export default function EditMedicalStore() {
       >
         <SectionTitle className="!mb-[18px] !mt-0">Edit Medical Store</SectionTitle>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <MedicalStoreFormFields disabled={isPending} showStatus />
+          <MedicalStoreFormFields disabled={isPending} />
           <FormActionButtons
             submitText="Update Medical Store"
             loading={isPending}
