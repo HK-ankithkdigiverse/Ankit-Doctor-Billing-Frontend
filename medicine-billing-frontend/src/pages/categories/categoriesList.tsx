@@ -52,7 +52,7 @@ export default function CategoriesList() {
         ]
       : []),
     {
-      title: "Date (Created Date, Updated Date)",
+      title: "Created At",
       key: "createdUpdatedAt",
       sorter: true,
       sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),

@@ -96,7 +96,7 @@ export default function BillList() {
         `Rs ${Number(bill?.totals?.finalPayableAmount ?? bill?.grandTotal ?? 0).toFixed(2)}`,
     },
     {
-      title: "Date (Created Date, Updated Date)",
+      title: "Created At",
       key: "createdUpdatedAt",
       sorter: true,
       sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),

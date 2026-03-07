@@ -87,7 +87,7 @@ export default function ProductsList() {
       render: (_: any, product: Product) => `Rs ${Number(product.price || 0).toFixed(2)}`,
     },
     {
-      title: "Date (Created Date, Updated Date)",
+      title: "Created At",
       key: "createdUpdatedAt",
       sorter: true,
       sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),

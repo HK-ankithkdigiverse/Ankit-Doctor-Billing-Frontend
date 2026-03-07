@@ -47,8 +47,57 @@ body {
   box-shadow: var(--btn-primary-shadow);
 }
 
-.ant-table-thead > tr > th {
-  font-weight: 600 !important;
+.ant-table-wrapper .ant-table {
+  border: 1px solid #e5ebf3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+  background: #f2f5fa !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+  border-bottom: 1px solid #e5ebf3 !important;
+  position: relative;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 25%;
+  width: 1px;
+  height: 50%;
+  background: #dde5ef;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th:first-child {
+  border-top-left-radius: 12px !important;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th:last-child {
+  border-top-right-radius: 12px !important;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  padding-top: 18px !important;
+  padding-bottom: 18px !important;
+  border-bottom: 1px solid #e8edf4 !important;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr:last-child > td {
+  border-bottom: 0 !important;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: #f9fbff !important;
 }
 
 .ant-table-wrapper .ant-table-cell {
