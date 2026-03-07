@@ -90,7 +90,7 @@ export const useBillsListData = () => {
       buildMedicalStoreOptions(medicalStoresData?.medicalStores, {
         includeInactive: true,
         fallbackToId: true,
-        includeIds: rowsRaw.map((bill) => getBillMedicalStoreId(bill)).filter(Boolean),
+        includeIds: rowsRaw.map((bill: any) => getBillMedicalStoreId(bill)).filter(Boolean),
         sort: false,
       }),
     [rowsRaw, medicalStoresData?.medicalStores]
