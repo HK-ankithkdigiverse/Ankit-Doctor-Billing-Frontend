@@ -37,6 +37,7 @@ export const useDashboardData = () => {
     location.pathname === ROUTES.DASHBOARD ||
     location.pathname === `${ROUTES.DASHBOARD}/`;
   const canLoadDashboardData = isDashboardRoute && !isLoading && !!user;
+  const canLoadAdminOnlyData = canLoadDashboardData && isAdmin;
   const meMedicalStoreId =
     toEntityId(user?.medicalStoreId) ||
     (typeof user?.medicineId === "string" ? user.medicineId : "");
@@ -66,7 +67,7 @@ export const useDashboardData = () => {
       getAllProductsApi({
         medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
       }),
-    enabled: canLoadDashboardData,
+    enabled: canLoadAdminOnlyData,
   });
 
   const {
@@ -102,7 +103,7 @@ export const useDashboardData = () => {
   } = useQuery({
     queryKey: [QUERY_KEYS.USERS, "dashboard", selectedMedicalStore],
     queryFn: () => getAllUsersApi(),
-    enabled: canLoadDashboardData && isAdmin,
+    enabled: canLoadAdminOnlyData,
   });
 
   const {
@@ -112,15 +113,16 @@ export const useDashboardData = () => {
   } = useQuery({
     queryKey: [QUERY_KEYS.MEDICAL_STORES, "dashboard", selectedMedicalStore],
     queryFn: () => getAllMedicalStoresApi(),
-    enabled: canLoadDashboardData && isAdmin,
+    enabled: canLoadAdminOnlyData,
   });
 
   const refreshDashboardData = useCallback(() => {
     if (!isDashboardRoute) return;
 
-    const requests = [refetchCompanies(), refetchProducts(), refetchCategories(), refetchBills()];
+    const requests = [refetchCompanies(), refetchCategories(), refetchBills()];
 
     if (isAdmin) {
+      requests.push(refetchProducts());
       requests.push(refetchUsers(), refetchMedicalStores());
     }
 

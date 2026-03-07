@@ -2,10 +2,9 @@ import { useMemo } from "react";
 import type { Category } from "../types/category";
 import { useCategories, useDeleteCategory } from "./useCategories";
 import { useMe } from "./useMe";
-import { useAllMedicalStores } from "./useMedicalStores";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { useViewState } from "./useViewState";
-import { buildMedicalStoreNameById, getCategoryMedicalStoreId } from "../utils/medicalStore";
+import { getCategoryMedicalStoreId } from "../utils/medicalStore";
 import { buildPageSizeSelectOptions } from "../utils/pagination";
 import {
   applyTableSort,
@@ -25,9 +24,6 @@ export const useCategoriesListData = () => {
   const isAdmin = String(me?.role || "").toUpperCase() === "ADMIN";
 
   const { data, isLoading, isFetching, error } = useCategories(page, limit, debouncedSearch);
-  const { data: medicalStoresData } = useAllMedicalStores({
-    enabled: isAdmin,
-  });
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteCategory, isPending } = useDeleteCategory();
 
@@ -36,11 +32,6 @@ export const useCategoriesListData = () => {
   const totalRecords = pagination?.total || 0;
   const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
   const sortState = { field: sortField, order: sortOrder };
-
-  const medicalStoreNameById = useMemo(
-    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
-    [medicalStoresData?.medicalStores]
-  );
 
   const getMedicalStoreId = (category: Category) => getCategoryMedicalStoreId(category);
 
@@ -52,7 +43,7 @@ export const useCategoriesListData = () => {
     if (populatedStoreName) return populatedStoreName;
     const storeId = getMedicalStoreId(category);
     if (!storeId) return "-";
-    return medicalStoreNameById.get(storeId) || "-";
+    return storeId;
   };
 
   const sortedCategories = useMemo(
@@ -62,7 +53,7 @@ export const useCategoriesListData = () => {
         medicalStore: createNameSorter((row: Category) => getMedicalStoreName(row)),
         createdUpdatedAt: createDateSorter((row: Category) => row.updatedAt || row.createdAt),
       }),
-    [categories, medicalStoreNameById, sortField, sortOrder]
+    [categories, sortField, sortOrder]
   );
 
   return {

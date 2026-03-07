@@ -11,10 +11,9 @@ const isAbsoluteApiUrl = /^https?:\/\//i.test(rawApiUrl);
 const apiOriginFromEnv = isAbsoluteApiUrl ? rawApiUrl.replace(/\/api$/i, "") : "";
 
 export const API_ORIGIN = apiOriginFromEnv || DEFAULT_API_ORIGIN;
-// Force same-origin in production to avoid duplicated CORS preflight requests.
-// In development, absolute VITE_API_URL is still supported for direct backend calls.
-export const API_BASE_URL =
-  import.meta.env.DEV && isAbsoluteApiUrl ? `${API_ORIGIN}/api` : "/api";
+// Always use same-origin API path so browser requests go through frontend rewrites/proxy.
+// This avoids cross-origin preflight overhead from direct backend calls.
+export const API_BASE_URL = "/api";
 
 export const AUTH_API = {
   SIGNUP: "/auth/signup",

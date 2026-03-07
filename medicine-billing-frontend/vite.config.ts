@@ -41,7 +41,9 @@ export default defineConfig(({ mode }) => {
 
               if (
                 moduleId.includes("/antd/") ||
-                moduleId.includes("/@ant-design/")
+                moduleId.includes("/@ant-design/") ||
+                moduleId.includes("/@rc-component/") ||
+                moduleId.includes("/rc-")
               ) {
                 return "vendor-antd";
               }
