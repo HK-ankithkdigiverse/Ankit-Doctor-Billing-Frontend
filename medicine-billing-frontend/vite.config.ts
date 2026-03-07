@@ -58,6 +58,10 @@ export default defineConfig(({ mode }) => {
               return "app-api";
             }
 
+            if (moduleId.includes("/src/services/")) {
+              return "app-api";
+            }
+
             if (moduleId.includes("/src/hooks/")) {
               return "app-hooks";
             }
@@ -66,14 +70,15 @@ export default defineConfig(({ mode }) => {
               return "app-components";
             }
 
+            if (moduleId.includes("/src/store/")) {
+              return "app-store";
+            }
+
             if (
               moduleId.includes("/src/utils/") ||
               moduleId.includes("/src/constants/") ||
               moduleId.includes("/src/query/") ||
-              moduleId.includes("/src/store/") ||
-              moduleId.includes("/src/services/") ||
-              moduleId.includes("/src/theme/") ||
-              moduleId.includes("/src/hooks/queryHelpers.ts")
+              moduleId.includes("/src/theme/")
             ) {
               return "app-core";
             }
