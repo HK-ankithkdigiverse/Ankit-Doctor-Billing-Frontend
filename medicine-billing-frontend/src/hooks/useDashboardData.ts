@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import {
   getAllBillsApi,
   getAllCategoriesApi,
@@ -8,7 +9,7 @@ import {
   getAllProductsApi,
 } from "../api/resourceApi";
 import { getAllUsersApi } from "../api/userApi";
-import { QUERY_KEYS, ROLE } from "../constants";
+import { QUERY_KEYS, ROLE, ROUTES } from "../constants";
 import { toEntityId } from "../utils/id";
 import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../utils/medicalStore";
 import {
@@ -27,11 +28,15 @@ import {
 import { useMe } from "./useMe";
 
 export const useDashboardData = () => {
+  const location = useLocation();
   const [medicalStoreFilter, setMedicalStoreFilter] = useState("");
   const { data: user, isLoading } = useMe();
 
   const isAdmin = user?.role === ROLE.ADMIN;
-  const canLoadDashboardData = !isLoading && !!user;
+  const isDashboardRoute =
+    location.pathname === ROUTES.DASHBOARD ||
+    location.pathname === `${ROUTES.DASHBOARD}/`;
+  const canLoadDashboardData = isDashboardRoute && !isLoading && !!user;
   const meMedicalStoreId =
     toEntityId(user?.medicalStoreId) ||
     (typeof user?.medicineId === "string" ? user.medicineId : "");
@@ -111,6 +116,8 @@ export const useDashboardData = () => {
   });
 
   const refreshDashboardData = useCallback(() => {
+    if (!isDashboardRoute) return;
+
     const requests = [refetchCompanies(), refetchProducts(), refetchCategories(), refetchBills()];
 
     if (isAdmin) {
@@ -119,6 +126,7 @@ export const useDashboardData = () => {
 
     void Promise.all(requests);
   }, [
+    isDashboardRoute,
     isAdmin,
     refetchCompanies,
     refetchProducts,
