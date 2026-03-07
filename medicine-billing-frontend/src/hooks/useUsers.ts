@@ -14,6 +14,7 @@ import {
 } from "../api/userApi";
 import { QUERY_KEYS } from "../constants/queryKeys";
 import { useMe } from "./useMe";
+import { invalidateQueryKeys } from "./queryHelpers";
 
 type UserStatus = "all" | "active" | "inactive";
 type UsersQueryOptions = { enabled?: boolean };
@@ -100,8 +101,11 @@ export const useUpdateUser = () => {
   return useMutation<any, Error, { id: string; data: UpdateUserPayload }>({
     mutationFn: ({ id, data }) => updateUserApi(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USERS] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MEDICAL_STORES] });
+      invalidateQueryKeys(
+        queryClient,
+        [QUERY_KEYS.USERS],
+        [QUERY_KEYS.MEDICAL_STORES]
+      );
     },
   });
 };
@@ -112,8 +116,11 @@ export const useCreateUser = () => {
   return useMutation({
     mutationFn: createUserApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USERS] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MEDICAL_STORES] });
+      invalidateQueryKeys(
+        queryClient,
+        [QUERY_KEYS.USERS],
+        [QUERY_KEYS.MEDICAL_STORES]
+      );
     },
   });
 };
@@ -124,7 +131,7 @@ export const useDeleteUser = () => {
   return useMutation({
     mutationFn: deleteUserApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USERS] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.USERS]);
     },
   });
 };

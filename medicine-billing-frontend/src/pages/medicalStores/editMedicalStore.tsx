@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { App, Button, Form, Typography } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
-import type { MedicalStorePayload } from "../../api/medicalStoreApi";
+import type { MedicalStorePayload } from "../../types/api";
 import MedicalStoreFormFields from "../../components/forms/MedicalStoreFormFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
 import PageShell from "../../components/ui/PageShell";

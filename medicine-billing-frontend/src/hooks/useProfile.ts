@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { changePasswordApi, getProfileApi, updateProfileApi } from "../api/userApi";
 import { QUERY_KEYS } from "../constants/queryKeys";
 import { getStoredToken } from "../utils/tokenStorage";
+import { invalidateQueryKeys } from "./queryHelpers";
 
 export const useProfile = () => {
   const token = getStoredToken();
@@ -25,7 +26,7 @@ export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: updateProfileApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROFILE] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.PROFILE]);
     },
   });
 };
@@ -36,7 +37,7 @@ export const useChangePassword = () => {
   return useMutation({
     mutationFn: changePasswordApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROFILE] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.PROFILE]);
     },
   });
 };

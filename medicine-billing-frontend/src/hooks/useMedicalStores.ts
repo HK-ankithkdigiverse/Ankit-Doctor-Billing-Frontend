@@ -11,9 +11,10 @@ import {
   getMedicalStoreByIdApi,
   getMedicalStoresApi,
   updateMedicalStoreApi,
-} from "../api/medicalStoreApi";
+} from "../api/resourceApi";
 import { QUERY_KEYS } from "../constants/queryKeys";
 import { useMe } from "./useMe";
+import { invalidateQueryKeys, parsePaginatedListArgs } from "./queryHelpers";
 
 type MedicalStoresQueryOptions = {
   enabled?: boolean;
@@ -26,24 +27,22 @@ export const useMedicalStores = (
   optionsArg?: MedicalStoresQueryOptions
 ) => {
   const { data: me } = useMe();
-  const isPaginated = typeof page === "number";
-  const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
-  const search =
-    typeof limitOrSearch === "string"
-      ? limitOrSearch
-      : typeof searchOrOptions === "string"
-        ? searchOrOptions
-        : "";
-  const options = typeof searchOrOptions === "object" ? searchOrOptions : optionsArg;
+  const { isPaginated, limit, search, options } = parsePaginatedListArgs(
+    page,
+    limitOrSearch,
+    searchOrOptions,
+    optionsArg
+  );
+  const pageNumber = typeof page === "number" ? page : 1;
 
   return useQuery({
     queryKey: isPaginated
-      ? [QUERY_KEYS.MEDICAL_STORES, page, limit, search]
+      ? [QUERY_KEYS.MEDICAL_STORES, pageNumber, limit, search]
       : [QUERY_KEYS.MEDICAL_STORES, "all"],
     queryFn: () =>
       isPaginated
         ? getMedicalStoresApi({
-            page,
+            page: pageNumber,
             limit,
             search: search || undefined,
           })
@@ -85,7 +84,7 @@ export const useCreateMedicalStore = () => {
   return useMutation({
     mutationFn: createMedicalStoreApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MEDICAL_STORES] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.MEDICAL_STORES]);
     },
   });
 };
@@ -96,10 +95,11 @@ export const useUpdateMedicalStore = () => {
   return useMutation({
     mutationFn: updateMedicalStoreApi,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MEDICAL_STORES] });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.MEDICAL_STORE, variables.id],
-      });
+      invalidateQueryKeys(
+        queryClient,
+        [QUERY_KEYS.MEDICAL_STORES],
+        [QUERY_KEYS.MEDICAL_STORE, variables.id]
+      );
     },
   });
 };
@@ -110,7 +110,7 @@ export const useDeleteMedicalStore = () => {
   return useMutation({
     mutationFn: deleteMedicalStoreApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MEDICAL_STORES] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.MEDICAL_STORES]);
     },
   });
 };

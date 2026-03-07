@@ -11,9 +11,10 @@ import {
   getCompaniesApi,
   getCompanyByIdApi,
   updateCompanyApi,
-} from "../api/companyApi";
+} from "../api/resourceApi";
 import { QUERY_KEYS } from "../constants/queryKeys";
 import { isObjectId } from "../utils/common";
+import { invalidateQueryKeys, parsePaginatedListArgs } from "./queryHelpers";
 
 type CompaniesQueryOptions = { enabled?: boolean };
 type AllCompaniesOptions = { enabled?: boolean; medicalStoreId?: string };
@@ -24,24 +25,22 @@ export const useCompanies = (
   searchOrOptions: string | CompaniesQueryOptions = "",
   optionsArg?: CompaniesQueryOptions
 ) => {
-  const isPaginated = typeof page === "number";
-  const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
-  const search =
-    typeof limitOrSearch === "string"
-      ? limitOrSearch
-      : typeof searchOrOptions === "string"
-        ? searchOrOptions
-        : "";
-  const options = typeof searchOrOptions === "object" ? searchOrOptions : optionsArg;
+  const { isPaginated, limit, search, options } = parsePaginatedListArgs(
+    page,
+    limitOrSearch,
+    searchOrOptions,
+    optionsArg
+  );
+  const pageNumber = typeof page === "number" ? page : 1;
 
   return useQuery({
     queryKey: isPaginated
-      ? [QUERY_KEYS.COMPANIES, page, limit, search]
+      ? [QUERY_KEYS.COMPANIES, pageNumber, limit, search]
       : [QUERY_KEYS.COMPANIES, "all"],
     queryFn: () =>
       isPaginated
         ? getCompaniesApi({
-            page,
+            page: pageNumber,
             limit,
             search: search || undefined,
           })
@@ -82,7 +81,7 @@ export const useCreateCompany = () => {
   return useMutation({
     mutationFn: createCompanyApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.COMPANIES] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.COMPANIES]);
     },
   });
 };
@@ -94,8 +93,11 @@ export const useUpdateCompany = () => {
     mutationFn: ({ id, payload }: { id: string; payload: FormData }) =>
       updateCompanyApi(id, payload),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.COMPANIES] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.COMPANY, variables.id] });
+      invalidateQueryKeys(
+        queryClient,
+        [QUERY_KEYS.COMPANIES],
+        [QUERY_KEYS.COMPANY, variables.id]
+      );
     },
   });
 };
@@ -106,8 +108,7 @@ export const useDeleteCompany = () => {
   return useMutation({
     mutationFn: deleteCompanyApi,
     onSuccess: (_data, id) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.COMPANIES] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.COMPANY, id] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.COMPANIES], [QUERY_KEYS.COMPANY, id]);
     },
   });
 };

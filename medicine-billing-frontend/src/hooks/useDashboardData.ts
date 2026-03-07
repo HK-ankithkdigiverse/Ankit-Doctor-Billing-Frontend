@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getAllBillsApi } from "../api/billApi";
-import { getAllCategoriesApi } from "../api/categoryApi";
-import { getAllCompaniesApi } from "../api/companyApi";
-import { getAllMedicalStoresApi } from "../api/medicalStoreApi";
-import { getAllProductsApi } from "../api/productApi";
+import {
+  getAllBillsApi,
+  getAllCategoriesApi,
+  getAllCompaniesApi,
+  getAllMedicalStoresApi,
+  getAllProductsApi,
+} from "../api/resourceApi";
 import { getAllUsersApi } from "../api/userApi";
-import { ROLE } from "../constants";
+import { QUERY_KEYS, ROLE } from "../constants";
 import { toEntityId } from "../utils/id";
 import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../utils/medicalStore";
 import {
@@ -41,7 +43,7 @@ export const useDashboardData = () => {
     refetch: refetchBills,
     isFetching: isBillsFetching,
   } = useQuery({
-    queryKey: ["bills", "dashboard", selectedMedicalStore],
+    queryKey: [QUERY_KEYS.BILLS, "dashboard", selectedMedicalStore],
     queryFn: () =>
       getAllBillsApi({
         medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
@@ -54,7 +56,7 @@ export const useDashboardData = () => {
     refetch: refetchProducts,
     isFetching: isProductsFetching,
   } = useQuery({
-    queryKey: ["products", "dashboard", selectedMedicalStore],
+    queryKey: [QUERY_KEYS.PRODUCTS, "dashboard", selectedMedicalStore],
     queryFn: () =>
       getAllProductsApi({
         medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
@@ -67,7 +69,7 @@ export const useDashboardData = () => {
     refetch: refetchCompanies,
     isFetching: isCompaniesFetching,
   } = useQuery({
-    queryKey: ["companies", "dashboard", selectedMedicalStore],
+    queryKey: [QUERY_KEYS.COMPANIES, "dashboard", selectedMedicalStore],
     queryFn: () =>
       getAllCompaniesApi({
         medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
@@ -80,7 +82,7 @@ export const useDashboardData = () => {
     refetch: refetchCategories,
     isFetching: isCategoriesFetching,
   } = useQuery({
-    queryKey: ["categories", "dashboard", selectedMedicalStore],
+    queryKey: [QUERY_KEYS.CATEGORIES, "dashboard", selectedMedicalStore],
     queryFn: () =>
       getAllCategoriesApi({
         medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
@@ -93,7 +95,7 @@ export const useDashboardData = () => {
     refetch: refetchUsers,
     isFetching: isUsersFetching,
   } = useQuery({
-    queryKey: ["users", "dashboard", selectedMedicalStore],
+    queryKey: [QUERY_KEYS.USERS, "dashboard", selectedMedicalStore],
     queryFn: () => getAllUsersApi(),
     enabled: canLoadDashboardData && isAdmin,
   });
@@ -103,7 +105,7 @@ export const useDashboardData = () => {
     refetch: refetchMedicalStores,
     isFetching: isMedicalStoresFetching,
   } = useQuery({
-    queryKey: ["medical-stores", "dashboard", selectedMedicalStore],
+    queryKey: [QUERY_KEYS.MEDICAL_STORES, "dashboard", selectedMedicalStore],
     queryFn: () => getAllMedicalStoresApi(),
     enabled: canLoadDashboardData && isAdmin,
   });

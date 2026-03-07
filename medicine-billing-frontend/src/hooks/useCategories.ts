@@ -12,8 +12,9 @@ import {
   getCategoryByIdApi,
   getCategoryDropdownApi,
   updateCategoryApi,
-} from "../api/categoryApi";
+} from "../api/resourceApi";
 import { QUERY_KEYS } from "../constants/queryKeys";
+import { invalidateQueryKeys, parsePaginatedListArgs } from "./queryHelpers";
 
 type CategoriesQueryOptions = { enabled?: boolean };
 type AllCategoriesOptions = { enabled?: boolean; medicalStoreId?: string };
@@ -24,24 +25,22 @@ export const useCategories = (
   searchOrOptions: string | CategoriesQueryOptions = "",
   optionsArg?: CategoriesQueryOptions
 ) => {
-  const isPaginated = typeof page === "number";
-  const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
-  const search =
-    typeof limitOrSearch === "string"
-      ? limitOrSearch
-      : typeof searchOrOptions === "string"
-        ? searchOrOptions
-        : "";
-  const options = typeof searchOrOptions === "object" ? searchOrOptions : optionsArg;
+  const { isPaginated, limit, search, options } = parsePaginatedListArgs(
+    page,
+    limitOrSearch,
+    searchOrOptions,
+    optionsArg
+  );
+  const pageNumber = typeof page === "number" ? page : 1;
 
   return useQuery({
     queryKey: isPaginated
-      ? [QUERY_KEYS.CATEGORIES, page, limit, search]
+      ? [QUERY_KEYS.CATEGORIES, pageNumber, limit, search]
       : [QUERY_KEYS.CATEGORIES, "all"],
     queryFn: () =>
       isPaginated
         ? getCategoriesApi({
-            page,
+            page: pageNumber,
             limit,
             search: search || undefined,
           })
@@ -87,7 +86,7 @@ export const useCreateCategory = () => {
   return useMutation({
     mutationFn: createCategoryApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CATEGORIES] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.CATEGORIES]);
     },
   });
 };
@@ -98,8 +97,11 @@ export const useUpdateCategory = () => {
   return useMutation({
     mutationFn: updateCategoryApi,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CATEGORIES] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CATEGORY, variables.id] });
+      invalidateQueryKeys(
+        queryClient,
+        [QUERY_KEYS.CATEGORIES],
+        [QUERY_KEYS.CATEGORY, variables.id]
+      );
     },
   });
 };
@@ -110,7 +112,7 @@ export const useDeleteCategory = () => {
   return useMutation({
     mutationFn: deleteCategoryApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CATEGORIES] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.CATEGORIES]);
     },
   });
 };

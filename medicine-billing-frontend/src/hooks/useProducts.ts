@@ -11,9 +11,10 @@ import {
   getProductByIdApi,
   getProductsApi,
   updateProductApi,
-} from "../api/productApi";
+} from "../api/resourceApi";
 import { QUERY_KEYS } from "../constants/queryKeys";
 import { isObjectId } from "../utils/common";
+import { invalidateQueryKeys, parsePaginatedListArgs } from "./queryHelpers";
 
 type ProductFilters = {
   category?: string;
@@ -29,21 +30,19 @@ export const useProducts = (
   searchOrFilters: string | ProductFilters = "",
   filtersArg?: ProductFilters
 ) => {
-  const isPaginated = typeof page === "number";
-  const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
-  const search =
-    typeof limitOrSearch === "string"
-      ? limitOrSearch
-      : typeof searchOrFilters === "string"
-        ? searchOrFilters
-        : "";
-  const filters = typeof searchOrFilters === "object" ? searchOrFilters : filtersArg;
+  const { isPaginated, limit, search, options: filters } = parsePaginatedListArgs(
+    page,
+    limitOrSearch,
+    searchOrFilters,
+    filtersArg
+  );
+  const pageNumber = typeof page === "number" ? page : 1;
 
   return useQuery({
     queryKey: isPaginated
       ? [
           QUERY_KEYS.PRODUCTS,
-          page,
+          pageNumber,
           limit,
           search,
           filters?.category,
@@ -62,7 +61,7 @@ export const useProducts = (
     queryFn: () =>
       isPaginated
         ? getProductsApi({
-            page,
+            page: pageNumber,
             limit,
             search: search || undefined,
             category: filters?.category,
@@ -119,7 +118,7 @@ export const useCreateProduct = () => {
   return useMutation({
     mutationFn: createProductApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PRODUCTS] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.PRODUCTS]);
     },
   });
 };
@@ -130,8 +129,11 @@ export const useUpdateProduct = () => {
   return useMutation({
     mutationFn: updateProductApi,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PRODUCTS] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PRODUCT, variables.id] });
+      invalidateQueryKeys(
+        queryClient,
+        [QUERY_KEYS.PRODUCTS],
+        [QUERY_KEYS.PRODUCT, variables.id]
+      );
     },
   });
 };
@@ -142,7 +144,7 @@ export const useDeleteProduct = () => {
   return useMutation({
     mutationFn: deleteProductApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PRODUCTS] });
+      invalidateQueryKeys(queryClient, [QUERY_KEYS.PRODUCTS]);
     },
   });
 };
