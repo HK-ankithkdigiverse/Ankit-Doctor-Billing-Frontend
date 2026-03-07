@@ -26,13 +26,15 @@ export const useUsersListData = () => {
   const { data: me } = useMe();
 
   const { data: medicalStoresData } = useAllMedicalStores();
+  const normalizedSortOrder = sortOrder === "asc" || sortOrder === "desc" ? sortOrder : undefined;
+  const normalizedSortBy = normalizedSortOrder ? sortField : undefined;
 
   const { data, isLoading, isFetching } = useUsers(
     page,
     limit,
     debouncedSearch,
     userStatus,
-    { sortBy: sortField, sortOrder }
+    { sortBy: normalizedSortBy, sortOrder: normalizedSortOrder }
   );
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
