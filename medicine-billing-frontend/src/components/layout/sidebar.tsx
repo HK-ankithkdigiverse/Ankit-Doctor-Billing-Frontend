@@ -38,15 +38,21 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           roles: ["ADMIN", "USER"],
         },
         {
+          key: ROUTES.MEDICAL_STORES,
+          icon: <ShopOutlined />,
+          label: "Medical Stores",
+          roles: ["ADMIN"],
+        },
+        {
+          key: ROUTES.USERS,
+          icon: <TeamOutlined />,
+          label: "Users",
+          roles: ["ADMIN"],
+        },
+        {
           key: ROUTES.PRODUCTS,
           icon: <MedicineBoxOutlined />,
           label: "Medicines",
-          roles: ["ADMIN", "USER"],
-        },
-        {
-          key: ROUTES.COMPANIES,
-          icon: <BankOutlined />,
-          label: "Companies",
           roles: ["ADMIN", "USER"],
         },
         {
@@ -56,22 +62,16 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           roles: ["ADMIN", "USER"],
         },
         {
+          key: ROUTES.COMPANIES,
+          icon: <BankOutlined />,
+          label: "Companies",
+          roles: ["ADMIN", "USER"],
+        },
+        {
           key: ROUTES.BILLING,
           icon: <FileTextOutlined />,
           label: "Billing",
           roles: ["ADMIN", "USER"],
-        },
-        {
-          key: ROUTES.USERS,
-          icon: <TeamOutlined />,
-          label: "Users",
-          roles: ["ADMIN"],
-        },
-        {
-          key: ROUTES.MEDICAL_STORES,
-          icon: <ShopOutlined />,
-          label: "Medical Stores",
-          roles: ["ADMIN"],
         },
         {
           key: ROUTES.PROFILE,
