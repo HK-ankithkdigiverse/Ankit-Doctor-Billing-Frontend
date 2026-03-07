@@ -277,18 +277,28 @@ export default function BillView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item: any, index: number) => (
-                    <tr key={item._id || index} style={{ borderBottom: "1px solid #d1d5db" }}>
-                      <td style={{ padding: "11px 12px" }}>{item.productName || "-"}</td>
-                      <td style={{ padding: "11px 12px", textAlign: "right" }}>{Number(item.qty || 0)}</td>
-                      <td style={{ padding: "11px 12px", textAlign: "right" }}>
-                        {formatBillCurrency(Number(item.rate || 0))}
-                      </td>
-                      <td style={{ padding: "11px 12px", textAlign: "right", fontWeight: 600 }}>
-                        {formatBillCurrency(Number(item.rate || 0) * Number(item.qty || 0))}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((item: any, index: number) => {
+                    const category =
+                      String(item?.category || (typeof item?.productId === "object" ? item?.productId?.category : "") || "").trim();
+
+                    return (
+                      <tr key={item._id || index} style={{ borderBottom: "1px solid #d1d5db" }}>
+                        <td style={{ padding: "11px 12px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <span>{item.productName || "-"}</span>
+                            {category ? <span style={{ color: "#6b7280", fontSize: 11 }}>Category: {category}</span> : null}
+                          </div>
+                        </td>
+                        <td style={{ padding: "11px 12px", textAlign: "right" }}>{Number(item.qty || 0)}</td>
+                        <td style={{ padding: "11px 12px", textAlign: "right" }}>
+                          {formatBillCurrency(Number(item.rate || 0))}
+                        </td>
+                        <td style={{ padding: "11px 12px", textAlign: "right", fontWeight: 600 }}>
+                          {formatBillCurrency(Number(item.rate || 0) * Number(item.qty || 0))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -190,6 +190,7 @@ export default function BillForm({
 
   const getProduct = (id: string) => products.find((product: any) => product._id === id);
   const getProductName = (id: string) => getProduct(id)?.name || "";
+  const getProductCategory = (id: string) => getProduct(id)?.category || "";
   const selectedUserOption = storeOptions.find((option) => option.value === userId);
   const selectedUserMedicalStoreId = selectedUserOption?.medicalStoreId || "";
   const selectedMedicalStoreId = isAdmin ? selectedUserMedicalStoreId : meMedicalStoreId;
@@ -413,11 +414,20 @@ export default function BillForm({
           style={{ width: 220 }}
           placeholder={companyId ? "Select product" : "Select company first"}
           onChange={(value: string) => updateItem(item.rowId, "productId", value)}
-          options={products.map((product: any) => ({ value: product._id, label: product.name }))}
+          options={products.map((product: any) => ({
+            value: product._id,
+            label: product.category ? `${product.name} (${product.category})` : product.name,
+          }))}
           disabled={!companyId}
           loading={productsLoading}
         />
       ),
+    },
+    {
+      title: "Category",
+      key: "category",
+      sorter: createNameSorter((row: BillFormRow) => getProductCategory(row.productId)),
+      render: (_: unknown, item: BillFormRow) => getProductCategory(item.productId) || "-",
     },
     {
       title: "Qty",
