@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { App, Button, Input, Pagination, Select, Space, Table } from "antd";
 import {
@@ -15,17 +15,11 @@ import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
 import { ROUTES } from "../../constants";
-import {
-  useDeleteMedicalStore,
-  useMedicalStores,
-  useUpdateMedicalStore,
-} from "../../hooks/useMedicalStores";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useMedicalStoresListData } from "../../hooks/useMedicalStoresListData";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
-import { buildPageSizeSelectOptions } from "../../utils/pagination";
-import { createDateSorter, createNameSorter } from "../../utils/tableSort";
-import { getSerialNumber, paginateByPage } from "../../utils/tablePagination";
+import { getSerialNumber } from "../../utils/pagination";
+import { getColumnSortOrder, resolveTableSort } from "../../utils/tableSort";
 import { getErrorMessage } from "../../utils/userForm";
 
 type StoreStatusFilter = "all" | "active" | "inactive";
@@ -40,41 +34,26 @@ export default function MedicalStoresList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const confirmDialog = useConfirmDialog();
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 10,
-    search: "",
-    status: "all" as StoreStatusFilter,
-  });
-  const debouncedSearch = useDebouncedValue(filters.search, 500);
-  const hasStatusFilter = filters.status !== "all";
-  const queryPage = hasStatusFilter ? 1 : filters.page;
-  const queryLimit = hasStatusFilter ? 1000 : filters.limit;
-
-  const { data, isLoading, isFetching } = useMedicalStores(
-    queryPage,
-    queryLimit,
-    debouncedSearch
-  );
-  const searchLoading = filters.search !== debouncedSearch || isFetching;
-  const { mutateAsync: updateMedicalStore, isPending: isUpdatePending } =
-    useUpdateMedicalStore();
-  const { mutateAsync: deleteMedicalStore, isPending: isDeletePending } =
-    useDeleteMedicalStore();
-
-  const storesRaw = data?.medicalStores ?? [];
-  const storesFilteredByStatus = storesRaw.filter((store) => {
-    if (filters.status === "active") return store.isActive !== false;
-    if (filters.status === "inactive") return store.isActive === false;
-    return true;
-  });
-  const stores = hasStatusFilter
-    ? paginateByPage(storesFilteredByStatus, filters.page, filters.limit)
-    : storesFilteredByStatus;
-  const totalRecords = hasStatusFilter
-    ? storesFilteredByStatus.length
-    : data?.pagination?.total || 0;
-  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
+  const {
+    page,
+    limit,
+    search,
+    storeStatus,
+    sortState,
+    stores,
+    totalRecords,
+    pageSizeSelectOptions,
+    searchLoading,
+    isLoading,
+    isUpdatePending,
+    isDeletePending,
+    setPagination,
+    setSearch,
+    setStoreStatus,
+    setSort,
+    updateMedicalStore,
+    deleteMedicalStore,
+  } = useMedicalStoresListData();
 
   const handleToggleStatus = async (store: MedicalStore) => {
     const nextIsActive = store.isActive === false;
@@ -105,13 +84,14 @@ export default function MedicalStoresList() {
       key: "serial",
       width: 80,
       render: (_: unknown, __: MedicalStore, index: number) =>
-        getSerialNumber(filters.page, filters.limit, index),
+        getSerialNumber(page, limit, index),
     },
     {
       title: "Medical Store Name",
       dataIndex: "name",
       key: "name",
-      sorter: createNameSorter((row: MedicalStore) => row.name),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "name"),
       render: (value: string) => value || "-",
     },
     {
@@ -137,7 +117,8 @@ export default function MedicalStoresList() {
     {
       title: "Date (Created, Updated)",
       key: "createdUpdatedAt",
-      sorter: createDateSorter((row: MedicalStore) => row.updatedAt || row.createdAt),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),
       render: (_: unknown, store: MedicalStore) => (
         <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
           {formatDateTime(store.createdAt)}
@@ -220,18 +201,16 @@ export default function MedicalStoresList() {
               allowClear
               prefix={<SearchOutlined />}
               suffix={searchLoading ? <LoadingOutlined spin /> : null}
-              value={filters.search}
+              value={search}
               onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }))
+                setSearch(e.target.value)
               }
               style={{ width: 360, maxWidth: "100%" }}
             />
             <Select
-              value={filters.status}
+              value={storeStatus}
               options={[...STATUS_FILTER_OPTIONS]}
-              onChange={(status: StoreStatusFilter) =>
-                setFilters((prev) => ({ ...prev, page: 1, status }))
-              }
+              onChange={(status: StoreStatusFilter) => setStoreStatus(status)}
               style={{ width: 180 }}
             />
           </Space>
@@ -245,15 +224,19 @@ export default function MedicalStoresList() {
           sortDirections={["ascend", "descend"]}
           pagination={false}
           scroll={{ x: "max-content" }}
+          onChange={(_pagination, _filters, sorter) => {
+            const nextSort = resolveTableSort(sorter);
+            setSort(nextSort.field, nextSort.order);
+          }}
         />
 
         <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
           <Pagination
-            current={filters.page}
-            pageSize={filters.limit}
+            current={page}
+            pageSize={limit}
             total={totalRecords}
-            onChange={(page, pageSize) =>
-              setFilters((prev) => ({ ...prev, page, limit: pageSize }))
+            onChange={(nextPage, pageSize) =>
+              setPagination(nextPage, pageSize)
             }
             showSizeChanger={{ options: pageSizeSelectOptions }}
           />

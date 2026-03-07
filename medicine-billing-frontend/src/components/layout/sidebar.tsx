@@ -26,6 +26,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   const navigate = useNavigate();
 
   const role = data?.role ?? "USER";
+  const normalizePath = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
 
   const menuItems: MenuProps["items"] = useMemo(
     () =>
@@ -141,6 +142,16 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         selectedKeys={[selectedKey]}
         items={menuItems}
         onClick={({ key }: { key: string }) => {
+          const currentPath = normalizePath(location.pathname);
+          const nextPath = normalizePath(key);
+
+          if (currentPath === nextPath) {
+            if (key === ROUTES.DASHBOARD) {
+              window.dispatchEvent(new Event("dashboard:refresh"));
+            }
+            onNavigate?.();
+            return;
+          }
           navigate(key);
           onNavigate?.();
         }}

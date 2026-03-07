@@ -187,6 +187,53 @@ export const resolveBillGstPercent = (bill: BillLike, items: BillItem[] = []) =>
   return firstItemTaxPercent >= 0 ? firstItemTaxPercent : 0;
 };
 
+export const getBillInvoiceBreakdown = (
+  bill: BillLike,
+  items: BillItem[] = [],
+  totalsOverride?: Record<string, any>
+) => {
+  const totals =
+    totalsOverride ||
+    ((bill as Record<string, any> | undefined)?.totals as Record<string, any>) ||
+    {};
+  const normalizedGstPercent = Math.floor(
+    clampPercent(toNumber(totals?.gstPercent ?? resolveBillGstPercent(bill, items)))
+  );
+  const subTotal = toNumber(totals?.subtotal ?? bill?.subTotal);
+  const totalTax = (subTotal * normalizedGstPercent) / 100;
+  const rawIgstTotal = toNumber(
+    totals?.igst ?? items.reduce((sum, item) => sum + toNumber((item as Record<string, any>)?.igst), 0)
+  );
+  const taxType =
+    totals?.gstType === "IGST" ||
+    (bill as Record<string, any> | undefined)?.gstType === "IGST" ||
+    (bill as Record<string, any> | undefined)?.taxType === "INTER" ||
+    rawIgstTotal > 0
+      ? ("IGST" as const)
+      : ("CGST_SGST" as const);
+  const igstTotal = taxType === "IGST" ? totalTax : 0;
+  const cgstTotal = taxType === "IGST" ? 0 : totalTax / 2;
+  const sgstTotal = taxType === "IGST" ? 0 : totalTax / 2;
+  const discountPercent = Math.floor(clampPercent(resolveBillDiscountPercent({ ...(bill as any), totals })));
+  const totalBeforeDiscount = subTotal + totalTax;
+  const discountAmount = (totalBeforeDiscount * discountPercent) / 100;
+  const grandTotal = Math.max(0, totalBeforeDiscount - discountAmount);
+
+  return {
+    subTotal,
+    gstPercent: normalizedGstPercent,
+    taxType,
+    totalTax,
+    igstTotal,
+    cgstTotal,
+    sgstTotal,
+    discountPercent,
+    totalBeforeDiscount,
+    discountAmount,
+    grandTotal,
+  };
+};
+
 export const getBillItemTaxAmount = (item: BillItem | Record<string, any> | undefined | null) => {
   const cgst = toNumber(item?.cgst);
   const sgst = toNumber(item?.sgst);

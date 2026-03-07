@@ -1,5 +1,4 @@
 import { api } from "./axios";
-import { dataOf } from "./http";
 import { AUTH_API } from "../constants";
 import type {
   LoginPayload,
@@ -8,22 +7,33 @@ import type {
   VerifyOtpResponse,
 } from "../types";
 
-export const loginApi = (data: LoginPayload) => dataOf(api.post<LoginResponse>(AUTH_API.LOGIN, data));
+export const loginApi = async (payload: LoginPayload): Promise<LoginResponse> => {
+  const { data } = await api.post<LoginResponse>(AUTH_API.LOGIN, payload);
+  return data;
+};
 
-export const verifyOtpApi = (data: VerifyOtpPayload) =>
-  dataOf(api.post<VerifyOtpResponse>(AUTH_API.VERIFY_OTP, data));
+export const verifyOtpApi = async (
+  payload: VerifyOtpPayload
+): Promise<VerifyOtpResponse> => {
+  const { data } = await api.post<VerifyOtpResponse>(AUTH_API.VERIFY_OTP, payload);
+  return data;
+};
 
-export const logoutApi = () => dataOf(api.post(AUTH_API.LOGOUT));
+export const logoutApi = async () => {
+  const { data } = await api.post(AUTH_API.LOGOUT);
+  return data;
+};
 
-export const forgotPasswordApi = ({ email }: { email: string }) =>
-  dataOf(api.post(AUTH_API.FORGOT_PASSWORD, { email }));
+export const forgotPasswordApi = async ({ email }: { email: string }) => {
+  const { data } = await api.post(AUTH_API.FORGOT_PASSWORD, { email });
+  return data;
+};
 
-export const resetPasswordApi = async ({
-  email,
-  otp,
-  newPassword,
-}: {
+export const resetPasswordApi = async (payload: {
   email: string;
   otp: string;
   newPassword: string;
-}) => dataOf(api.post(AUTH_API.RESET_PASSWORD, { email, otp, newPassword }));
+}) => {
+  const { data } = await api.post(AUTH_API.RESET_PASSWORD, payload);
+  return data;
+};

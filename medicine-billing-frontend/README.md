@@ -11,6 +11,7 @@ The app uses this backend by default:
 You can override it with:
 
 - `VITE_API_URL`
+- `VITE_PROXY_TARGET` (optional, only if backend is running locally)
 
 Example:
 

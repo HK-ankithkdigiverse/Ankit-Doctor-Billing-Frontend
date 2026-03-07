@@ -1,32 +1,73 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   createCategoryApi,
   deleteCategoryApi,
+  getAllCategoriesApi,
+  getCategoriesApi,
   getCategoryByIdApi,
   getCategoryDropdownApi,
-  getCategoriesApi,
   updateCategoryApi,
 } from "../api/categoryApi";
-import { QUERY_KEYS } from "../constants";
+import { QUERY_KEYS } from "../constants/queryKeys";
 
-export const useCategories = (page: number, limit: number, search: string) => {
-  const safeLimit = Math.max(limit || 1, 1);
+type CategoriesQueryOptions = { enabled?: boolean };
+type AllCategoriesOptions = { enabled?: boolean; medicalStoreId?: string };
+
+export const useCategories = (
+  page?: number,
+  limitOrSearch?: number | string,
+  searchOrOptions: string | CategoriesQueryOptions = "",
+  optionsArg?: CategoriesQueryOptions
+) => {
+  const isPaginated = typeof page === "number";
+  const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
+  const search =
+    typeof limitOrSearch === "string"
+      ? limitOrSearch
+      : typeof searchOrOptions === "string"
+        ? searchOrOptions
+        : "";
+  const options = typeof searchOrOptions === "object" ? searchOrOptions : optionsArg;
+
   return useQuery({
-    queryKey: QUERY_KEYS.CATEGORIES_LIST({ page, limit: safeLimit, search }),
+    queryKey: isPaginated
+      ? [QUERY_KEYS.CATEGORIES, page, limit, search]
+      : [QUERY_KEYS.CATEGORIES, "all"],
     queryFn: () =>
-      getCategoriesApi({
-        page,
-        limit: safeLimit,
-        search: search || undefined,
+      isPaginated
+        ? getCategoriesApi({
+            page,
+            limit,
+            search: search || undefined,
+          })
+        : getAllCategoriesApi(),
+    enabled: options?.enabled ?? true,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useAllCategories = (options?: AllCategoriesOptions) => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.CATEGORIES, "all", options?.medicalStoreId],
+    queryFn: () =>
+      getAllCategoriesApi({
+        medicalStoreId: options?.medicalStoreId,
       }),
-    placeholderData: (prev) => prev,
-    staleTime: 1000 * 5,
+    enabled: options?.enabled ?? true,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
   });
 };
 
 export const useCategory = (id: string) => {
   return useQuery({
-    queryKey: QUERY_KEYS.CATEGORY(id),
+    queryKey: [QUERY_KEYS.CATEGORY, id],
     queryFn: () => getCategoryByIdApi(id),
     enabled: !!id,
   });
@@ -34,7 +75,7 @@ export const useCategory = (id: string) => {
 
 export const useCategoryDropdown = () => {
   return useQuery({
-    queryKey: QUERY_KEYS.CATEGORIES_DROPDOWN,
+    queryKey: [QUERY_KEYS.CATEGORIES_DROPDOWN],
     queryFn: getCategoryDropdownApi,
     staleTime: 1000 * 30,
   });
@@ -46,7 +87,7 @@ export const useCreateCategory = () => {
   return useMutation({
     mutationFn: createCategoryApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CATEGORIES });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CATEGORIES] });
     },
   });
 };
@@ -57,8 +98,8 @@ export const useUpdateCategory = () => {
   return useMutation({
     mutationFn: updateCategoryApi,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CATEGORIES });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CATEGORY(variables.id) });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CATEGORIES] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CATEGORY, variables.id] });
     },
   });
 };
@@ -69,9 +110,7 @@ export const useDeleteCategory = () => {
   return useMutation({
     mutationFn: deleteCategoryApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.CATEGORIES });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CATEGORIES] });
     },
   });
 };
-
-

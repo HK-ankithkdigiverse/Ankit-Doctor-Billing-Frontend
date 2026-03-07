@@ -6,16 +6,13 @@ import { ROUTES } from "../../constants";
 import { useBill } from "../../hooks/useBills";
 import { getCompanyDisplayName, getCompanyLogoUrl, getUploadFileUrl } from "../../utils/company";
 import {
+  formatBillCurrency,
+  getBillInvoiceBreakdown,
   getBillUserProfile,
-  resolveBillDiscountPercent,
-  resolveBillGstPercent,
 } from "../../utils/billing";
 import { formatDateTime } from "../../utils/dateTime";
 
 const INVOICE_ACCENT = "#2f3f46";
-const normalizeWholePercent = (value: number) =>
-  Math.floor(Math.min(100, Math.max(0, Number(value) || 0)));
-const toWholePercent = (value: number) => `${normalizeWholePercent(value)}%`;
 
 export default function BillView() {
   const navigate = useNavigate();
@@ -23,7 +20,9 @@ export default function BillView() {
   const screens = Grid.useBreakpoint();
   const { id } = useParams();
   const isValidBillId = !!id && /^[a-fA-F0-9]{24}$/.test(id);
-  const { data, isLoading } = useBill(id!);
+  const { data, isLoading, isError, error } = useBill(id, {
+    enabled: isValidBillId,
+  });
   const printRef = useRef<HTMLDivElement>(null);
   const autoDownloadTriggered = useRef(false);
   const bill = data?.bill;
@@ -52,28 +51,31 @@ export default function BillView() {
   const shouldShowSignature = !!signatureUrl && isSignatureVisible;
   const compactPreview = !screens.md && !isPreparingPdf;
   const totals = (data as any)?.totals || (bill as any)?.totals || {};
-  const subTotal = Number(totals?.subtotal ?? bill?.subTotal ?? 0);
-  const rawGstPercent = Number(totals?.gstPercent ?? resolveBillGstPercent(bill, items));
-  const gstPercent = normalizeWholePercent(rawGstPercent);
-  const rawIgstTotal = Number(
-    totals?.igst ?? items.reduce((sum: number, item: any) => sum + Number(item?.igst || 0), 0)
-  );
-  const resolvedTaxType =
-    totals?.gstType === "IGST" ||
-    (bill as any)?.gstType === "IGST" ||
-    (bill as any)?.taxType === "INTER" ||
-    rawIgstTotal > 0
-      ? "IGST"
-      : "CGST_SGST";
-  const totalTax = (subTotal * gstPercent) / 100;
-  const igstTotal = resolvedTaxType === "IGST" ? totalTax : 0;
-  const cgstTotal = resolvedTaxType === "IGST" ? 0 : totalTax / 2;
-  const sgstTotal = resolvedTaxType === "IGST" ? 0 : totalTax / 2;
-  const rawDiscountPercent = Number(resolveBillDiscountPercent({ ...(bill as any), totals }));
-  const discountPercent = normalizeWholePercent(rawDiscountPercent);
-  const totalBeforeDiscount = subTotal + totalTax;
-  const discountAmount = (totalBeforeDiscount * discountPercent) / 100;
-  const grandTotal = Math.max(0, totalBeforeDiscount - discountAmount);
+  const {
+    subTotal,
+    gstPercent,
+    taxType,
+    igstTotal,
+    cgstTotal,
+    sgstTotal,
+    discountPercent,
+    totalBeforeDiscount,
+    discountAmount,
+    grandTotal,
+  } = getBillInvoiceBreakdown(bill, items, totals);
+  const summaryRows = [
+    { label: "SUB TOTAL", value: formatBillCurrency(subTotal) },
+    { label: "GST (%)", value: `${gstPercent}%` },
+    ...(taxType === "IGST"
+      ? [{ label: "IGST", value: formatBillCurrency(igstTotal) }]
+      : [
+          { label: "CGST", value: formatBillCurrency(cgstTotal) },
+          { label: "SGST", value: formatBillCurrency(sgstTotal) },
+        ]),
+    { label: "TOTAL AMOUNT", value: formatBillCurrency(totalBeforeDiscount) },
+    { label: "DISCOUNT (%)", value: `${discountPercent}%` },
+    { label: "DISCOUNT AMOUNT", value: formatBillCurrency(discountAmount) },
+  ];
 
   useEffect(() => {
     setIsLogoVisible(true);
@@ -127,6 +129,17 @@ export default function BillView() {
   }
 
   if (isLoading) return <p>Loading...</p>;
+  if (isError) {
+    const errorMessage =
+      (error as any)?.response?.data?.message ||
+      (error as any)?.message ||
+      "Failed to load bill details.";
+    return (
+      <Card>
+        <Typography.Text type="danger">{errorMessage}</Typography.Text>
+      </Card>
+    );
+  }
   if (!data || !bill) return null;
 
   return (
@@ -268,9 +281,11 @@ export default function BillView() {
                     <tr key={item._id || index} style={{ borderBottom: "1px solid #d1d5db" }}>
                       <td style={{ padding: "11px 12px" }}>{item.productName || "-"}</td>
                       <td style={{ padding: "11px 12px", textAlign: "right" }}>{Number(item.qty || 0)}</td>
-                      <td style={{ padding: "11px 12px", textAlign: "right" }}>Rs {Number(item.rate || 0).toFixed(2)}</td>
+                      <td style={{ padding: "11px 12px", textAlign: "right" }}>
+                        {formatBillCurrency(Number(item.rate || 0))}
+                      </td>
                       <td style={{ padding: "11px 12px", textAlign: "right", fontWeight: 600 }}>
-                        Rs {(Number(item.rate || 0) * Number(item.qty || 0)).toFixed(2)}
+                        {formatBillCurrency(Number(item.rate || 0) * Number(item.qty || 0))}
                       </td>
                     </tr>
                   ))}
@@ -305,19 +320,7 @@ export default function BillView() {
                     overflow: "hidden",
                   }}
                 >
-                  {[
-                    { label: "SUB TOTAL", value: `Rs ${subTotal.toFixed(2)}` },
-                    { label: "GST (%)", value: toWholePercent(gstPercent) },
-                     ...(resolvedTaxType === "IGST"
-                      ? [{ label: "IGST", value: `Rs ${igstTotal.toFixed(2)}` }]
-                      : [
-                          { label: "CGST", value: `Rs ${cgstTotal.toFixed(2)}` },
-                          { label: "SGST", value: `Rs ${sgstTotal.toFixed(2)}` },
-                        ]),
-                    { label: "TOTAL AMOUNT", value: `Rs ${totalBeforeDiscount.toFixed(2)}` },
-                    { label: "DISCOUNT (%)", value: toWholePercent(discountPercent) },
-                    { label: "DISCOUNT AMOUNT", value: `Rs ${discountAmount.toFixed(2)}` },
-                  ].map((row, index, arr) => (
+                  {summaryRows.map((row, index, arr) => (
                     <div
                       key={row.label}
                       style={{
@@ -363,7 +366,7 @@ export default function BillView() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Typography.Text style={{ fontWeight: 700, fontSize: 13 }}>GRAND TOTAL</Typography.Text>
                     <Typography.Text style={{ fontWeight: 800, fontSize: 16, color: "#111827" }}>
-                      Rs {grandTotal.toFixed(2)}
+                      {formatBillCurrency(grandTotal)}
                     </Typography.Text>
                   </div>
                 </div>

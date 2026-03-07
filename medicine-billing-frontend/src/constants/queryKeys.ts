@@ -1,28 +1,22 @@
 export const QUERY_KEYS = {
-  ME: ["me"],
-  PROFILE: ["profile"],
+  ME: "me",
+  PROFILE: "profile",
 
-  PRODUCTS: ["products"],
-  PRODUCTS_LIST: (params?: any) => ["products", params],
-  PRODUCT: (id: string) => ["product", id],
+  PRODUCTS: "products",
+  PRODUCT: "product",
 
-  COMPANIES: ["companies"],
-  COMPANIES_LIST: (params?: any) => ["companies", params],
-  COMPANY: (id: string) => ["company", id],
+  COMPANIES: "companies",
+  COMPANY: "company",
 
-  CATEGORIES: ["categories"],
-  CATEGORIES_LIST: (params?: any) => ["categories", params],
-  CATEGORY: (id: string) => ["category", id],
-  CATEGORIES_DROPDOWN: ["categories", "dropdown"],
+  CATEGORIES: "categories",
+  CATEGORY: "category",
+  CATEGORIES_DROPDOWN: "categories-dropdown",
 
-  BILLS: ["bills"],
-  BILLS_LIST: (params?: any) => ["bills", params],
-  BILL: (id: string) => ["bill", id],
+  BILLS: "bills",
+  BILL: "bill",
 
-  USERS: ["users"],
-  USERS_LIST: (params?: any) => ["users", params],
+  USERS: "users",
 
-  MEDICAL_STORES: ["medical-stores"],
-  MEDICAL_STORES_LIST: (params?: any) => ["medical-stores", params],
-  MEDICAL_STORE: (id: string) => ["medical-store", id],
-};
+  MEDICAL_STORES: "medical-stores",
+  MEDICAL_STORE: "medical-store",
+} as const;

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { API_BASE_URL, AUTH_API, ROUTES } from "../constants";
-import { clearStoredToken, getStoredToken } from "../helpers/tokenStorage";
+import { clearStoredToken, getStoredToken } from "../utils/tokenStorage";
 import { isPublicPath, storePostLoginRedirect } from "../utils/authRedirect";
 
 export const api = axios.create({

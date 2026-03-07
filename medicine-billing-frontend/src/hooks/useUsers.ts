@@ -1,39 +1,107 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllUsersApi, updateUserApi, createUserApi, deleteUserApi, type UpdateUserPayload } from "../api/userApi";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  createUserApi,
+  deleteUserApi,
+  getAllUsersApi,
+  getUsersApi,
+  type UpdateUserPayload,
+  updateUserApi,
+} from "../api/userApi";
+import { QUERY_KEYS } from "../constants/queryKeys";
 import { useMe } from "./useMe";
-import { QUERY_KEYS } from "../constants";
+
+type UserStatus = "all" | "active" | "inactive";
+type UsersQueryOptions = { enabled?: boolean };
+
+const isUserStatus = (value: unknown): value is UserStatus =>
+  value === "all" || value === "active" || value === "inactive";
+
+const isUsersQueryOptions = (value: unknown): value is UsersQueryOptions =>
+  typeof value === "object" && value !== null;
 
 export const useUsers = (
-  page: number,
-  limit: number,
-  search: string,
-  status?: "all" | "active" | "inactive"
+  page?: number,
+  limitOrSearch?: number | string,
+  searchOrStatusOrOptions: string | UserStatus | UsersQueryOptions = "",
+  statusOrOptions?: UserStatus | UsersQueryOptions,
+  optionsArg?: UsersQueryOptions
 ) => {
   const { data: me } = useMe();
+  const isAdmin = me?.role === "ADMIN";
+  const isPaginated = typeof page === "number";
+
+  const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
+  const search =
+    typeof limitOrSearch === "string"
+      ? limitOrSearch
+      : typeof searchOrStatusOrOptions === "string" && !isUserStatus(searchOrStatusOrOptions)
+        ? searchOrStatusOrOptions
+        : "";
+
+  let status: UserStatus | undefined;
+  if (typeof limitOrSearch === "string" && isUserStatus(searchOrStatusOrOptions)) {
+    status = searchOrStatusOrOptions;
+  }
+  if (isUserStatus(statusOrOptions)) {
+    status = statusOrOptions;
+  }
+
+  const options = isUsersQueryOptions(searchOrStatusOrOptions)
+    ? searchOrStatusOrOptions
+    : isUsersQueryOptions(statusOrOptions)
+      ? statusOrOptions
+      : optionsArg;
 
   return useQuery({
-    queryKey: QUERY_KEYS.USERS_LIST({ page, limit, search, status }),
+    queryKey: isPaginated
+      ? [QUERY_KEYS.USERS, page, limit, search, status]
+      : [QUERY_KEYS.USERS, "all", status],
     queryFn: () =>
-      getAllUsersApi({
-        page,
-        limit,
-        search: search || undefined,
-        isActive: status === "all" || !status ? undefined : status === "active",
-      }),
-    enabled: me?.role === "ADMIN",
-    placeholderData: (prev) => prev,
-    staleTime: 1000 * 5,
+      isPaginated
+        ? getUsersApi({
+            page,
+            limit,
+            search: search || undefined,
+            isActive: status === "all" || !status ? undefined : status === "active",
+          })
+        : getAllUsersApi({
+            isActive: status === "all" || !status ? undefined : status === "active",
+          }),
+    enabled: (options?.enabled ?? true) && isAdmin,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
   });
 };
+
+export const useAllUsers = (status: UserStatus = "all", options?: UsersQueryOptions) => {
+  const { data: me } = useMe();
+  const isAdmin = me?.role === "ADMIN";
+
+  return useQuery({
+    queryKey: [QUERY_KEYS.USERS, "all", status],
+    queryFn: () =>
+      getAllUsersApi({
+        isActive: status === "all" ? undefined : status === "active",
+      }),
+    enabled: (options?.enabled ?? true) && isAdmin,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
-
 
   return useMutation<any, Error, { id: string; data: UpdateUserPayload }>({
     mutationFn: ({ id, data }) => updateUserApi(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USERS });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.MEDICAL_STORES });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USERS] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MEDICAL_STORES] });
     },
   });
 };
@@ -44,8 +112,8 @@ export const useCreateUser = () => {
   return useMutation({
     mutationFn: createUserApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USERS });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.MEDICAL_STORES });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USERS] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.MEDICAL_STORES] });
     },
   });
 };
@@ -56,9 +124,7 @@ export const useDeleteUser = () => {
   return useMutation({
     mutationFn: deleteUserApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USERS });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USERS] });
     },
   });
 };
-
-

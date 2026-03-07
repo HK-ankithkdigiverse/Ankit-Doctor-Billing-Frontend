@@ -1,12 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { loginApi, logoutApi, verifyOtpApi } from "../api/auth.api";
 import { ROUTES } from "../constants";
-import { clearStoredToken, setStoredToken } from "../helpers/tokenStorage";
-import { getLoginBlockReason } from "../utils/authAccess";
-import { useAppDispatch } from "../store/hooks";
-import { clearAuth, hydrateAuth, setToken, setUser } from "../store/slices/authSlice";
+import { clearStoredToken, setStoredToken } from "../utils/tokenStorage";
+import { clearAuth, hydrateAuth, setToken, setUser, useAppDispatch } from "../store";
 import type { User, VerifyOtpPayload, VerifyOtpResponse } from "../types";
+import { getLoginBlockReason } from "../utils/authAccess";
 
 const buildOptimisticUser = (
   apiUser: VerifyOtpResponse["user"] | undefined,
@@ -89,3 +88,4 @@ export const useAuth = () => {
     loading: login.isPending || verifyOtp.isPending || logout.isPending,
   };
 };
+

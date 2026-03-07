@@ -14,6 +14,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
+import { useMe } from "../../hooks/useMe";
 import { useProfile } from "../../hooks/useProfile";
 import { useAuth } from "../../hooks/useAuth";
 import { useConfirmDialog } from "../../utils/confirmDialog";
@@ -35,45 +36,67 @@ const formatRoleLabel = (role?: string) => {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { data: user, isLoading } = useProfile();
+  const { data: me } = useMe();
+  const { data: user, isLoading, isError, error } = useProfile();
   const { logout, loading: authLoading } = useAuth();
   const confirmDialog = useConfirmDialog();
+  const resolvedUser = user || me;
 
-  if (isLoading) return <p>Loading...</p>;
-  if (!user) return null;
+  if (isLoading && !resolvedUser) return <p>Loading...</p>;
+  if (!resolvedUser) {
+    return (
+      <Card>
+        <Typography.Text type="danger">
+          {(error as any)?.response?.data?.message ||
+            (error as any)?.message ||
+            (isError ? "Failed to load profile." : "Profile data is unavailable.")}
+        </Typography.Text>
+      </Card>
+    );
+  }
 
-  const normalizedRole = String(user.role || "").toUpperCase();
+  const normalizedRole = String(resolvedUser.role || "").toUpperCase();
   const isAdmin = normalizedRole === "ADMIN";
 
-  const uploadedImage = getUploadFileUrl((user as any)?.profileImage || (user as any)?.avatar || (user as any)?.image);
-  const fallbackName = encodeURIComponent(user.name || "User");
+  const uploadedImage = getUploadFileUrl(
+    (resolvedUser as any)?.profileImage ||
+      (resolvedUser as any)?.avatar ||
+      (resolvedUser as any)?.image
+  );
+  const fallbackName = encodeURIComponent(resolvedUser.name || "User");
   const profileImage =
     uploadedImage || `https://ui-avatars.com/api/?name=${fallbackName}&background=DBEAFE&color=1E3A8A&size=220`;
 
-  const signatureUrl = getUploadFileUrl(user.signature);
-  const roleLabel = formatRoleLabel(user.role);
-  const subtitle = isAdmin ? "System Administrator" : user.medicalName || "Medicine Billing User";
+  const signatureUrl = getUploadFileUrl(resolvedUser.signature);
+  const roleLabel = formatRoleLabel(resolvedUser.role);
+  const subtitle =
+    isAdmin ? "System Administrator" : resolvedUser.medicalName || "Medicine Billing User";
 
   const adminFields: InfoItem[] = [
-    { key: "name", label: "Name", value: user.name || "-", icon: <UserOutlined /> },
-    { key: "email", label: "Email", value: user.email || "-", icon: <MailOutlined /> },
-    { key: "phone", label: "Phone", value: user.phone || "-", icon: <PhoneOutlined /> },
+    { key: "name", label: "Name", value: resolvedUser.name || "-", icon: <UserOutlined /> },
+    { key: "email", label: "Email", value: resolvedUser.email || "-", icon: <MailOutlined /> },
+    { key: "phone", label: "Phone", value: resolvedUser.phone || "-", icon: <PhoneOutlined /> },
   ];
 
   const userPersonalFields: InfoItem[] = [
-    { key: "name", label: "Name", value: user.name || "-", icon: <UserOutlined /> },
-    { key: "email", label: "Email", value: user.email || "-", icon: <MailOutlined /> },
-    { key: "phone", label: "Phone", value: user.phone || "-", icon: <PhoneOutlined /> },
+    { key: "name", label: "Name", value: resolvedUser.name || "-", icon: <UserOutlined /> },
+    { key: "email", label: "Email", value: resolvedUser.email || "-", icon: <MailOutlined /> },
+    { key: "phone", label: "Phone", value: resolvedUser.phone || "-", icon: <PhoneOutlined /> },
   ];
 
   const userProfessionalFields: InfoItem[] = [
-    { key: "Medical", label: "Medical Name", value: user.medicalName || "-", icon: <ShopOutlined /> },
-    { key: "address", label: "Address", value: user.address || "-", icon: <EnvironmentOutlined /> },
-    { key: "city", label: "City", value: user.city || "-", icon: <EnvironmentOutlined /> },
-    { key: "state", label: "State", value: user.state || "-", icon: <EnvironmentOutlined /> },
-    { key: "pincode", label: "Pincode", value: user.pincode || "-", icon: <NumberOutlined /> },
-    { key: "gst", label: "GST Number", value: user.gstNumber || "-", icon: <IdcardOutlined /> },
-    { key: "pan", label: "PAN Number", value: user.panCardNumber || "-", icon: <IdcardOutlined /> },
+    {
+      key: "Medical",
+      label: "Medical Name",
+      value: resolvedUser.medicalName || "-",
+      icon: <ShopOutlined />,
+    },
+    { key: "address", label: "Address", value: resolvedUser.address || "-", icon: <EnvironmentOutlined /> },
+    { key: "city", label: "City", value: resolvedUser.city || "-", icon: <EnvironmentOutlined /> },
+    { key: "state", label: "State", value: resolvedUser.state || "-", icon: <EnvironmentOutlined /> },
+    { key: "pincode", label: "Pincode", value: resolvedUser.pincode || "-", icon: <NumberOutlined /> },
+    { key: "gst", label: "GST Number", value: resolvedUser.gstNumber || "-", icon: <IdcardOutlined /> },
+    { key: "pan", label: "PAN Number", value: resolvedUser.panCardNumber || "-", icon: <IdcardOutlined /> },
     {
       key: "signature",
       label: "Signature",
@@ -156,7 +179,7 @@ export default function Profile() {
 
                 <div style={{ minWidth: 0 }}>
                   <Typography.Title level={3} style={{ margin: 0, lineHeight: 1.1 }}>
-                    {user.name || "-"}
+                    {resolvedUser.name || "-"}
                   </Typography.Title>
                   <Typography.Text style={{ color: "#4b5563", fontWeight: 600, display: "block" }}>{subtitle}</Typography.Text>
                 </div>

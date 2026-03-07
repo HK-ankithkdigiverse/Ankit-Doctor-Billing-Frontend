@@ -1,8 +1,8 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { User } from "../../types";
-import { clearStoredToken, getStoredToken } from "../../helpers/tokenStorage";
+import { clearStoredToken, getStoredToken } from "../../utils/tokenStorage";
 import { fetchCurrentUser } from "../../services/authService";
-import type { RootState } from "../index";
+import type { RootState } from "../rootReducer";
 
 type AuthStatus = "idle" | "loading" | "authenticated" | "unauthenticated";
 

@@ -1,60 +1,67 @@
 import { api } from "./axios";
-import { dataOf } from "./http";
+import { buildPagedQueryParams, buildQueryParams, parseStatePagination } from "./pagination";
 import { MEDICAL_STORES_API } from "../constants";
-import type { MedicalStore } from "../types";
+import type {
+  GetMedicalStoresParams,
+  GetMedicalStoresResponse,
+  MedicalStorePayload,
+} from "../types/api";
 
-export interface GetMedicalStoresParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
+export type {
+  GetMedicalStoresParams,
+  GetMedicalStoresResponse,
+  MedicalStorePayload,
+} from "../types/api";
 
-export interface GetMedicalStoresResponse {
-  medicalStores: MedicalStore[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+type GetAllMedicalStoresParams = Omit<
+  GetMedicalStoresParams,
+  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+>;
+
+const toMedicalStoresResponse = (raw: any): GetMedicalStoresResponse => {
+  const medicalStores = raw?.medicalStores || raw?.medicalStore_data || [];
+  return {
+    medicalStores,
+    pagination: raw?.pagination || parseStatePagination(raw),
   };
-}
+};
 
-export interface MedicalStorePayload {
-  name: string;
-  phone: string;
-  address: string;
-  state: string;
-  city: string;
-  pincode: string;
-  gstNumber: string;
-  panCardNumber: string;
-  gstType: "IGST" | "CGST_SGST";
-  isActive?: boolean;
-}
+export const getMedicalStoresApi = async (params: GetMedicalStoresParams) => {
+  const { data } = await api.get(MEDICAL_STORES_API.ROOT, {
+    params: buildPagedQueryParams(params),
+  });
+  return toMedicalStoresResponse(data);
+};
 
-export const getMedicalStoresApi = (
-  params: GetMedicalStoresParams
-): Promise<GetMedicalStoresResponse> =>
-  dataOf(api.get(MEDICAL_STORES_API.ROOT, { params }));
+export const getAllMedicalStoresApi = async (params?: GetAllMedicalStoresParams) => {
+  const { data } = await api.get(MEDICAL_STORES_API.ROOT, {
+    params: buildQueryParams(params),
+  });
+  return toMedicalStoresResponse(data);
+};
 
-export const getMedicalStoreByIdApi = (
-  id: string
-): Promise<{ medicalStore: MedicalStore } | MedicalStore> =>
-  dataOf(api.get(MEDICAL_STORES_API.BY_ID(id)));
+export const getMedicalStoreByIdApi = async (id: string) => {
+  const { data } = await api.get(MEDICAL_STORES_API.BY_ID(id));
+  return data;
+};
 
-export const createMedicalStoreApi = (
-  payload: MedicalStorePayload
-): Promise<{ message: string; medicalStore: MedicalStore }> =>
-  dataOf(api.post(MEDICAL_STORES_API.ROOT, payload));
+export const createMedicalStoreApi = async (payload: MedicalStorePayload) => {
+  const { data } = await api.post(MEDICAL_STORES_API.ROOT, payload);
+  return data;
+};
 
-export const updateMedicalStoreApi = ({
+export const updateMedicalStoreApi = async ({
   id,
   payload,
 }: {
   id: string;
   payload: Partial<MedicalStorePayload>;
-}): Promise<{ message: string; medicalStore: MedicalStore }> =>
-  dataOf(api.put(MEDICAL_STORES_API.BY_ID(id), payload));
+}) => {
+  const { data } = await api.put(MEDICAL_STORES_API.BY_ID(id), payload);
+  return data;
+};
 
-export const deleteMedicalStoreApi = (id: string): Promise<{ message: string }> =>
-  dataOf(api.delete(MEDICAL_STORES_API.BY_ID(id)));
+export const deleteMedicalStoreApi = async (id: string) => {
+  const { data } = await api.delete(MEDICAL_STORES_API.BY_ID(id));
+  return data;
+};

@@ -4,7 +4,7 @@ import { Form, App } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCompany, useUpdateCompany } from "../../hooks/useCompanies";
 import { useMe } from "../../hooks/useMe";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { useAllMedicalStores } from "../../hooks/useMedicalStores";
 import { getCompanyDisplayName } from "../../utils/company";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
@@ -31,7 +31,7 @@ export default function EditCompany() {
   const { mutateAsync, isPending } = useUpdateCompany();
   const { data: me } = useMe();
   const isAdmin = String(me?.role || "").toUpperCase() === ROLE.ADMIN;
-  const { data: medicalStoresData, isLoading: isLoadingStores } = useMedicalStores(1, 1000, "", {
+  const { data: medicalStoresData, isLoading: isLoadingStores } = useAllMedicalStores({
     enabled: isAdmin,
   });
   const storeOptions = useMemo<{ label: string; value: string }[]>(
@@ -73,7 +73,7 @@ export default function EditCompany() {
     });
 
     try {
-      await mutateAsync({ id: company._id, formData });
+      await mutateAsync({ id: company._id, payload: formData });
       message.success("Company updated");
       navigate(`${ROUTES.COMPANIES}/${company._id}`);
     } catch (error: any) {

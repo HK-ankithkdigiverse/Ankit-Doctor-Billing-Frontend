@@ -5,6 +5,15 @@ export type PageSizeOption = {
 
 const DEFAULT_PAGE_SIZES = [10, 30, 50, 100];
 
+export const getSerialNumber = (page: number, limit: number, index: number) =>
+  (Math.max(page, 1) - 1) * Math.max(limit, 1) + index + 1;
+
+export const paginateByPage = <T>(items: T[], page: number, limit: number) => {
+  const safeLimit = Math.max(limit, 1);
+  const start = (Math.max(page, 1) - 1) * safeLimit;
+  return items.slice(start, start + safeLimit);
+};
+
 export const buildPageSizeSelectOptions = (
   totalRecords: number,
   pageSizes: number[] = DEFAULT_PAGE_SIZES
@@ -24,4 +33,3 @@ export const buildPageSizeSelectOptions = (
     return true;
   });
 };
-

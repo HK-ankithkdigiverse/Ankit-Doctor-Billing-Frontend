@@ -1,62 +1,69 @@
 import { api } from "./axios";
-import { dataOf } from "./http";
+import { buildPagedQueryParams, buildQueryParams, parseStatePagination } from "./pagination";
 import { BILLS_API } from "../constants";
 import type { BillPayload, BillUpdatePayload } from "../types/bill";
+import type { ApiSortOrder } from "../types/api";
 
-const getErrorMessage = (error: any, fallback: string) => {
-  const responseData = error?.response?.data;
-  const detailMessage =
-    Array.isArray(responseData?.error) && responseData.error.length
-      ? responseData.error[0]
-      : responseData?.error?.message;
-  return detailMessage || responseData?.message || fallback;
-};
-
-const requestWithError = async <T>(request: Promise<T>, fallback: string) => {
-  try {
-    return await request;
-  } catch (error) {
-    throw new Error(getErrorMessage(error, fallback));
-  }
-};
-
-const toBillRequestPayload = (payload: BillPayload | BillUpdatePayload) => ({
-  ...(payload.userId ? { userId: payload.userId } : {}),
-  ...(payload.companyId ? { companyId: payload.companyId } : {}),
-  ...(typeof payload.discount === "number" ? { discount: payload.discount } : {}),
-  ...(typeof payload.gstPercent === "number" ? { gstPercent: payload.gstPercent } : {}),
-  ...(Array.isArray(payload.items) ? { items: payload.items } : {}),
-});
-
-export const getBillsApi = (params?: {
-  page?: number;
+export type GetBillsParams = {
+  page: number;
   limit?: number;
   search?: string;
-}) => dataOf(api.get(BILLS_API.ROOT, { params }));
+  sortBy?: string;
+  sortOrder?: ApiSortOrder;
+  medicalStoreId?: string;
+};
 
-export const getBillByIdApi = (id: string) => dataOf(api.get(BILLS_API.BY_ID(id)));
+export type GetAllBillsParams = Omit<
+  GetBillsParams,
+  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+>;
 
-export const createBillApi = (payload: BillPayload) =>
-  requestWithError(
-    dataOf(
-      api.post(BILLS_API.ROOT, {
-        ...toBillRequestPayload(payload),
-        discount: payload.discount || 0,
-      })
-    ),
-    "Failed to create bill"
-  );
+const toBillsResponse = (raw: any) => {
+  const bills = raw?.data || raw?.bills || raw?.bill_data || [];
+  return {
+    ...raw,
+    data: bills,
+    bills,
+    pagination: raw?.pagination || parseStatePagination(raw),
+  };
+};
 
-export const deleteBillApi = (id: string) => dataOf(api.delete(BILLS_API.BY_ID(id)));
+export const getBillsApi = async (params: GetBillsParams) => {
+  const { data } = await api.get(BILLS_API.ROOT, {
+    params: buildPagedQueryParams(params),
+  });
+  return toBillsResponse(data);
+};
 
-export const updateBillApi = ({
+export const getAllBillsApi = async (params?: GetAllBillsParams) => {
+  const { data } = await api.get(BILLS_API.ROOT, {
+    params: buildQueryParams(params),
+  });
+  return toBillsResponse(data);
+};
+
+export const getBillByIdApi = async (id: string) => {
+  const { data } = await api.get(BILLS_API.BY_ID(id));
+  return data;
+};
+
+export const createBillApi = async (payload: BillPayload) => {
+  const { data } = await api.post(BILLS_API.ROOT, payload);
+  return data;
+};
+
+export const updateBillApi = async ({
   id,
   payload,
 }: {
   id: string;
   payload: BillUpdatePayload;
-}) =>
-  requestWithError(
-    dataOf(api.put(BILLS_API.BY_ID(id), toBillRequestPayload(payload))),
-    "Failed to update bill"
-  );
+}) => {
+  const { data } = await api.put(BILLS_API.BY_ID(id), payload);
+  return data;
+};
+
+export const deleteBillApi = async (id: string) => {
+  const { data } = await api.delete(BILLS_API.BY_ID(id));
+  return data;
+};

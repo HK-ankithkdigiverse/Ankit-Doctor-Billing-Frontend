@@ -1,27 +1,16 @@
 import { api } from "./axios";
-import { dataOf } from "./http";
+import { buildPagedQueryParams, buildQueryParams } from "./pagination";
+import type { GetUploadsParams, GetUploadsResponse } from "../types/api";
 
-export interface GetUploadsParams {
-  page?: number;
-  limit?: number;
-  type?: "image" | "pdf";
-}
+export type { GetUploadsParams, GetUploadsResponse } from "../types/api";
 
-export interface GetUploadsResponse {
-  files: string[];
-  state: {
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-  totalData: number;
-}
+type GetAllUploadsParams = Omit<GetUploadsParams, "page" | "limit">;
 
 export const uploadFilesApi = async (files: File[]): Promise<string[]> => {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
 
-  const data = await dataOf<any>(api.post("/upload", formData));
+  const { data } = await api.post("/upload", formData);
   return (data?.files || []) as string[];
 };
 
@@ -39,9 +28,26 @@ export const uploadSingleFileApi = async (file: File): Promise<string> => {
 export const getUploadsApi = async (
   params?: GetUploadsParams
 ): Promise<GetUploadsResponse> => {
-  return dataOf<GetUploadsResponse>(api.get("/upload", { params }));
+  const { data } = await api.get<GetUploadsResponse>("/upload", {
+    params: buildPagedQueryParams({
+      page: params?.page ?? 1,
+      limit: params?.limit,
+      type: params?.type,
+    }),
+  });
+  return data;
+};
+
+export const getAllUploadsApi = async (
+  params?: GetAllUploadsParams
+): Promise<GetUploadsResponse> => {
+  const { data } = await api.get<GetUploadsResponse>("/upload", {
+    params: buildQueryParams(params),
+  });
+  return data;
 };
 
 export const deleteUploadApi = async (payload: { url?: string; filename?: string }) => {
-  return dataOf(api.delete("/upload", { data: payload }));
+  const { data } = await api.delete("/upload", { data: payload });
+  return data;
 };

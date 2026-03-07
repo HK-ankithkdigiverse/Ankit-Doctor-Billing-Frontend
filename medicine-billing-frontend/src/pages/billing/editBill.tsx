@@ -16,7 +16,8 @@ export default function EditBill() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin, companies, users } = useBillFormMeta();
-  const { data: billData, isLoading } = useBill(id);
+  const isValidBillId = !!id && /^[a-fA-F0-9]{24}$/.test(id);
+  const { data: billData, isLoading } = useBill(id, { enabled: isValidBillId });
   const { mutateAsync, isPending } = useUpdateBill();
 
   const initialItems = normalizeBillItemsForForm(billData?.items);

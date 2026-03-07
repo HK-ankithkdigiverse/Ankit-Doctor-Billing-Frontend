@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -12,92 +12,57 @@ import {
   Typography,
 } from "antd";
 import { DeleteOutlined, EditOutlined, EyeOutlined, FilePdfOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { useBills, useDeleteBill } from "../../hooks/useBills";
-import { ROLE, ROUTES } from "../../constants";
-import { useMe } from "../../hooks/useMe";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import { useConfirmDialog } from "../../utils/confirmDialog";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
-import { formatDateTime } from "../../utils/dateTime";
-import { buildMedicalStoreNameById } from "../../utils/medicalStore";
-import { buildPageSizeSelectOptions } from "../../utils/pagination";
-import { createDateSorter, createNameSorter } from "../../utils/tableSort";
-import { getSerialNumber, paginateByPage } from "../../utils/tablePagination";
-import type { DateFilterType } from "../../types/bill";
+import { ROUTES } from "../../constants";
 import {
   type BillingDateRange,
-  DATE_FILTER_OPTIONS,
-  filterBills,
-  getBillCompanyName,
-  getBillMedicalStoreId,
-  getBillMedicalStoreName,
-} from "../../utils/billing";
+  type DateFilterType,
+  useBillsListData,
+} from "../../hooks/useBillsListData";
+import { useConfirmDialog } from "../../utils/confirmDialog";
+import { formatDateTime } from "../../utils/dateTime";
+import { getSerialNumber } from "../../utils/pagination";
+import {
+  getColumnSortOrder,
+  resolveTableSort,
+} from "../../utils/tableSort";
 
 export default function BillList() {
   const { RangePicker } = DatePicker;
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 10,
-    search: "",
-    medicalStoreId: "",
-  });
-  const [dateFilter, setDateFilter] = useState<DateFilterType>("all");
-  const [customRange, setCustomRange] = useState<BillingDateRange>(null);
-  const debouncedSearch = useDebouncedValue(filters.search, 500);
-  const { data: me } = useMe();
-  const isAdmin = me?.role === ROLE.ADMIN;
-  const hasAdminMedicalStoreFilter = isAdmin && !!filters.medicalStoreId;
-  const hasDateFilter = dateFilter !== "all";
-  const hasLocalFilter = hasAdminMedicalStoreFilter || hasDateFilter;
-  const queryPage = hasLocalFilter ? 1 : filters.page;
-  const queryLimit = hasLocalFilter ? 1000 : filters.limit;
-
-  const { data, isLoading, isFetching } = useBills(queryPage, queryLimit, debouncedSearch);
-  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", {
-    enabled: isAdmin,
-  });
-  const searchLoading = filters.search !== debouncedSearch || isFetching;
-  const { mutateAsync: deleteBill } = useDeleteBill();
-  const confirmDialog = useConfirmDialog();
-  const medicalStoreNameById = useMemo(
-    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
-    [medicalStoresData?.medicalStores]
-  );
-  const getBillMedicalStoreLabel = (bill: any) => {
-    const embeddedName = getBillMedicalStoreName(bill);
-    if (embeddedName !== "-") return embeddedName;
-
-    const storeId = getBillMedicalStoreId(bill);
-    if (!storeId) return "-";
-    return medicalStoreNameById.get(storeId) || "-";
-  };
-
-  const rowsRaw = data?.data ?? [];
-  const filteredRows = filterBills(rowsRaw, {
-    isAdmin,
-    medicalStoreId: filters.medicalStoreId,
+  const {
+    page,
+    limit,
+    search,
+    medicalStoreId,
     dateFilter,
     customRange,
-  });
-  const rows = hasLocalFilter
-    ? paginateByPage(filteredRows, filters.page, filters.limit)
-    : filteredRows;
-  const pagination = data?.pagination;
-  const totalRecords = hasLocalFilter ? filteredRows.length : pagination?.total || 0;
-  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
-  const medicalStoreOptions =
-    (medicalStoresData?.medicalStores ?? []).map((store) => ({
-      value: store._id,
-      label: store.name || store._id,
-    })) ?? [];
+    isAdmin,
+    sortState,
+    rows,
+    totalRecords,
+    pageSizeSelectOptions,
+    medicalStoreOptions,
+    searchLoading,
+    isLoading,
+    setPagination,
+    setSearch,
+    setMedicalStoreId,
+    setDateFilter,
+    setCustomRange,
+    setSort,
+    deleteBill,
+    getBillMedicalStoreLabel,
+    getBillCompanyName,
+    DATE_FILTER_OPTIONS,
+  } = useBillsListData();
+  const confirmDialog = useConfirmDialog();
 
   const columns = [
     {
       title: "S.No",
       key: "serial",
       width: 80,
-      render: (_: any, __: any, index: number) => getSerialNumber(filters.page, filters.limit, index),
+      render: (_: any, __: any, index: number) => getSerialNumber(page, limit, index),
     },
     {
       title: "Bill No",
@@ -107,7 +72,8 @@ export default function BillList() {
     {
       title: "Company",
       key: "company",
-      sorter: createNameSorter((row: any) => getBillCompanyName(row)),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "company"),
       render: (_: any, bill: any) => getBillCompanyName(bill),
     },
     ...(isAdmin
@@ -115,7 +81,8 @@ export default function BillList() {
           {
             title: "Medical Store",
             key: "medicalStore",
-            sorter: createNameSorter((row: any) => getBillMedicalStoreLabel(row)),
+            sorter: true,
+            sortOrder: getColumnSortOrder(sortState, "medicalStore"),
             render: (_: any, bill: any) => getBillMedicalStoreLabel(bill),
           },
         ]
@@ -130,7 +97,8 @@ export default function BillList() {
     {
       title: "Date (Created Date, Updated Date)",
       key: "createdUpdatedAt",
-      sorter: createDateSorter((row: any) => row?.updatedAt || row?.createdAt),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),
       render: (_: any, bill: any) => (
         <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
           {formatDateTime(bill.createdAt)}
@@ -203,9 +171,9 @@ export default function BillList() {
             allowClear
             prefix={<SearchOutlined />}
             suffix={searchLoading ? <LoadingOutlined spin /> : null}
-            value={filters.search}
+            value={search}
             onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }));
+              setSearch(e.target.value);
             }}
             style={{ width: 360, maxWidth: "100%" }}
           />
@@ -215,20 +183,16 @@ export default function BillList() {
               showSearch
               optionFilterProp="label"
               placeholder="Filter by medical store"
-              value={filters.medicalStoreId || undefined}
+              value={medicalStoreId || undefined}
               options={medicalStoreOptions}
-              onChange={(value) =>
-                setFilters((prev) => ({ ...prev, page: 1, medicalStoreId: value || "" }))
-              }
+              onChange={(value) => setMedicalStoreId(value || "")}
               style={{ width: 240 }}
             />
           )}
           <Select
             value={dateFilter}
             onChange={(value: DateFilterType) => {
-              setFilters((prev) => ({ ...prev, page: 1 }));
               setDateFilter(value);
-              if (value !== "custom") setCustomRange(null);
             }}
             className="date-filter-select"
             popupClassName="date-filter-dropdown"
@@ -239,7 +203,6 @@ export default function BillList() {
             <RangePicker
               value={customRange}
               onChange={(values) => {
-                setFilters((prev) => ({ ...prev, page: 1 }));
                 setCustomRange(values as BillingDateRange);
               }}
             />
@@ -255,15 +218,19 @@ export default function BillList() {
         sortDirections={["ascend", "descend"]}
         pagination={false}
         scroll={{ x: "max-content" }}
+        onChange={(_pagination, _filters, sorter) => {
+          const nextSort = resolveTableSort(sorter);
+          setSort(nextSort.field, nextSort.order);
+        }}
       />
 
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
-          current={filters.page}
-          pageSize={filters.limit}
+          current={page}
+          pageSize={limit}
           total={totalRecords}
-          onChange={(p: number, pageSize: number) =>
-            setFilters((prev) => ({ ...prev, page: p, limit: pageSize }))
+          onChange={(nextPage: number, pageSize: number) =>
+            setPagination(nextPage, pageSize)
           }
           showSizeChanger={{ options: pageSizeSelectOptions }}
         />

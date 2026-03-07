@@ -1,25 +1,19 @@
 import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, Form, Typography, App } from "antd";
-import { useCompanies } from "../../hooks/useCompanies";
+import { useAllCompanies } from "../../hooks/useCompanies";
 import { useCreateProduct } from "../../hooks/useProducts";
 import { ROLE, ROUTES } from "../../constants";
-import { useCategories } from "../../hooks/useCategories";
+import { useAllCategories } from "../../hooks/useCategories";
 import { useMe } from "../../hooks/useMe";
 import ProductFormFields from "../../components/forms/ProductFormFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
-import { toEntityId } from "../../utils/id";
-
-const toProductPayload = (values: any) => ({
-  ...values,
-  mrp: Number(values.mrp || 0),
-  price: Number(values.price || 0),
-  stock: Number(values.stock || 0),
-});
-
-const getCompanyMedicalStoreId = (company: any) => toEntityId(company?.medicalStoreId);
-
-const getCategoryMedicalStoreId = (category: any) => toEntityId(category?.medicalStoreId);
+import {
+  buildCategoryOptionsForProductForm,
+  buildCompanyOptions,
+  resolveSelectedCompanyMedicalStoreId,
+  toProductPayload,
+} from "../../utils/productForm";
 
 export default function CreateProduct() {
   const { message } = App.useApp();
@@ -28,43 +22,24 @@ export default function CreateProduct() {
   const selectedCompanyId = Form.useWatch("companyId", form);
   const { data: me } = useMe();
   const isAdmin = String(me?.role || "").toUpperCase() === ROLE.ADMIN;
-  const { data: companyData, isLoading } = useCompanies(1, 1000, "");
-  const { data: categoryData } = useCategories(1, 100, "");
+  const { data: companyData, isLoading } = useAllCompanies();
+  const { data: categoryData } = useAllCategories();
   const { mutateAsync, isPending } = useCreateProduct();
 
   const companies = companyData?.companies ?? [];
   const categories = categoryData?.categories ?? [];
-  const companyOptions = companies.map((c: any) => ({
-    value: c._id,
-    label: c.companyName || c.name || c.email || c._id,
-  }));
+  const companyOptions = useMemo(() => buildCompanyOptions(companies), [companies]);
   const selectedCompanyMedicalStoreId = useMemo(() => {
-    if (!selectedCompanyId) return "";
-    const selectedCompany = companies.find((company: any) => company._id === selectedCompanyId);
-    return getCompanyMedicalStoreId(selectedCompany);
+    return resolveSelectedCompanyMedicalStoreId(companies, selectedCompanyId || "");
   }, [companies, selectedCompanyId]);
 
   const categoryOptions = useMemo(() => {
-    const filteredCategories = categories.filter((category: any) => {
-      if (!isAdmin) return true;
-      if (!selectedCompanyId) return false;
-      if (!selectedCompanyMedicalStoreId) return true;
-      const categoryStoreId = getCategoryMedicalStoreId(category);
-      if (!categoryStoreId) return true;
-      return categoryStoreId === selectedCompanyMedicalStoreId;
+    return buildCategoryOptionsForProductForm({
+      categories,
+      isAdmin,
+      selectedCompanyId: selectedCompanyId || "",
+      selectedCompanyMedicalStoreId,
     });
-
-    const options = filteredCategories.map((category: any) => ({
-      value: category.name,
-      label: category.name,
-    }));
-
-    const deduped = new Map<string, { value: string; label: string }>();
-    options.forEach((option) => {
-      if (!deduped.has(option.value)) deduped.set(option.value, option);
-    });
-
-    return [...deduped.values()];
   }, [categories, isAdmin, selectedCompanyId, selectedCompanyMedicalStoreId]);
 
   useEffect(() => {

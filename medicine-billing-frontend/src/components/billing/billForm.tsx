@@ -11,9 +11,9 @@ import {
   Typography,
 } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import { useProducts } from "../../hooks/useProducts";
+import { useAllProducts } from "../../hooks/useProducts";
 import type { BillFormItem, BillFormRow, BillPayload, BillTaxMode, BillUserOption } from "../../types/bill";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { useAllMedicalStores } from "../../hooks/useMedicalStores";
 import { useMe } from "../../hooks/useMe";
 import {
   getBillSummary,
@@ -84,9 +84,9 @@ export default function BillForm({
   const [gstPercent, setGstPercent] = useState(normalizeWholePercent(initialGstPercent));
   const [items, setItems] = useState<BillFormRow[]>(normalizeBillFormRows(initialItems));
   const { data: me } = useMe();
-  const { data: medicalStoresData } = useMedicalStores(1, 1000, "");
+  const { data: medicalStoresData } = useAllMedicalStores();
 
-  const { data: productData, isLoading: productsLoading } = useProducts(1, 1000, "", {
+  const { data: productData, isLoading: productsLoading } = useAllProducts({
     companyId: companyId || undefined,
     enabled: !!companyId,
   });

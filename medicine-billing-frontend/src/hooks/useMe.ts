@@ -1,5 +1,4 @@
-import { useAppSelector } from "../store/hooks";
-import { selectAuthLoading, selectAuthUser } from "../store/slices/authSlice";
+import { selectAuthLoading, selectAuthUser, useAppSelector } from "../store";
 
 export const useMe = () => {
   const data = useAppSelector(selectAuthUser);
@@ -10,3 +9,4 @@ export const useMe = () => {
     isLoading,
   };
 };
+

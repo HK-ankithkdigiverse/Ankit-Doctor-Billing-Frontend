@@ -1,19 +1,21 @@
-import { useQuery,useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProfileApi, updateProfileApi, changePasswordApi } from "../api/userApi";
-import { QUERY_KEYS } from "../constants";
-import { getStoredToken } from "../helpers/tokenStorage";
-
-
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { changePasswordApi, getProfileApi, updateProfileApi } from "../api/userApi";
+import { QUERY_KEYS } from "../constants/queryKeys";
+import { getStoredToken } from "../utils/tokenStorage";
 
 export const useProfile = () => {
   const token = getStoredToken();
 
   return useQuery({
-    queryKey: QUERY_KEYS.PROFILE,
+    queryKey: [QUERY_KEYS.PROFILE],
     queryFn: getProfileApi,
     enabled: Boolean(token),
     retry: false,
-    initialData: null,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
 
@@ -23,7 +25,7 @@ export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: updateProfileApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PROFILE });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROFILE] });
     },
   });
 };
@@ -34,9 +36,7 @@ export const useChangePassword = () => {
   return useMutation({
     mutationFn: changePasswordApi,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PROFILE });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PROFILE] });
     },
   });
 };
-
-

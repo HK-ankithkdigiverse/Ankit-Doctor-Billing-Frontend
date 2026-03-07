@@ -1,69 +1,92 @@
 import {
-  useQuery,
-  useMutation,
-  useQueryClient,
   keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
 } from "@tanstack/react-query";
-
 import {
-  getBillsApi,
-  getBillByIdApi,
   createBillApi,
   deleteBillApi,
+  getAllBillsApi,
+  getBillByIdApi,
+  getBillsApi,
   updateBillApi,
 } from "../api/billApi";
-import { QUERY_KEYS } from "../constants";
+import { QUERY_KEYS } from "../constants/queryKeys";
+import { isObjectId } from "../utils/common";
 
-const isValidObjectId = (id?: string) => !!id && /^[a-fA-F0-9]{24}$/.test(id);
+type BillsQueryOptions = { enabled?: boolean };
+type BillQueryOptions = { enabled?: boolean };
+type AllBillsQueryOptions = { enabled?: boolean; medicalStoreId?: string };
 
-/* ======================
-   LIST BILLS
-====================== */
 export const useBills = (
-  page: number,
-  limit: number,
-  search: string
-) =>
-  useQuery({
-    queryKey: QUERY_KEYS.BILLS_LIST({ page, limit, search }),
+  page?: number,
+  limitOrSearch?: number | string,
+  searchOrOptions: string | BillsQueryOptions = "",
+  optionsArg?: BillsQueryOptions
+) => {
+  const isPaginated = typeof page === "number";
+  const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
+  const search =
+    typeof limitOrSearch === "string"
+      ? limitOrSearch
+      : typeof searchOrOptions === "string"
+        ? searchOrOptions
+        : "";
+  const options = typeof searchOrOptions === "object" ? searchOrOptions : optionsArg;
+
+  return useQuery({
+    queryKey: isPaginated
+      ? [QUERY_KEYS.BILLS, page, limit, search]
+      : [QUERY_KEYS.BILLS, "all"],
     queryFn: () =>
-      getBillsApi({
-        page,
-        limit,
-        search,
-      }),
+      isPaginated
+        ? getBillsApi({
+            page,
+            limit,
+            search: search || undefined,
+          })
+        : getAllBillsApi(),
+    enabled: options?.enabled ?? true,
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 5, // ✅ optional but recommended
+    staleTime: 5 * 60 * 1000,
   });
+};
 
-/* ======================
-   SINGLE BILL
-====================== */
-export const useBill = (id?: string) =>
+export const useAllBills = (options?: AllBillsQueryOptions) =>
   useQuery({
-    queryKey: QUERY_KEYS.BILL(id || ""),
-    queryFn: () => getBillByIdApi(id as string),
-    enabled: isValidObjectId(id),
+    queryKey: [QUERY_KEYS.BILLS, "all", options?.medicalStoreId],
+    queryFn: () =>
+      getAllBillsApi({
+        medicalStoreId: options?.medicalStoreId,
+      }),
+    enabled: options?.enabled ?? true,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
   });
 
-/* ======================
-   CREATE BILL
-====================== */
+export const useBill = (id?: string, options?: BillQueryOptions) =>
+  useQuery({
+    queryKey: [QUERY_KEYS.BILL, id],
+    queryFn: () => getBillByIdApi(id as string),
+    enabled: (options?.enabled ?? true) && isObjectId(id),
+    retry: 0,
+    retryOnMount: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
 export const useCreateBill = () => {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: createBillApi,
-
     onSuccess: () => {
-      // ✅ refresh bill list
-      qc.invalidateQueries({
-        queryKey: QUERY_KEYS.BILLS,
-      });
+      qc.invalidateQueries({ queryKey: [QUERY_KEYS.BILLS] });
     },
-
     onError: (err: any) => {
-      console.error("Create Bill Error 👉", err?.response?.data || err);
+      console.error("Create Bill Error", err?.response?.data || err);
     },
   });
 };
@@ -73,28 +96,20 @@ export const useDeleteBill = () => {
 
   return useMutation({
     mutationFn: deleteBillApi,
-
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: QUERY_KEYS.BILLS,
-      });
+      qc.invalidateQueries({ queryKey: [QUERY_KEYS.BILLS] });
     },
   });
 };
 
-/* ======================
-   UPDATE BILL
-====================== */
 export const useUpdateBill = () => {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: updateBillApi,
     onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.BILLS });
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.BILL(variables.id) });
+      qc.invalidateQueries({ queryKey: [QUERY_KEYS.BILLS] });
+      qc.invalidateQueries({ queryKey: [QUERY_KEYS.BILL, variables.id] });
     },
   });
 };
-
-

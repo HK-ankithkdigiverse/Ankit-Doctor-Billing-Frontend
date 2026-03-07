@@ -1,78 +1,20 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Button,
-  Card,
-  Input,
-  Pagination,
-  Space,
-  Table,
-  Typography,
-  App,
-} from "antd";
-import { DeleteOutlined, EditOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import {App,Button,Card,Input,Pagination,Space,Table,Typography} from "antd";
+import {DeleteOutlined,EditOutlined,LoadingOutlined,PlusOutlined,SearchOutlined,} from "@ant-design/icons";
 import { ROUTES } from "../../constants";
-import { useCategories, useDeleteCategory } from "../../hooks/useCategories";
-import { useMe } from "../../hooks/useMe";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useCategoriesListData } from "../../hooks/useCategoriesListData";
 import type { Category } from "../../types/category";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
-import { buildMedicalStoreNameById } from "../../utils/medicalStore";
-import { buildPageSizeSelectOptions } from "../../utils/pagination";
-import { createDateSorter, createNameSorter } from "../../utils/tableSort";
-import { getSerialNumber } from "../../utils/tablePagination";
+import { getSerialNumber } from "../../utils/pagination";
+import { getColumnSortOrder, resolveTableSort } from "../../utils/tableSort";
 
 export default function CategoriesList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 10,
-    search: "",
-  });
-  const debouncedSearch = useDebouncedValue(filters.search, 500);
-  const { data: me } = useMe();
-  const isAdmin = String(me?.role || "").toUpperCase() === "ADMIN";
-
-  const { data, isLoading, isFetching, error } = useCategories(
-    filters.page,
-    filters.limit,
-    debouncedSearch
-  );
-  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", {
-    enabled: isAdmin,
-  });
-  const searchLoading = filters.search !== debouncedSearch || isFetching;
-  const { mutateAsync: deleteCategory, isPending } = useDeleteCategory();
   const confirmDialog = useConfirmDialog();
-
-  const categories = data?.categories ?? [];
-  const pagination = data?.pagination;
-  const totalRecords = pagination?.total || 0;
-  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
-
-  const medicalStoreNameById = useMemo(
-    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
-    [medicalStoresData?.medicalStores]
-  );
-
-  const getMedicalStoreId = (category: Category) =>
-    typeof category.medicalStoreId === "string"
-      ? category.medicalStoreId
-      : category.medicalStoreId?._id || "";
-
-  const getMedicalStoreName = (category: Category) => {
-    const populatedStoreName =
-      typeof category.medicalStoreId === "object"
-        ? (category.medicalStoreId?.name || "").trim()
-        : "";
-    if (populatedStoreName) return populatedStoreName;
-    const storeId = getMedicalStoreId(category);
-    if (!storeId) return "-";
-    return medicalStoreNameById.get(storeId) || "-";
-  };
+  const {isAdmin, page,limit,search,sortState,sortedCategories,totalRecords,pageSizeSelectOptions,searchLoading,isLoading,isPending,error,setPagination,setSearch,setSort,getMedicalStoreName,deleteCategory,} = useCategoriesListData();
 
   const handleDelete = async (id: string) => {
     try {
@@ -89,20 +31,22 @@ export default function CategoriesList() {
       key: "serial",
       width: 80,
       render: (_: unknown, __: Category, index: number) =>
-        getSerialNumber(filters.page, filters.limit, index),
+        getSerialNumber(page, limit, index),
     },
     {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      sorter: createNameSorter((row: Category) => row.name),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "name"),
     },
     ...(isAdmin
       ? [
           {
             title: "Medical Store",
             key: "medicalStore",
-            sorter: createNameSorter((row: Category) => getMedicalStoreName(row)),
+            sorter: true,
+            sortOrder: getColumnSortOrder(sortState, "medicalStore"),
             render: (_: unknown, category: Category) => getMedicalStoreName(category),
           },
         ]
@@ -110,7 +54,8 @@ export default function CategoriesList() {
     {
       title: "Date (Created Date, Updated Date)",
       key: "createdUpdatedAt",
-      sorter: createDateSorter((row: Category) => row.updatedAt || row.createdAt),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),
       render: (_: unknown, category: Category) => (
         <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
           {formatDateTime(category.createdAt)}
@@ -139,7 +84,8 @@ export default function CategoriesList() {
             onClick={() =>
               confirmDialog({
                 title: "Confirm Deletion",
-                message: "This action cannot be undone. Are you sure you want to delete this category?",
+                message:
+                  "This action cannot be undone. Are you sure you want to delete this category?",
                 confirmText: "Delete",
                 danger: true,
                 onConfirm: () => handleDelete(category._id),
@@ -179,9 +125,9 @@ export default function CategoriesList() {
             allowClear
             prefix={<SearchOutlined />}
             suffix={searchLoading ? <LoadingOutlined spin /> : null}
-            value={filters.search}
+            value={search}
             onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }));
+              setSearch(e.target.value);
             }}
             style={{ width: 360, maxWidth: "100%" }}
           />
@@ -192,19 +138,23 @@ export default function CategoriesList() {
         rowKey="_id"
         loading={isLoading || searchLoading}
         columns={columns}
-        dataSource={categories}
+        dataSource={sortedCategories}
         sortDirections={["ascend", "descend"]}
         pagination={false}
         scroll={{ x: "max-content" }}
+        onChange={(_pagination, _filters, sorter) => {
+          const nextSort = resolveTableSort(sorter);
+          setSort(nextSort.field, nextSort.order);
+        }}
       />
 
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
-          current={filters.page}
-          pageSize={filters.limit}
+          current={page}
+          pageSize={limit}
           total={totalRecords}
-          onChange={(p: number, pageSize: number) =>
-            setFilters((prev) => ({ ...prev, page: p, limit: pageSize }))
+          onChange={(nextPage: number, pageSize: number) =>
+            setPagination(nextPage, pageSize)
           }
           showSizeChanger={{ options: pageSizeSelectOptions }}
         />

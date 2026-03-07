@@ -2,17 +2,18 @@ import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Spin } from "antd";
 import { ROUTES } from "../../constants";
-import { clearStoredToken } from "../../helpers/tokenStorage";
+import { clearStoredToken } from "../../utils/tokenStorage";
 import { hasRequiredRole } from "../../utils/roleAccess";
 import { storePostLoginRedirect } from "../../utils/authRedirect";
 import { getLoginBlockReason } from "../../utils/authAccess";
-import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   clearAuth,
   selectAuthInitialized,
   selectAuthLoading,
   selectAuthUser,
-} from "../../store/slices/authSlice";
+  useAppDispatch,
+  useAppSelector,
+} from "../../store";
 
 type ProtectedRouteProps = {
   roles?: string[];
@@ -61,3 +62,4 @@ export default function ProtectedRoute({ roles }: ProtectedRouteProps) {
 
   return <Outlet />;
 }
+

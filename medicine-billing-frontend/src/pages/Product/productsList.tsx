@@ -1,99 +1,21 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Button,
-  Card,
-  Input,
-  Pagination,
-  Select,
-  Space,
-  Table,
-  Typography,
-  App,
-} from "antd";
-import { DeleteOutlined, EditOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { useDeleteProduct, useProducts } from "../../hooks/useProducts";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
-import { ROLE, ROUTES } from "../../constants";
-import type { Product } from "../../types/product";
-import { useMe } from "../../hooks/useMe";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import {App,Button,Card,Input,Pagination,Select,Space,Table,Typography,} from "antd";
+import { DeleteOutlined,EditOutlined,LoadingOutlined,PlusOutlined,SearchOutlined} from "@ant-design/icons";
+import { ROUTES } from "../../constants";
+import { useProductsListData } from "../../hooks/useProductsListData";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
-import { buildMedicalStoreNameById } from "../../utils/medicalStore";
-import { buildPageSizeSelectOptions } from "../../utils/pagination";
-import { createDateSorter, createNameSorter } from "../../utils/tableSort";
-import { getSerialNumber, paginateByPage } from "../../utils/tablePagination";
+import { getSerialNumber } from "../../utils/pagination";
+import { getColumnSortOrder, resolveTableSort } from "../../utils/tableSort";
+import type { Product } from "../../types/product";
 
 export default function ProductsList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 10,
-    search: "",
-    medicalStoreId: "",
-  });
-  const debouncedSearch = useDebouncedValue(filters.search, 500);
-  const { data: me } = useMe();
-  const isAdmin = me?.role === ROLE.ADMIN;
-  const hasAdminFilter = isAdmin && !!filters.medicalStoreId;
-  const queryPage = hasAdminFilter ? 1 : filters.page;
-  const queryLimit = hasAdminFilter ? 1000 : filters.limit;
-
-  const { data, isPending, isFetching } = useProducts(queryPage, queryLimit, debouncedSearch);
-  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", {
-    enabled: isAdmin,
-  });
-  const searchLoading = filters.search !== debouncedSearch || isFetching;
-  const { mutateAsync: deleteProduct, isPending: deletePending } = useDeleteProduct();
   const confirmDialog = useConfirmDialog();
-  const productsRaw: Product[] = data?.products ?? [];
-  const getProductMedicalStoreId = (product: Product) => {
-    if (typeof product.medicalStoreId === "string") return product.medicalStoreId;
-    if (typeof product.medicalStoreId === "object" && product.medicalStoreId?._id) {
-      return product.medicalStoreId._id;
-    }
-    if (typeof product.createdBy?.medicalStoreId === "string") {
-      return product.createdBy.medicalStoreId;
-    }
-    if (
-      typeof product.createdBy?.medicalStoreId === "object" &&
-      product.createdBy.medicalStoreId?._id
-    ) {
-      return product.createdBy.medicalStoreId._id;
-    }
-    return "";
-  };
-  const medicalStoreNameById = useMemo(
-    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
-    [medicalStoresData?.medicalStores]
-  );
-  const getProductMedicalStoreName = (product: Product) => {
-    if (typeof product.medicalStoreId === "object") {
-      const storeName = product.medicalStoreId?.name?.trim();
-      if (storeName) return storeName;
-    }
-    const medicalStoreId = getProductMedicalStoreId(product);
-    if (!medicalStoreId) return "-";
-    return medicalStoreNameById.get(medicalStoreId) || "-";
-  };
-  const matchesAdminFilters = (product: Product) => {
-    const storeId = getProductMedicalStoreId(product);
-    return !filters.medicalStoreId || storeId === filters.medicalStoreId;
-  };
-  const filteredProducts: Product[] = isAdmin ? productsRaw.filter(matchesAdminFilters) : productsRaw;
-  const products: Product[] = hasAdminFilter
-    ? paginateByPage(filteredProducts, filters.page, filters.limit)
-    : filteredProducts;
-  const pagination = data?.pagination;
-  const totalRecords = hasAdminFilter ? filteredProducts.length : pagination?.total || 0;
-  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
-  const medicalStoreOptions =
-    (medicalStoresData?.medicalStores ?? []).map((store) => ({
-      value: store._id,
-      label: store.name || store._id,
-    })) ?? [];
+  const {isAdmin,page,limit,search,medicalStoreId,sortState,products,totalRecords,pageSizeSelectOptions,medicalStoreOptions,searchLoading,isPending,deletePending,setPagination,setSearch,setMedicalStoreId,setSort,getProductMedicalStoreName,pickProductDate,deleteProduct,} = useProductsListData();
+
   const handleDelete = async (id: string) => {
     try {
       await deleteProduct(id);
@@ -102,44 +24,20 @@ export default function ProductsList() {
       message.error("Failed to delete product");
     }
   };
-  const objectIdToDate = (id?: string): Date | null => {
-    if (!id || id.length < 8) return null;
-    const epochSeconds = Number.parseInt(id.slice(0, 8), 16);
-    if (!Number.isFinite(epochSeconds)) return null;
-    const parsed = new Date(epochSeconds * 1000);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  };
-  const pickProductDate = (product: Product, field: "created" | "updated"): string | Date | null => {
-    const fallbackFromId = objectIdToDate(product._id);
-    const candidates =
-      field === "created"
-        ? [product.createdAt, (product as any).createdDate, (product as any).date, fallbackFromId]
-        : [
-            product.updatedAt,
-            (product as any).updatedDate,
-            product.createdAt,
-            (product as any).createdDate,
-            fallbackFromId,
-          ];
-    const value = candidates.find((candidate) => {
-      if (candidate instanceof Date) return !Number.isNaN(candidate.getTime());
-      return candidate !== undefined && candidate !== null && String(candidate).trim() !== "";
-    });
-    return (value as string | Date | undefined) ?? null;
-  };
 
   const columns = [
     {
       title: "S.No",
       key: "serial",
       width: 80,
-      render: (_: any, __: Product, index: number) => getSerialNumber(filters.page, filters.limit, index),
+      render: (_: any, __: Product, index: number) => getSerialNumber(page, limit, index),
     },
     {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      sorter: createNameSorter((row: Product) => row.name),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "name"),
     },
     {
       title: "Category",
@@ -154,9 +52,8 @@ export default function ProductsList() {
     {
       title: "Company",
       key: "company",
-      sorter: createNameSorter(
-        (row: Product) => (row.companyId as any)?.companyName || (row.companyId as any)?.name || ""
-      ),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "company"),
       render: (_: any, product: Product) =>
         (product.companyId as any)?.companyName || (product.companyId as any)?.name || "-",
     },
@@ -165,7 +62,8 @@ export default function ProductsList() {
           {
             title: "Medical Store",
             key: "medicalStore",
-            sorter: createNameSorter((row: Product) => getProductMedicalStoreName(row)),
+            sorter: true,
+            sortOrder: getColumnSortOrder(sortState, "medicalStore"),
             render: (_: any, product: Product) => getProductMedicalStoreName(product),
           },
         ]
@@ -191,7 +89,8 @@ export default function ProductsList() {
     {
       title: "Date (Created Date, Updated Date)",
       key: "createdUpdatedAt",
-      sorter: createDateSorter((row: Product) => pickProductDate(row, "updated")),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),
       render: (_: any, product: Product) => (
         <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
           {formatDateTime(pickProductDate(product, "created"))}
@@ -252,9 +151,9 @@ export default function ProductsList() {
             allowClear
             prefix={<SearchOutlined />}
             suffix={searchLoading ? <LoadingOutlined spin /> : null}
-            value={filters.search}
+            value={search}
             onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }));
+              setSearch(e.target.value);
             }}
             style={{ width: 360, maxWidth: "100%" }}
           />
@@ -264,11 +163,9 @@ export default function ProductsList() {
               showSearch
               optionFilterProp="label"
               placeholder="Filter by medical store"
-              value={filters.medicalStoreId || undefined}
+              value={medicalStoreId || undefined}
               options={medicalStoreOptions}
-              onChange={(value) =>
-                setFilters((prev) => ({ ...prev, page: 1, medicalStoreId: value || "" }))
-              }
+              onChange={(value) => setMedicalStoreId(value || "")}
               style={{ width: 240 }}
             />
           )}
@@ -283,15 +180,19 @@ export default function ProductsList() {
         sortDirections={["ascend", "descend"]}
         pagination={false}
         scroll={{ x: "max-content" }}
+        onChange={(_pagination, _filters, sorter) => {
+          const nextSort = resolveTableSort(sorter);
+          setSort(nextSort.field, nextSort.order);
+        }}
       />
 
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
-          current={filters.page}
-          pageSize={filters.limit}
+          current={page}
+          pageSize={limit}
           total={totalRecords}
-          onChange={(p: number, pageSize: number) =>
-            setFilters((prev) => ({ ...prev, page: p, limit: pageSize }))
+          onChange={(nextPage: number, pageSize: number) =>
+            setPagination(nextPage, pageSize)
           }
           showSizeChanger={{ options: pageSizeSelectOptions }}
         />

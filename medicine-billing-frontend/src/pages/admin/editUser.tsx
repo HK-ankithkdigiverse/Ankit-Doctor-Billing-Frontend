@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { App, Button, Card, Col, Form, Input, Row, Select, Typography } from "antd";
 import { ROUTES } from "../../constants";
-import { useUpdateUser, useUsers } from "../../hooks/useUsers";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { useAllUsers, useUpdateUser } from "../../hooks/useUsers";
+import { useAllMedicalStores } from "../../hooks/useMedicalStores";
+import { uploadSingleFileApi } from "../../api/uploadApi";
 import type { UpdateUserPayload } from "../../api/userApi";
 import type { User } from "../../types";
 import { emailRule, requiredRule } from "../../utils/formRules";
-import { uploadSingleFileApi } from "../../api/uploadApi";
 import { getUploadFileUrl } from "../../utils/company";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
 import FormActionButtons from "../../components/forms/FormActionButtons";
@@ -54,14 +54,11 @@ export default function EditUser() {
   const navigate = useNavigate();
   const [form] = Form.useForm<EditUserFormValues>();
   const watchedValues = Form.useWatch([], form);
-  const { data, isLoading } = useUsers(1, 1000, "", "all");
+  const { data, isLoading } = useAllUsers("all");
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
-  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useMedicalStores(
-    1,
-    1000,
-    "",
-    { enabled: true }
-  );
+  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useAllMedicalStores({
+    enabled: true,
+  });
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [removeSignature, setRemoveSignature] = useState(false);
 

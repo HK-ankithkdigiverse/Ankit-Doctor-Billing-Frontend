@@ -1,30 +1,18 @@
-import { useMemo, useState, type ChangeEvent } from "react";
-import type { MedicalStore, User } from "../../types";
-import { useNavigate } from "react-router-dom";
-import {
-  Button,
-  Input,
-  Pagination,
-  Select,
-  Space,
-  Table,
-  App,
-} from "antd";
-import { DeleteOutlined, EditOutlined, EyeOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { ROLE, ROUTES } from "../../constants";
-import { useCompanies, useDeleteCompany } from "../../hooks/useCompanies";
-import { useUsers } from "../../hooks/useUsers";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
-import { useMe } from "../../hooks/useMe";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import type { ChangeEvent } from "react";
 import type { Company } from "../../types/company";
+import { useNavigate } from "react-router-dom";
+import { App, Button, Input, Pagination, Select, Space, Table } from "antd";
+import {DeleteOutlined,EditOutlined,EyeOutlined,LoadingOutlined,PlusOutlined,SearchOutlined} from "@ant-design/icons";
+import { ROUTES } from "../../constants";
+import { useCompaniesListData } from "../../hooks/useCompaniesListData";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { getCompanyDisplayName } from "../../utils/company";
 import { formatDateTime } from "../../utils/dateTime";
-import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../../utils/medicalStore";
-import { buildPageSizeSelectOptions } from "../../utils/pagination";
-import { createDateSorter, createNameSorter } from "../../utils/tableSort";
-import { getSerialNumber, paginateByPage } from "../../utils/tablePagination";
+import { getSerialNumber } from "../../utils/pagination";
+import {
+  getColumnSortOrder,
+  resolveTableSort,
+} from "../../utils/tableSort";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -32,90 +20,14 @@ import SectionTitle from "../../components/ui/SectionTitle";
 export default function CompaniesList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 10,
-    search: "",
-    medicalStoreId: "",
-  });
-  const debouncedSearch = useDebouncedValue(filters.search, 500);
-  const { data: me } = useMe();
-  const isAdmin = me?.role === ROLE.ADMIN;
-  const hasAdminStoreFilter = isAdmin && !!filters.medicalStoreId;
-  const queryPage = hasAdminStoreFilter ? 1 : filters.page;
-  const queryLimit = hasAdminStoreFilter ? 1000 : filters.limit;
-
-  const { data, isLoading, isFetching } = useCompanies(queryPage, queryLimit, debouncedSearch);
-  const { data: usersFilterData } = useUsers(1, 1000, "", "all");
-  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", { enabled: isAdmin });
-  const searchLoading = filters.search !== debouncedSearch || isFetching;
-  const { mutateAsync: deleteCompany, isPending } = useDeleteCompany();
   const confirmDialog = useConfirmDialog();
-  const companiesRaw: Company[] = data?.companies ?? [];
-  const getOwnerId = (company: Company) =>
-    typeof company.userId === "object" ? company.userId?._id : company.userId;
-  const userStoreIdById = new Map<string, string>(
-    (usersFilterData?.users ?? [])
-      .map((user: User) => [user._id, getUserMedicalStoreId(user)] as const)
-      .filter(([, storeId]: readonly [string, string]) => !!storeId)
-  );
-  const getCompanyMedicalStoreId = (company: Company) => {
-    const companyStore = company.medicalStoreId;
-    if (typeof companyStore === "string") return companyStore;
-    if (companyStore && typeof companyStore === "object") return companyStore._id || "";
-    const ownerId = getOwnerId(company);
-    if (!ownerId) return "";
-    return userStoreIdById.get(ownerId) || "";
-  };
-  const medicalStoreNameById = buildMedicalStoreNameById(medicalStoresData?.medicalStores, {
-    fallbackToId: true,
-  });
-  const filteredCompanies = isAdmin
-    ? companiesRaw.filter(
-        (company) =>
-          !filters.medicalStoreId || getCompanyMedicalStoreId(company) === filters.medicalStoreId
-      )
-    : companiesRaw;
-  const companies = hasAdminStoreFilter
-    ? paginateByPage(filteredCompanies, filters.page, filters.limit)
-    : filteredCompanies;
-  const pagination = data?.pagination;
-  const totalRecords = hasAdminStoreFilter ? filteredCompanies.length : pagination?.total || 0;
-  const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
+  const {isAdmin,page,limit,search,medicalStoreId,sortState,companies,totalRecords,pageSizeSelectOptions,medicalStoreOptions,searchLoading,isLoading,isPending,setPagination,setSearch,setMedicalStoreId,setSort,getCreatedByStoreLabel,deleteCompany,} = useCompaniesListData();
+
   const oneLineCell = (value?: string) => (
     <span style={{ whiteSpace: "nowrap" }} title={value || "-"}>
       {value || "-"}
     </span>
   );
-  const medicalStoreOptions = useMemo<{ label: string; value: string }[]>(
-    () => {
-      const optionMap = new Map<string, string>();
-
-      (medicalStoresData?.medicalStores ?? []).forEach((store: MedicalStore) => {
-        if (!store?._id || store.isActive === false) return;
-        optionMap.set(store._id, store.name?.trim() || store._id);
-      });
-
-      // Keep filterable ids visible even if a store record is not in the current response.
-      companiesRaw.forEach((company: Company) => {
-        const storeId = getCompanyMedicalStoreId(company);
-        if (!storeId || optionMap.has(storeId)) return;
-        optionMap.set(storeId, storeId);
-      });
-
-      return [...optionMap.entries()]
-        .map(([value, label]) => ({ value, label }))
-        .sort((a: { label: string; value: string }, b: { label: string; value: string }) =>
-          a.label.localeCompare(b.label)
-        );
-    },
-    [companiesRaw, medicalStoresData?.medicalStores]
-  );
-  const getCreatedByStoreLabel = (company: Company) => {
-    const storeId = getCompanyMedicalStoreId(company);
-    if (!storeId) return "-";
-    return medicalStoreNameById.get(storeId) || storeId;
-  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -132,13 +44,15 @@ export default function CompaniesList() {
       key: "serial",
       width: 80,
       render: (_: unknown, __: Company, index: number) =>
-        getSerialNumber(filters.page, filters.limit, index),
+        getSerialNumber(page, limit, index),
     },
     {
       title: "Company",
       key: "companyName",
-      sorter: createNameSorter((row: Company) => getCompanyDisplayName(row)),
-      render: (_: unknown, company: Company) => oneLineCell(getCompanyDisplayName(company)),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "companyName"),
+      render: (_: unknown, company: Company) =>
+        oneLineCell(getCompanyDisplayName(company)),
     },
     {
       title: "GST",
@@ -163,15 +77,18 @@ export default function CompaniesList() {
           {
             title: "Created By",
             key: "createdBy",
-            sorter: createNameSorter((row: Company) => getCreatedByStoreLabel(row)),
-            render: (_: unknown, company: Company) => oneLineCell(getCreatedByStoreLabel(company)),
+            sorter: true,
+            sortOrder: getColumnSortOrder(sortState, "createdBy"),
+            render: (_: unknown, company: Company) =>
+              oneLineCell(getCreatedByStoreLabel(company)),
           },
         ]
       : []),
     {
       title: "Created / Updated",
       key: "createdUpdatedAt",
-      sorter: createDateSorter((row: Company) => (row as any).updatedAt || (row as any).createdAt),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),
       render: (_: unknown, company: Company) => {
         const created = formatDateTime((company as any).createdAt);
         const updated = formatDateTime((company as any).updatedAt);
@@ -210,7 +127,8 @@ export default function CompaniesList() {
             onClick={() =>
               confirmDialog({
                 title: "Confirm Deletion",
-                message: "This action cannot be undone. Are you sure you want to delete this company?",
+                message:
+                  "This action cannot be undone. Are you sure you want to delete this company?",
                 confirmText: "Delete",
                 danger: true,
                 onConfirm: () => handleDelete(company._id),
@@ -244,9 +162,9 @@ export default function CompaniesList() {
               allowClear
               prefix={<SearchOutlined />}
               suffix={searchLoading ? <LoadingOutlined spin /> : null}
-              value={filters.search}
+              value={search}
               onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                setFilters((prev) => ({ ...prev, page: 1, search: e.target.value }));
+                setSearch(e.target.value);
               }}
               style={{ width: 360, maxWidth: "100%", borderRadius: 10 }}
             />
@@ -256,11 +174,9 @@ export default function CompaniesList() {
                 showSearch
                 optionFilterProp="label"
                 placeholder="Filter by medical store"
-                value={filters.medicalStoreId || undefined}
+                value={medicalStoreId || undefined}
                 options={medicalStoreOptions}
-                onChange={(value) =>
-                  setFilters((prev) => ({ ...prev, page: 1, medicalStoreId: value || "" }))
-                }
+                onChange={(value) => setMedicalStoreId(value || "")}
                 style={{ width: 220 }}
               />
             )}
@@ -275,15 +191,19 @@ export default function CompaniesList() {
           sortDirections={["ascend", "descend"]}
           pagination={false}
           scroll={{ x: "max-content" }}
+          onChange={(_pagination, _filters, sorter) => {
+            const nextSort = resolveTableSort(sorter);
+            setSort(nextSort.field, nextSort.order);
+          }}
         />
 
         <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
           <Pagination
-            current={filters.page}
-            pageSize={filters.limit}
+            current={page}
+            pageSize={limit}
             total={totalRecords}
-            onChange={(p: number, pageSize: number) =>
-              setFilters((prev) => ({ ...prev, page: p, limit: pageSize }))
+            onChange={(nextPage: number, pageSize: number) =>
+              setPagination(nextPage, pageSize)
             }
             showSizeChanger={{ options: pageSizeSelectOptions }}
           />

@@ -1,7 +1,6 @@
 import { App, Button, Dropdown, Space, Tag, Typography, type MenuProps } from "antd";
 import { LogoutOutlined, MedicineBoxOutlined, UserOutlined } from "@ant-design/icons";
 import { useMe } from "../../hooks/useMe";
-import { useProfile } from "../../hooks/useProfile";
 import { useAuth } from "../../hooks/useAuth";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 
@@ -12,15 +11,12 @@ type NavbarProps = {
 export default function Navbar({ compact = false }: NavbarProps) {
   const { message } = App.useApp();
   const { data: me } = useMe();
-  const { data: profile } = useProfile();
   const { logout } = useAuth();
   const confirmDialog = useConfirmDialog();
-  const role = String(me?.role || profile?.role || "USER").toUpperCase();
+  const role = String(me?.role || "USER").toUpperCase();
   const isAdmin = role === "ADMIN";
   const medicalStoreName =
-    profile?.medicalName ||
     me?.medicalName ||
-    (typeof profile?.medicalStoreId === "object" ? profile?.medicalStoreId?.name : "") ||
     (typeof me?.medicalStoreId === "object" ? me?.medicalStoreId?.name : "") ||
     "Medical Store";
   const headerTitle = isAdmin ? "Medicine Billing Management" : medicalStoreName;
@@ -88,12 +84,12 @@ export default function Navbar({ compact = false }: NavbarProps) {
 
       <Space size={compact ? 8 : 12}>
         <div style={{ lineHeight: 1.1, minWidth: 0 }}>
-          <Typography.Text
-            strong
-            style={{ display: "block", textAlign: "right", color: "#0F172A" }}
-          >
-            {me?.name || profile?.name || "User"}
-          </Typography.Text>
+            <Typography.Text
+              strong
+              style={{ display: "block", textAlign: "right", color: "#0F172A" }}
+            >
+              {me?.name || "User"}
+            </Typography.Text>
           <div>
             <Tag color="green" style={{ marginTop: 4, borderRadius: 999 }}>
               {me?.role || "USER"}

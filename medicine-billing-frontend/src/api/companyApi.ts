@@ -1,48 +1,49 @@
 import { api } from "./axios";
-import { dataOf } from "./http";
+import { buildPagedQueryParams, buildQueryParams, parseStatePagination } from "./pagination";
 import { COMPANIES_API } from "../constants";
-import type { Company } from "../types/company";
+import type { GetCompaniesParams } from "../types/api";
 
-export interface GetCompaniesParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
+type GetAllCompaniesParams = Omit<GetCompaniesParams, "page" | "limit" | "search" | "sortBy" | "sortOrder">;
 
-export interface GetCompaniesResponse {
-  companies: Company[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+const toCompaniesResponse = (raw: any) => {
+  const companies = raw?.companies || raw?.company_data || [];
+  return {
+    ...raw,
+    companies,
+    pagination: raw?.pagination || parseStatePagination(raw),
   };
-}
+};
 
-export const getCompaniesApi = (params: GetCompaniesParams): Promise<GetCompaniesResponse> =>
-  dataOf(
-    api.get(COMPANIES_API.ROOT, {
-      params,
-      headers: {
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    })
-  );
+export const getCompaniesApi = async (params: GetCompaniesParams) => {
+  const { data } = await api.get(COMPANIES_API.ROOT, {
+    params: buildPagedQueryParams(params),
+  });
+  return toCompaniesResponse(data);
+};
 
-export const getCompanyByIdApi = (id: string): Promise<{ company: Company } | Company> =>
-  dataOf(api.get(COMPANIES_API.BY_ID(id)));
+export const getAllCompaniesApi = async (params?: GetAllCompaniesParams) => {
+  const { data } = await api.get(COMPANIES_API.ROOT, {
+    params: buildQueryParams(params),
+  });
+  return toCompaniesResponse(data);
+};
 
-export const createCompanyApi = (formData: FormData) =>
-  dataOf(api.post(COMPANIES_API.ROOT, formData));
+export const getCompanyByIdApi = async (id: string) => {
+  const { data } = await api.get(COMPANIES_API.BY_ID(id));
+  return data;
+};
 
-export const updateCompanyApi = ({
-  id,
-  formData,
-}: {
-  id: string;
-  formData: FormData;
-}) => dataOf(api.put(COMPANIES_API.BY_ID(id), formData));
+export const createCompanyApi = async (payload: FormData) => {
+  const { data } = await api.post(COMPANIES_API.ROOT, payload);
+  return data;
+};
 
-export const deleteCompanyApi = (id: string) =>
-  dataOf(api.delete(COMPANIES_API.BY_ID(id)));
+export const updateCompanyApi = async (id: string, payload: FormData) => {
+  const { data } = await api.put(COMPANIES_API.BY_ID(id), payload);
+  return data;
+};
+
+export const deleteCompanyApi = async (id: string) => {
+  const { data } = await api.delete(COMPANIES_API.BY_ID(id));
+  return data;
+};

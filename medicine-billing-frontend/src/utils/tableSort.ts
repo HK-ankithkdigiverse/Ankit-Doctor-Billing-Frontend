@@ -7,6 +7,12 @@ const toSafeNumber = (value: unknown) => {
 
 type SortDateValue = string | Date | null | undefined;
 
+export type TableSortOrder = "ascend" | "descend" | null;
+export type TableSortState = {
+  field: string;
+  order: TableSortOrder;
+};
+
 const toSafeTime = (value?: SortDateValue) => {
   if (!value) return 0;
   const time = (value instanceof Date ? value : new Date(value)).getTime();
@@ -28,3 +34,43 @@ export const createNameSorter = <TRow>(getValue: (row: TRow) => unknown) =>
 export const createDateSorter = <TRow>(getValue: (row: TRow) => SortDateValue) =>
   (left: TRow, right: TRow) => sortDateTime(getValue(left), getValue(right));
 
+export const getColumnSortOrder = (
+  sortState: TableSortState,
+  field: string
+): TableSortOrder => (sortState.field === field ? sortState.order : null);
+
+export const resolveTableSort = (sorter: unknown): TableSortState => {
+  const resolved = Array.isArray(sorter) ? sorter[0] : sorter;
+
+  if (!resolved || typeof resolved !== "object") {
+    return { field: "", order: null };
+  }
+
+  const value = resolved as {
+    field?: string;
+    columnKey?: string;
+    order?: TableSortOrder;
+  };
+
+  return {
+    field: value.field || value.columnKey || "",
+    order:
+      value.order === "ascend" || value.order === "descend"
+        ? value.order
+        : null,
+  };
+};
+
+export const applyTableSort = <TRow>(
+  rows: TRow[],
+  sortState: TableSortState,
+  comparators: Record<string, (left: TRow, right: TRow) => number>
+) => {
+  if (!sortState.field || !sortState.order) return rows;
+
+  const comparator = comparators[sortState.field];
+  if (!comparator) return rows;
+
+  const sorted = [...rows].sort(comparator);
+  return sortState.order === "descend" ? sorted.reverse() : sorted;
+};

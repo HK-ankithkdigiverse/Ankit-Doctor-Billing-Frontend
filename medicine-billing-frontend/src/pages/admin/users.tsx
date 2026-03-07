@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { App, Button, Card, Input, Pagination, Space, Table, Typography } from "antd";
 import {
@@ -11,43 +11,45 @@ import {
   StopOutlined,
 } from "@ant-design/icons";
 import { useUsers, useUpdateUser, useDeleteUser } from "../../hooks/useUsers";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
 import { ROUTES } from "../../constants";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useViewState } from "../../hooks/useViewState";
 import type { User } from "../../types";
 import { useMe } from "../../hooks/useMe";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
-import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../../utils/medicalStore";
-import { buildPageSizeSelectOptions } from "../../utils/pagination";
-import { createDateSorter, createNameSorter } from "../../utils/tableSort";
-import { getSerialNumber } from "../../utils/tablePagination";
+import { getUserMedicalStoreId } from "../../utils/medicalStore";
+import { buildPageSizeSelectOptions, getSerialNumber } from "../../utils/pagination";
+import {
+  applyTableSort,
+  createDateSorter,
+  createNameSorter,
+  getColumnSortOrder,
+  resolveTableSort,
+} from "../../utils/tableSort";
 
 export default function Users() {
   const { message } = App.useApp();
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"active" | "inactive">("active");
+  const {
+    view: { page, limit, search, userStatus, sortField, sortOrder },
+    setPagination,
+    setSearch,
+    setUserStatus,
+    setSort,
+  } = useViewState("users");
   const debouncedSearch = useDebouncedValue(search, 500);
   const navigate = useNavigate();
   const { data: me } = useMe();
   const confirmDialog = useConfirmDialog();
-  const { data: medicalStoresData } = useMedicalStores(1, 1000, "", { enabled: true });
 
-  const { data, isLoading, isFetching } = useUsers(page, limit, debouncedSearch, statusFilter);
+  const { data, isLoading, isFetching } = useUsers(page, limit, debouncedSearch, userStatus);
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
-  const medicalStoreNameById = useMemo(
-    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
-    [medicalStoresData?.medicalStores]
-  );
+  const sortState = { field: sortField, order: sortOrder };
 
-  if (isLoading) return <p>Loading users...</p>;
-  if (!data) return <p>No access</p>;
-
-  const { users: usersRaw, pagination } = data;
+  const usersRaw = data?.users ?? [];
+  const pagination = data?.pagination;
   const getMedicalStoreId = (user: User) => getUserMedicalStoreId(user);
   const getMedicalStoreName = (user: User) => {
     const populatedStoreName =
@@ -61,10 +63,10 @@ export default function Users() {
 
     const storeId = getMedicalStoreId(user);
     if (!storeId) return "-";
-    return medicalStoreNameById.get(storeId) || "-";
+    return storeId;
   };
   const matchesStatus = (user: User) =>
-    statusFilter === "active" ? user.isActive !== false : user.isActive === false;
+    userStatus === "active" ? user.isActive !== false : user.isActive === false;
   const query = debouncedSearch.trim().toLowerCase();
   const matchesSearch = (user: User) => {
     if (!query) return true;
@@ -78,17 +80,23 @@ export default function Users() {
     });
   };
 
-  // Fallback: if backend doesn't filter by isActive, filter on frontend.
-  const backendAlreadyFiltered =
-    usersRaw.every(matchesStatus);
+  const backendAlreadyFiltered = usersRaw.every(matchesStatus);
   const users = backendAlreadyFiltered ? usersRaw : usersRaw.filter(matchesStatus);
   const filteredUsers = users.filter(matchesSearch);
+  const sortedUsers = applyTableSort(filteredUsers, sortState, {
+    name: createNameSorter((row: User) => row.name),
+    medicalStore: createNameSorter((row: User) => getMedicalStoreName(row)),
+    createdUpdatedAt: createDateSorter((row: User) => row.updatedAt || row.createdAt),
+  });
   const totalRecords = query
       ? filteredUsers.length
       : backendAlreadyFiltered
         ? pagination?.total || 0
         : users.length;
   const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
+
+  if (isLoading) return <p>Loading users...</p>;
+  if (!data) return <p>No access</p>;
   const handleToggleStatus = async (user: User) => {
     const nextIsActive = !(user.isActive ?? true);
     try {
@@ -113,7 +121,8 @@ export default function Users() {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      sorter: createNameSorter((row: User) => row.name),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "name"),
       render: (value: string, user: User) => (
         <span style={{ color: (user.isActive ?? true) ? undefined : "#94a3b8" }}>
           {value}
@@ -128,13 +137,15 @@ export default function Users() {
     {
       title: "Medical Store",
       key: "medicalStore",
-      sorter: createNameSorter((row: User) => getMedicalStoreName(row)),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "medicalStore"),
       render: (_: any, user: User) => getMedicalStoreName(user),
     },
     {
       title: "Date (Created Date, Updated Date)",
       key: "createdUpdatedAt",
-      sorter: createDateSorter((row: User) => row.updatedAt || row.createdAt),
+      sorter: true,
+      sortOrder: getColumnSortOrder(sortState, "createdUpdatedAt"),
       render: (_: any, user: User) => (
         <span style={{ whiteSpace: "normal", lineHeight: 1.2 }}>
           {formatDateTime(user.createdAt)}
@@ -232,7 +243,6 @@ export default function Users() {
               suffix={searchLoading ? <LoadingOutlined spin /> : null}
               value={search}
               onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                setPage(1);
                 setSearch(e.target.value);
               }}
               style={{ width: 360, maxWidth: "100%" }}
@@ -240,22 +250,20 @@ export default function Users() {
           </Space>
           <Space wrap align="center">
             <Button
-              type={statusFilter === "active" ? "primary" : "default"}
+              type={userStatus === "active" ? "primary" : "default"}
               danger={false}
               onClick={() => {
-                setPage(1);
-                setStatusFilter("active");
+                setUserStatus("active");
               }}
-              style={statusFilter === "active" ? { background: "#16a34a", borderColor: "#16a34a" } : undefined}
+              style={userStatus === "active" ? { background: "#16a34a", borderColor: "#16a34a" } : undefined}
             >
               Active
             </Button>
             <Button
-              type={statusFilter === "inactive" ? "primary" : "default"}
-              danger={statusFilter === "inactive"}
+              type={userStatus === "inactive" ? "primary" : "default"}
+              danger={userStatus === "inactive"}
               onClick={() => {
-                setPage(1);
-                setStatusFilter("inactive");
+                setUserStatus("inactive");
               }}
             >
               Inactive
@@ -268,11 +276,15 @@ export default function Users() {
         rowKey="_id"
         loading={searchLoading}
         columns={columns}
-        dataSource={filteredUsers}
+        dataSource={sortedUsers}
         sortDirections={["ascend", "descend"]}
         rowClassName={(record: User) => ((record.isActive ?? true) ? "" : "inactive-user-row")}
         pagination={false}
         scroll={{ x: "max-content" }}
+        onChange={(_pagination, _filters, sorter) => {
+          const nextSort = resolveTableSort(sorter);
+          setSort(nextSort.field, nextSort.order);
+        }}
       />
 
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
@@ -280,9 +292,8 @@ export default function Users() {
           current={page}
           pageSize={limit}
           total={totalRecords}
-          onChange={(p: number, pageSize: number) => {
-            setPage(p);
-            setLimit(pageSize);
+          onChange={(nextPage: number, pageSize: number) => {
+            setPagination(nextPage, pageSize);
           }}
           showSizeChanger={{ options: pageSizeSelectOptions }}
         />

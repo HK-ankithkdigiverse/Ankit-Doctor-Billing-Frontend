@@ -1,44 +1,51 @@
-import Dashboard from "../pages/dashboard";
-
-// Products
-import ProductsList from "../pages/Product/productsList";
-import CreateProduct from "../pages/Product/createProduct";
-import EditProduct from "../pages/Product/editProduct";
-
-// Companies
-import CompaniesList from "../pages/companies/companiesList";
-import CreateCompany from "../pages/companies/createCompany";
-import CompanyDetails from "../pages/companies/companyDetails";
-import EditCompany from "../pages/companies/editCompany";
-import CategoriesList from "../pages/categories/categoriesList";
-import CreateCategory from "../pages/categories/createCategory";
-import EditCategory from "../pages/categories/editCategory";
-import Profile from "../pages/Profile/profile";
-import EditProfile from "../pages/Profile/editProfile";
-
-// Admin
-import Users from "../pages/admin/users";
-import CreateUser from "../pages/admin/createUser";
-import EditUser from "../pages/admin/editUser";
-import MedicalStoresList from "../pages/medicalStores/medicalStoresList";
-import CreateMedicalStore from "../pages/medicalStores/createMedicalStore";
-import EditMedicalStore from "../pages/medicalStores/editMedicalStore";
-
-// Auth
-import Login from "../pages/auth/login";
-import ForgotPassword from "../pages/auth/forgotPassword";
-import ResetPassword from "../pages/auth/resetPassword";
-import VerifyOtp from "../pages/auth/verifyOtp";
+import { lazy } from "react";
 
 import { ROUTES } from "../constants";
 import ProtectedRoute from "../components/protected/protectedRoute";
 import PublicOnlyRoute from "../components/protected/publicOnlyRoute";
 import Layout from "../components/layout/layout";
-import BillDetails from "../pages/billing/billDetails";
-import CreateBill from "../pages/billing/createBill";
-import BillList from "../pages/billing/billList";
-import EditBill from "../pages/billing/editBill";
-import NotFound from "../pages/notFound";
+
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+
+// Products
+const ProductsList = lazy(() => import("../pages/Product/productsList"));
+const CreateProduct = lazy(() => import("../pages/Product/createProduct"));
+const EditProduct = lazy(() => import("../pages/Product/editProduct"));
+
+// Companies
+const CompaniesList = lazy(() => import("../pages/companies/companiesList"));
+const CreateCompany = lazy(() => import("../pages/companies/createCompany"));
+const CompanyDetails = lazy(() => import("../pages/companies/companyDetails"));
+const EditCompany = lazy(() => import("../pages/companies/editCompany"));
+const CategoriesList = lazy(() => import("../pages/categories/categoriesList"));
+const CreateCategory = lazy(() => import("../pages/categories/createCategory"));
+const EditCategory = lazy(() => import("../pages/categories/editCategory"));
+const Profile = lazy(() => import("../pages/Profile/profile"));
+const EditProfile = lazy(() => import("../pages/Profile/editProfile"));
+const ChangePassword = lazy(() => import("../pages/Profile/changePassword"));
+
+// Admin
+const Users = lazy(() => import("../pages/admin/users"));
+const CreateUser = lazy(() => import("../pages/admin/createUser"));
+const EditUser = lazy(() => import("../pages/admin/editUser"));
+const MedicalStoresList = lazy(() => import("../pages/medicalStores/medicalStoresList"));
+const CreateMedicalStore = lazy(() => import("../pages/medicalStores/createMedicalStore"));
+const EditMedicalStore = lazy(() => import("../pages/medicalStores/editMedicalStore"));
+
+// Auth
+const Login = lazy(() => import("../pages/auth/login"));
+const ForgotPassword = lazy(() => import("../pages/auth/forgotPassword"));
+const ResetPassword = lazy(() => import("../pages/auth/resetPassword"));
+const VerifyOtp = lazy(() => import("../pages/auth/verifyOtp"));
+
+// Billing
+const BillDetails = lazy(() => import("../pages/billing/billDetails"));
+const CreateBill = lazy(() => import("../pages/billing/createBill"));
+const BillList = lazy(() => import("../pages/billing/billList"));
+const EditBill = lazy(() => import("../pages/billing/editBill"));
+
+const NotFound = lazy(() => import("../pages/notFound"));
+
 export const PageRoutes = [
   /* ============ PUBLIC ============ */
   {
@@ -133,6 +140,10 @@ export const PageRoutes = [
           {
             path: ROUTES.EDITPROFILE,
             element: <EditProfile />,
+          },
+          {
+            path: ROUTES.CHANGE_PASSWORD,
+            element: <ChangePassword />,
           },
 
           /* BILLING */

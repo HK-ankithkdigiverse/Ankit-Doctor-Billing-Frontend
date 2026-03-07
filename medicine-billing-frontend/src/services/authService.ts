@@ -8,3 +8,4 @@ export const fetchCurrentUser = async (): Promise<User | null> => {
     return null;
   }
 };
+

@@ -1,39 +1,47 @@
 import { api } from "./axios";
-import { dataOf } from "./http";
+import { buildPagedQueryParams, buildQueryParams, parseStatePagination } from "./pagination";
 import { CATEGORIES_API } from "../constants";
-import type {
-  Category,
-  CategoryDropdownItem,
-  CreateCategoryPayload,
-} from "../types/category";
+import type { CategoryDropdownItem, CreateCategoryPayload } from "../types/category";
+import type { GetCategoriesParams, GetCategoriesResponse } from "../types/api";
 
-export interface GetCategoriesParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
+export type { GetCategoriesParams, GetCategoriesResponse } from "../types/api";
 
-export interface GetCategoriesResponse {
-  categories: Category[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
+type GetAllCategoriesParams = Omit<
+  GetCategoriesParams,
+  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+>;
+
+const toCategoriesResponse = (raw: any): GetCategoriesResponse => {
+  const categories = raw?.categories || raw?.category_data || [];
+  return {
+    categories,
+    pagination: raw?.pagination || parseStatePagination(raw),
   };
-}
+};
 
-export const getCategoriesApi = async (
-  params: GetCategoriesParams
-): Promise<GetCategoriesResponse> => dataOf(api.get(CATEGORIES_API.ROOT, { params }));
+export const getCategoriesApi = async (params: GetCategoriesParams) => {
+  const { data } = await api.get(CATEGORIES_API.ROOT, {
+    params: buildPagedQueryParams(params),
+  });
+  return toCategoriesResponse(data);
+};
 
-export const getCategoryByIdApi = (id: string): Promise<Category> =>
-  dataOf(api.get(CATEGORIES_API.BY_ID(id)));
+export const getAllCategoriesApi = async (params?: GetAllCategoriesParams) => {
+  const { data } = await api.get(CATEGORIES_API.ROOT, {
+    params: buildQueryParams(params),
+  });
+  return toCategoriesResponse(data);
+};
 
-export const createCategoryApi = async (
-  payload: CreateCategoryPayload
-): Promise<{ message: string; category: Category }> =>
-  dataOf(api.post(CATEGORIES_API.ROOT, payload));
+export const getCategoryByIdApi = async (id: string) => {
+  const { data } = await api.get(CATEGORIES_API.BY_ID(id));
+  return data;
+};
+
+export const createCategoryApi = async (payload: CreateCategoryPayload) => {
+  const { data } = await api.post(CATEGORIES_API.ROOT, payload);
+  return data;
+};
 
 export const updateCategoryApi = async ({
   id,
@@ -41,13 +49,17 @@ export const updateCategoryApi = async ({
 }: {
   id: string;
   payload: CreateCategoryPayload;
-}): Promise<{ message: string; category: Category }> =>
-  dataOf(api.put(CATEGORIES_API.BY_ID(id), payload));
+}) => {
+  const { data } = await api.put(CATEGORIES_API.BY_ID(id), payload);
+  return data;
+};
 
-export const deleteCategoryApi = (id: string): Promise<{ message: string }> =>
-  dataOf(api.delete(CATEGORIES_API.BY_ID(id)));
+export const deleteCategoryApi = async (id: string) => {
+  const { data } = await api.delete(CATEGORIES_API.BY_ID(id));
+  return data;
+};
 
 export const getCategoryDropdownApi = async (): Promise<CategoryDropdownItem[]> => {
-  const data = await dataOf<any>(api.get(CATEGORIES_API.DROPDOWN));
-  return data?.categories ?? data ?? [];
+  const { data } = await api.get(CATEGORIES_API.DROPDOWN);
+  return data?.categories || data || [];
 };

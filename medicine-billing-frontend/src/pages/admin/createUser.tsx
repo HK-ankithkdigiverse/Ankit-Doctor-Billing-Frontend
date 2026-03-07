@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { App, Card, Col, Form, Input, Row, Select, Typography } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCreateUser } from "../../hooks/useUsers";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { useAllMedicalStores } from "../../hooks/useMedicalStores";
 import { emailRule, passwordMinRule, requiredRule } from "../../utils/formRules";
-import type { CreateUserPayload } from "../../api/userApi";
 import { uploadSingleFileApi } from "../../api/uploadApi";
+import type { CreateUserPayload } from "../../api/userApi";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
 import FormActionButtons from "../../components/forms/FormActionButtons";
 import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString } from "../../utils/userForm";
@@ -40,7 +40,7 @@ export default function CreateUser() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const { mutateAsync: createUser, isPending } = useCreateUser();
-  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useMedicalStores(1, 1000, "");
+  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useAllMedicalStores();
   const [form] = Form.useForm<CreateUserFormValues>();
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
 

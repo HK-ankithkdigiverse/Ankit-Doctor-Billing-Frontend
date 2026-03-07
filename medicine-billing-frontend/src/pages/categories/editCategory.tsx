@@ -5,7 +5,7 @@ import axios from "axios";
 import { ROUTES } from "../../constants";
 import { useCategory, useUpdateCategory } from "../../hooks/useCategories";
 import { useMe } from "../../hooks/useMe";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { useAllMedicalStores } from "../../hooks/useMedicalStores";
 import CategoryFormFields from "../../components/forms/CategoryFormFields";
 import FormActionButtons from "../../components/forms/FormActionButtons";
 import { requiredRule } from "../../utils/formRules";
@@ -34,12 +34,9 @@ export default function EditCategory() {
   const [form] = Form.useForm<CategoryFormValues>();
   const { data: me } = useMe();
   const isAdmin = String(me?.role || "").toUpperCase() === "ADMIN";
-  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useMedicalStores(
-    1,
-    1000,
-    "",
-    { enabled: isAdmin }
-  );
+  const { data: medicalStoresData, isLoading: isLoadingMedicalStores } = useAllMedicalStores({
+    enabled: isAdmin,
+  });
 
   const medicalStoreOptions = useMemo(
     () =>

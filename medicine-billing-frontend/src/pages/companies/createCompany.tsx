@@ -4,7 +4,7 @@ import { Form, App } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCreateCompany } from "../../hooks/useCompanies";
 import { useMe } from "../../hooks/useMe";
-import { useMedicalStores } from "../../hooks/useMedicalStores";
+import { useAllMedicalStores } from "../../hooks/useMedicalStores";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -29,7 +29,7 @@ export default function CreateCompany() {
   const [logo, setLogo] = useState<File | null>(null);
   const { data: me } = useMe();
   const isAdmin = String(me?.role || "").toUpperCase() === ROLE.ADMIN;
-  const { data: medicalStoresData, isLoading: isLoadingStores } = useMedicalStores(1, 1000, "", {
+  const { data: medicalStoresData, isLoading: isLoadingStores } = useAllMedicalStores({
     enabled: isAdmin,
   });
   const storeOptions = useMemo<{ label: string; value: string }[]>(
