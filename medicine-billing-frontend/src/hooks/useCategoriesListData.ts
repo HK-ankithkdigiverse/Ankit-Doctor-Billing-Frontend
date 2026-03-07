@@ -4,13 +4,14 @@ import { useCategories, useDeleteCategory } from "./useCategories";
 import { useMe } from "./useMe";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { useViewState } from "./useViewState";
-import { getCategoryMedicalStoreId } from "../utils/medicalStore";
+import { buildMedicalStoreNameById, getCategoryMedicalStoreId } from "../utils/medicalStore";
 import { buildPageSizeSelectOptions } from "../utils/pagination";
 import {
   applyTableSort,
   createDateSorter,
   createNameSorter,
 } from "../utils/tableSort";
+import { useAllMedicalStores } from "./useMedicalStores";
 
 export const useCategoriesListData = () => {
   const {
@@ -22,6 +23,11 @@ export const useCategoriesListData = () => {
   const debouncedSearch = useDebouncedValue(search, 500);
   const { data: me } = useMe();
   const isAdmin = String(me?.role || "").toUpperCase() === "ADMIN";
+  const { data: medicalStoresData } = useAllMedicalStores({ enabled: isAdmin });
+  const medicalStoreNameById = useMemo(
+    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
+    [medicalStoresData?.medicalStores]
+  );
 
   const { data, isLoading, isFetching, error } = useCategories(page, limit, debouncedSearch);
   const searchLoading = search !== debouncedSearch || isFetching;
@@ -43,7 +49,7 @@ export const useCategoriesListData = () => {
     if (populatedStoreName) return populatedStoreName;
     const storeId = getMedicalStoreId(category);
     if (!storeId) return "-";
-    return storeId;
+    return medicalStoreNameById.get(storeId) || "-";
   };
 
   const sortedCategories = useMemo(
@@ -53,7 +59,7 @@ export const useCategoriesListData = () => {
         medicalStore: createNameSorter((row: Category) => getMedicalStoreName(row)),
         createdUpdatedAt: createDateSorter((row: Category) => row.updatedAt || row.createdAt),
       }),
-    [categories, sortField, sortOrder]
+    [categories, medicalStoreNameById, sortField, sortOrder]
   );
 
   return {

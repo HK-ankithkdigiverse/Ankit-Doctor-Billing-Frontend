@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import type { Bill, DateFilterType } from "../types/bill";
 import {
   type BillingDateRange,
@@ -36,9 +36,8 @@ export const useBillsListData = () => {
   const debouncedSearch = useDebouncedValue(search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
-  const [shouldLoadMedicalStores, setShouldLoadMedicalStores] = useState(false);
   const hasAdminMedicalStoreFilter = isAdmin && !!medicalStoreId;
-  const canLoadMedicalStores = isAdmin && (hasAdminMedicalStoreFilter || shouldLoadMedicalStores);
+  const canLoadMedicalStores = isAdmin;
   const hasDateFilter = dateFilter !== "all";
   const hasLocalFilter = hasAdminMedicalStoreFilter || hasDateFilter;
   const queryPage = hasLocalFilter ? 1 : page;
@@ -62,7 +61,7 @@ export const useBillsListData = () => {
 
     const storeId = getBillMedicalStoreId(bill);
     if (!storeId) return "-";
-    return medicalStoreNameById.get(storeId) || storeId;
+    return medicalStoreNameById.get(storeId) || "-";
   };
 
   const rowsRaw: Bill[] = data?.data ?? [];
@@ -96,7 +95,7 @@ export const useBillsListData = () => {
     [rowsRaw, medicalStoresData?.medicalStores]
   );
   const requestMedicalStoreOptions = useCallback(() => {
-    setShouldLoadMedicalStores(true);
+    return;
   }, []);
 
   return {

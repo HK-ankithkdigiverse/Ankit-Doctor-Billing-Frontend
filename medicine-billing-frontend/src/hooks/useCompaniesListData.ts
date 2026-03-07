@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import type { Company } from "../types/company";
 import { ROLE } from "../constants";
 import { useCompanies, useDeleteCompany } from "./useCompanies";
@@ -30,9 +30,8 @@ export const useCompaniesListData = () => {
   const debouncedSearch = useDebouncedValue(search, 500);
   const { data: me } = useMe();
   const isAdmin = me?.role === ROLE.ADMIN;
-  const [shouldLoadMedicalStores, setShouldLoadMedicalStores] = useState(false);
   const hasAdminStoreFilter = isAdmin && !!medicalStoreId;
-  const canLoadMedicalStores = isAdmin && (hasAdminStoreFilter || shouldLoadMedicalStores);
+  const canLoadMedicalStores = isAdmin;
   const queryPage = hasAdminStoreFilter ? 1 : page;
   const queryLimit = hasAdminStoreFilter ? 1000 : limit;
 
@@ -49,9 +48,7 @@ export const useCompaniesListData = () => {
 
   const medicalStoreNameById = useMemo(
     () =>
-      buildMedicalStoreNameById(medicalStoresData?.medicalStores, {
-        fallbackToId: true,
-      }),
+      buildMedicalStoreNameById(medicalStoresData?.medicalStores),
     [medicalStoresData?.medicalStores]
   );
 
@@ -64,7 +61,7 @@ export const useCompaniesListData = () => {
   const getCreatedByStoreLabel = (company: Company) => {
     const storeId = getCompanyMedicalStoreId(company);
     if (!storeId) return "-";
-    return medicalStoreNameById.get(storeId) || storeId;
+    return medicalStoreNameById.get(storeId) || "-";
   };
 
   const sortedCompanies = useMemo(
@@ -98,7 +95,7 @@ export const useCompaniesListData = () => {
   );
 
   const requestMedicalStoreOptions = useCallback(() => {
-    setShouldLoadMedicalStores(true);
+    return;
   }, []);
 
   return {

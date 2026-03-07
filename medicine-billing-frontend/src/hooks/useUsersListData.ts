@@ -3,7 +3,7 @@ import { useUsers, useUpdateUser, useDeleteUser } from "./useUsers";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { useViewState } from "./useViewState";
 import { useMe } from "./useMe";
-import { getUserMedicalStoreId } from "../utils/medicalStore";
+import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../utils/medicalStore";
 import { buildPageSizeSelectOptions } from "../utils/pagination";
 import {
   applyTableSort,
@@ -26,6 +26,10 @@ export const useUsersListData = () => {
   const { data: me } = useMe();
 
   const { data: medicalStoresData } = useAllMedicalStores();
+  const medicalStoreNameById = useMemo(
+    () => buildMedicalStoreNameById(medicalStoresData?.medicalStores),
+    [medicalStoresData?.medicalStores]
+  );
   const normalizedSortOrder =
     sortOrder === "ascend" ? "asc" : sortOrder === "descend" ? "desc" : undefined;
   const normalizedSortBy = normalizedSortOrder ? sortField : undefined;
@@ -57,7 +61,7 @@ export const useUsersListData = () => {
 
     const storeId = getMedicalStoreId(user);
     if (!storeId) return "-";
-    return storeId;
+    return medicalStoreNameById.get(storeId) || "-";
   };
 
   const medicalStoreGstMap = useMemo(() => {
