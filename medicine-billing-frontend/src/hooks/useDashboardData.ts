@@ -1,42 +1,23 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
-import {
-  getAllBillsApi,
-  getAllCategoriesApi,
-  getAllCompaniesApi,
-  getDashboardSummaryApi,
-  getAllMedicalStoresApi,
-  getAllProductsApi,
-} from "../api/resourceApi";
-import { getAllUsersApi } from "../api/userApi";
+import { getAllBillsApi, getDashboardApi } from "../api/resourceApi";
 import { QUERY_KEYS, ROLE, ROUTES } from "../constants";
-import { toEntityId } from "../utils/id";
-import { buildMedicalStoreNameById, getUserMedicalStoreId } from "../utils/medicalStore";
 import { DATE_FILTER_OPTIONS, filterBills } from "../utils/billing";
-import {
-  buildCompanyMedicalStoreIdByCompanyId,
-  buildUserMedicalStoreIdByUserId,
-  createStoreIdResolver,
-  enrichMedicalStoreNameByIdFromUsers,
-  filterByMedicalStore,
-  getCategoryMedicalStoreIdForDashboard,
-  getCompanyMedicalStoreIdForDashboard,
-  getProductMedicalStoreIdForDashboard,
-  resolveCurrentUserMedicalStoreName,
-  toMedicalStoreOptionsFromNameMap,
-} from "../utils/dashboard";
+import { toEntityId } from "../utils/id";
+import { paginateByPage } from "../utils/pagination";
 import { useMe } from "./useMe";
 import { useViewState } from "./useViewState";
 
 export const useDashboardData = () => {
   const location = useLocation();
   const {
-    view: { medicalStoreId: medicalStoreFilter, dateFilter },
+    view: { medicalStoreId: medicalStoreFilter, dateFilter, page, limit },
     customRange,
     setMedicalStoreId,
     setDateFilter,
     setCustomRange,
+    setPagination,
   } = useViewState("dashboard");
   const { data: user, isLoading } = useMe();
 
@@ -45,128 +26,43 @@ export const useDashboardData = () => {
     location.pathname === ROUTES.DASHBOARD ||
     location.pathname === `${ROUTES.DASHBOARD}/`;
   const canLoadDashboardData = isDashboardRoute && !isLoading && !!user;
-  const canLoadAdminOnlyData = canLoadDashboardData && isAdmin;
+
   const meMedicalStoreId =
     toEntityId(user?.medicalStoreId) ||
     (typeof user?.medicineId === "string" ? user.medicineId : "");
   const effectiveMedicalStoreId = isAdmin ? medicalStoreFilter : meMedicalStoreId;
-  const selectedMedicalStore = effectiveMedicalStoreId || "";
 
   const {
-    data: dashboardSummaryData,
-    refetch: refetchDashboardSummary,
-    isFetching: isDashboardSummaryFetching,
+    data: dashboardData,
+    refetch: refetchDashboardTotals,
+    isFetching: isDashboardTotalsFetching,
   } = useQuery({
-    queryKey: [QUERY_KEYS.DASHBOARD_SUMMARY, selectedMedicalStore],
-    queryFn: async () => {
-      try {
-        return await getDashboardSummaryApi({
-          medicalStoreId: selectedMedicalStore || undefined,
-        });
-      } catch {
-        const [bills, products, companies, categories, users, medicalStores] = await Promise.all([
-          getAllBillsApi({
-            medicalStoreId: selectedMedicalStore || undefined,
-          }),
-          getAllProductsApi({
-            medicalStoreId: selectedMedicalStore || undefined,
-          }),
-          getAllCompaniesApi({
-            medicalStoreId: selectedMedicalStore || undefined,
-          }),
-          getAllCategoriesApi({
-            medicalStoreId: selectedMedicalStore || undefined,
-          }),
-          getAllUsersApi(),
-          getAllMedicalStoresApi(),
-        ]);
-
-        return {
-          bills,
-          products,
-          companies,
-          categories,
-          users,
-          medicalStores,
-        };
-      }
-    },
-    enabled: canLoadAdminOnlyData,
+    queryKey: [QUERY_KEYS.DASHBOARD_SUMMARY, "totals"],
+    queryFn: () => getDashboardApi(),
+    enabled: canLoadDashboardData,
   });
 
   const {
     data: billsDataQuery,
-    refetch: refetchBillsQuery,
-    isFetching: isBillsFetchingQuery,
+    refetch: refetchBills,
+    isFetching: isBillsFetching,
   } = useQuery({
-    queryKey: [QUERY_KEYS.BILLS, "dashboard", selectedMedicalStore],
+    queryKey: [
+      QUERY_KEYS.BILLS,
+      "dashboard",
+      isAdmin ? medicalStoreFilter || "all" : "self",
+    ],
     queryFn: () =>
       getAllBillsApi({
-        medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
+        medicalStoreId: isAdmin ? medicalStoreFilter || undefined : undefined,
       }),
-    enabled: canLoadDashboardData && !isAdmin,
+    enabled: canLoadDashboardData,
   });
-
-  const {
-    data: companiesDataQuery,
-    refetch: refetchCompaniesQuery,
-    isFetching: isCompaniesFetchingQuery,
-  } = useQuery({
-    queryKey: [QUERY_KEYS.COMPANIES, "dashboard", selectedMedicalStore],
-    queryFn: () =>
-      getAllCompaniesApi({
-        medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
-      }),
-    enabled: canLoadDashboardData && !isAdmin,
-  });
-
-  const {
-    data: categoriesDataQuery,
-    refetch: refetchCategoriesQuery,
-    isFetching: isCategoriesFetchingQuery,
-  } = useQuery({
-    queryKey: [QUERY_KEYS.CATEGORIES, "dashboard", selectedMedicalStore],
-    queryFn: () =>
-      getAllCategoriesApi({
-        medicalStoreId: isAdmin ? selectedMedicalStore || undefined : undefined,
-      }),
-    enabled: canLoadDashboardData && !isAdmin,
-  });
-
-  const billsData = isAdmin ? dashboardSummaryData?.bills : billsDataQuery;
-  const productsData = isAdmin ? dashboardSummaryData?.products : undefined;
-  const companiesData = isAdmin ? dashboardSummaryData?.companies : companiesDataQuery;
-  const categoriesData = isAdmin ? dashboardSummaryData?.categories : categoriesDataQuery;
-  const usersData = isAdmin ? dashboardSummaryData?.users : undefined;
-  const medicalStoresData = isAdmin ? dashboardSummaryData?.medicalStores : undefined;
 
   const refreshDashboardData = useCallback(() => {
     if (!isDashboardRoute) return;
-
-    if (isAdmin) {
-      void refetchDashboardSummary();
-      return;
-    }
-
-    void Promise.all([
-      refetchCompaniesQuery(),
-      refetchCategoriesQuery(),
-      refetchBillsQuery(),
-    ]);
-  }, [
-    isDashboardRoute,
-    isAdmin,
-    refetchDashboardSummary,
-    refetchCompaniesQuery,
-    refetchCategoriesQuery,
-    refetchBillsQuery,
-  ]);
-
-  const isDashboardFetching =
-    (isAdmin && isDashboardSummaryFetching) ||
-    isCompaniesFetchingQuery ||
-    isCategoriesFetchingQuery ||
-    isBillsFetchingQuery;
+    void Promise.all([refetchDashboardTotals(), refetchBills()]);
+  }, [isDashboardRoute, refetchDashboardTotals, refetchBills]);
 
   useEffect(() => {
     const handleDashboardRefresh = () => refreshDashboardData();
@@ -175,81 +71,29 @@ export const useDashboardData = () => {
       window.removeEventListener("dashboard:refresh", handleDashboardRefresh);
   }, [refreshDashboardData]);
 
-  const usersRaw = usersData?.users ?? [];
-  const currentUserId = toEntityId(user?._id);
-  const userMedicalStoreIdByUserId = buildUserMedicalStoreIdByUserId(
-    usersRaw,
-    currentUserId,
-    meMedicalStoreId
+  const currentUserMedicalStoreName =
+    (typeof user?.medicalStoreId === "object" &&
+      ((user.medicalStoreId as any)?.medicalStoreName ||
+        (user.medicalStoreId as any)?.name)) ||
+    (typeof (user as any)?.medicalStoreName === "string"
+      ? (user as any).medicalStoreName
+      : "") ||
+    "-";
+
+  const billsRaw = billsDataQuery?.data ?? [];
+
+  const filteredBillsForStore = useMemo(
+    () =>
+      filterBills(billsRaw, {
+        isAdmin,
+        medicalStoreId: isAdmin ? effectiveMedicalStoreId || undefined : undefined,
+        dateFilter,
+        customRange,
+      }),
+    [billsRaw, isAdmin, effectiveMedicalStoreId, dateFilter, customRange]
   );
 
-  const resolveStoreIdByUserId = createStoreIdResolver({
-    userMedicalStoreIdByUserId,
-    currentUserId,
-    currentUserMedicalStoreId: meMedicalStoreId,
-  });
-
-  const medicalStoreNameById = enrichMedicalStoreNameByIdFromUsers(
-    buildMedicalStoreNameById(medicalStoresData?.medicalStores),
-    usersRaw
-  );
-
-  const medicalStoreOptions = toMedicalStoreOptionsFromNameMap(medicalStoreNameById);
-
-  const currentUserMedicalStoreName = resolveCurrentUserMedicalStoreName({
-    user: user || {},
-    currentUserMedicalStoreId: meMedicalStoreId,
-    medicalStoreNameById,
-  });
-
-  const companiesRaw = companiesData?.companies ?? [];
-  const productsRaw = productsData?.products ?? [];
-  const categoriesRaw = categoriesData?.categories ?? [];
-  const billsRaw = billsData?.data ?? [];
-
-  const companyMedicalStoreIdByCompanyId = buildCompanyMedicalStoreIdByCompanyId(
-    companiesRaw,
-    resolveStoreIdByUserId
-  );
-
-  const filteredCompanies = filterByMedicalStore(
-    companiesRaw,
-    effectiveMedicalStoreId,
-    (company: any) =>
-      getCompanyMedicalStoreIdForDashboard(company, resolveStoreIdByUserId)
-  );
-
-  const filteredProducts = filterByMedicalStore(
-    productsRaw,
-    effectiveMedicalStoreId,
-    (product: any) =>
-      getProductMedicalStoreIdForDashboard(
-        product,
-        resolveStoreIdByUserId,
-        companyMedicalStoreIdByCompanyId
-      )
-  );
-
-  const filteredCategories = filterByMedicalStore(
-    categoriesRaw,
-    effectiveMedicalStoreId,
-    (category: any) =>
-      getCategoryMedicalStoreIdForDashboard(category, resolveStoreIdByUserId)
-  );
-
-  const filteredUsers = filterByMedicalStore(
-    usersRaw,
-    effectiveMedicalStoreId,
-    (targetUser: any) => getUserMedicalStoreId(targetUser)
-  );
-
-  const filteredBillsForStore = filterBills(billsRaw, {
-    isAdmin,
-    medicalStoreId: isAdmin ? effectiveMedicalStoreId : undefined,
-    dateFilter,
-    customRange,
-  });
-  const sortedBillsForStore = useMemo(
+  const sortedBillsAll = useMemo(
     () =>
       [...filteredBillsForStore].sort(
         (a: any, b: any) =>
@@ -259,12 +103,13 @@ export const useDashboardData = () => {
     [filteredBillsForStore]
   );
 
-  const medicalStores = medicalStoresData?.medicalStores ?? [];
-  const scopedMedicalStores = effectiveMedicalStoreId
-    ? medicalStores.filter(
-        (store: any) => String(store?._id || "") === String(effectiveMedicalStoreId)
-      )
-    : medicalStores;
+  const sortedBillsForStore = useMemo(
+    () => paginateByPage(sortedBillsAll, page, limit),
+    [sortedBillsAll, page, limit]
+  );
+
+  const selectedBillsTotal = sortedBillsAll.length;
+  const isDashboardFetching = isDashboardTotalsFetching || isBillsFetching;
 
   return {
     user,
@@ -277,22 +122,27 @@ export const useDashboardData = () => {
     setDateFilter,
     setCustomRange,
     dateFilterOptions: DATE_FILTER_OPTIONS,
+    page,
+    limit,
+    setDashboardPagination: setPagination,
     effectiveMedicalStoreId,
     currentUserMedicalStoreName,
-    medicalStoreOptions,
-    filteredCompanies,
-    filteredProducts,
-    filteredCategories,
-    filteredUsers,
-    filteredBillsForStore,
-    sortedBillsForStore,
-    scopedMedicalStores,
-    companiesData,
-    productsData,
-    categoriesData,
-    usersData,
-    billsData,
-    medicalStoresData,
+    medicalStoreOptions: [] as Array<{ value: string; label: string }>,
+    filteredCompanies: [] as any[],
+    filteredProducts: [] as any[],
+    filteredCategories: [] as any[],
+    filteredUsers: [] as any[],
+    filteredBillsForStore: sortedBillsAll as any[],
+    sortedBillsForStore: sortedBillsForStore as any[],
+    scopedMedicalStores: [] as any[],
+    companiesData: null as any,
+    productsData: null as any,
+    categoriesData: null as any,
+    usersData: null as any,
+    billsData: { pagination: { total: selectedBillsTotal } } as any,
+    medicalStoresData: null as any,
+    selectedBillsTotal,
+    dashboardTotals: dashboardData?.dashboard,
     isDashboardFetching,
     refreshDashboardData,
   };

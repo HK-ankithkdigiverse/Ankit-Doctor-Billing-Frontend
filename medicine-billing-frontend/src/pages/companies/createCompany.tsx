@@ -5,6 +5,7 @@ import { ROLE, ROUTES } from "../../constants";
 import { useCreateCompany } from "../../hooks/useCompanies";
 import { useMe } from "../../hooks/useMe";
 import { useAllMedicalStores } from "../../hooks/useMedicalStores";
+import { uploadSingleFileApi } from "../../api/uploadApi";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -52,7 +53,10 @@ export default function CreateCompany() {
       if (value === undefined || value === null) return;
       formData.append(key, String(value));
     });
-    if (logo) formData.append("logo", logo);
+    if (logo) {
+      const uploadedLogoPath = await uploadSingleFileApi(logo);
+      formData.append("logo", uploadedLogoPath);
+    }
 
     try {
       await mutateAsync(formData);

@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Form, App } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCompany, useUpdateCompany } from "../../hooks/useCompanies";
 import { useMe } from "../../hooks/useMe";
 import { useAllMedicalStores } from "../../hooks/useMedicalStores";
+import { uploadSingleFileApi } from "../../api/uploadApi";
 import { getCompanyDisplayName } from "../../utils/company";
 import PageShell from "../../components/ui/PageShell";
 import SectionCard from "../../components/ui/SectionCard";
@@ -27,6 +28,7 @@ export default function EditCompany() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [form] = Form.useForm<CompanyFormValues>();
+  const [logo, setLogo] = useState<File | null>(null);
   const { data: company, isLoading } = useCompany(id);
   const { mutateAsync, isPending } = useUpdateCompany();
   const { data: me } = useMe();
@@ -71,6 +73,10 @@ export default function EditCompany() {
       if (value === undefined || value === null) return;
       formData.append(key, String(value));
     });
+    if (logo) {
+      const uploadedLogoPath = await uploadSingleFileApi(logo);
+      formData.append("logo", uploadedLogoPath);
+    }
 
     try {
       await mutateAsync({ id: company._id, payload: formData });
@@ -93,6 +99,8 @@ export default function EditCompany() {
         <SectionTitle className="mb-4.5! mt-0!">Edit Company</SectionTitle>
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <CompanyFormFields
+            showLogo
+            onLogoSelect={setLogo}
             showStoreSelect={isAdmin}
             storeSelectRequired={isAdmin}
             storeOptions={storeOptions}

@@ -318,6 +318,123 @@ export const searchProductsApi = async (search: string) => {
   return response?.products || [];
 };
 
+export type DashboardTotals = {
+  totalMedicalStores: number;
+  totalMedicines: number;
+  totalCompanies: number;
+  totalCategories: number;
+  totalUsers: number;
+  totalBills: number;
+  totalBillAmount: number;
+};
+
+export type DashboardSelectedBill = {
+  _id?: string;
+  billNo?: string;
+  company?: string;
+  totalAmount?: number;
+  createdAt?: string;
+};
+
+export type DashboardSelectedBillsResponse = {
+  bill_data: DashboardSelectedBill[];
+  totalData: number;
+  state: {
+    page: number;
+    limit: number;
+    page_limit: number;
+  };
+};
+
+export type GetDashboardParams = {
+  search?: string;
+  companyId?: string;
+  medicalStoreId?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type DashboardResponse = {
+  dashboard: DashboardTotals;
+  billsBySelectedFilters: DashboardSelectedBillsResponse;
+};
+
+const toNonNegativeNumber = (value: unknown) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return parsed;
+};
+
+const toPositiveInt = (value: unknown, fallback = 1) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const asInt = Math.trunc(parsed);
+  return asInt > 0 ? asInt : fallback;
+};
+
+const normalizeDashboardBillsBySelectedFilters = (
+  raw: any
+): DashboardSelectedBillsResponse => {
+  const rows = Array.isArray(raw?.bill_data) ? raw.bill_data : [];
+  const page = toPositiveInt(raw?.state?.page, 1);
+  const limit = toPositiveInt(raw?.state?.limit, 10);
+  const pageLimit = toPositiveInt(
+    raw?.state?.page_limit,
+    Math.max(1, Math.ceil(toNonNegativeNumber(raw?.totalData) / limit))
+  );
+
+  return {
+    bill_data: rows.map((row: any) => ({
+      _id: typeof row?._id === "string" ? row._id : "",
+      billNo: typeof row?.billNo === "string" ? row.billNo : "",
+      company: typeof row?.company === "string" ? row.company : "",
+      totalAmount: toNonNegativeNumber(row?.totalAmount),
+      createdAt: typeof row?.createdAt === "string" ? row.createdAt : "",
+    })),
+    totalData: toNonNegativeNumber(raw?.totalData),
+    state: {
+      page,
+      limit,
+      page_limit: pageLimit,
+    },
+  };
+};
+
+const normalizeDashboardResponse = (raw: any): DashboardResponse => {
+  const payload = raw && typeof raw === "object" ? raw : {};
+  const source =
+    payload?.dashboard && typeof payload.dashboard === "object"
+      ? payload.dashboard
+      : payload;
+  if (!source || typeof source !== "object") {
+    throw new Error("Invalid dashboard response");
+  }
+
+  return {
+    dashboard: {
+      totalMedicalStores: toNonNegativeNumber(source.totalMedicalStores),
+      totalMedicines: toNonNegativeNumber(source.totalMedicines),
+      totalCompanies: toNonNegativeNumber(source.totalCompanies),
+      totalCategories: toNonNegativeNumber(source.totalCategories),
+      totalUsers: toNonNegativeNumber(source.totalUsers),
+      totalBills: toNonNegativeNumber(source.totalBills),
+      totalBillAmount: toNonNegativeNumber(source.totalBillAmount),
+    },
+    billsBySelectedFilters: normalizeDashboardBillsBySelectedFilters(
+      payload?.billsBySelectedFilters
+    ),
+  };
+};
+
+export const getDashboardApi = async (params?: GetDashboardParams) => {
+  const { data } = await api.get("/dashboard", {
+    params: buildQueryParams(params),
+  });
+  return normalizeDashboardResponse(data);
+};
+
 export const getDashboardSummaryApi = async (params?: { medicalStoreId?: string }) => {
   const { data } = await api.get("/dashboard-summary", {
     baseURL: "",

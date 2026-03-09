@@ -5,6 +5,7 @@ import { EditOutlined, FilePdfOutlined } from "@ant-design/icons";
 import { ROUTES } from "../../constants";
 import { useBill } from "../../hooks/useBills";
 import { getCompanyDisplayName, getCompanyLogoUrl, getUploadFileUrl } from "../../utils/company";
+import DotLoading from "../../components/ui/dotLoading";
 import {
   formatBillCurrency,
   getBillInvoiceBreakdown,
@@ -12,7 +13,20 @@ import {
 } from "../../utils/billing";
 import { formatDateTime } from "../../utils/dateTime";
 
-const INVOICE_ACCENT = "#2f3f46";
+const INVOICE_COLORS = {
+  accent: "#0f172a",
+  surfaceBg: "#ffffff",
+  darkPrimary: "#0b1120",
+  darkSecondary: "#111827",
+  darkAccent: "#0f172a",
+  textStrong: "#0f172a",
+  textBody: "#1f2937",
+  textMuted: "#4b5563",
+  border: "#e5e7eb",
+  success: "#16a34a",
+  danger: "#dc2626",
+  white: "#fff",
+} as const;
 
 export default function BillView() {
   const navigate = useNavigate();
@@ -36,12 +50,23 @@ export default function BillView() {
   const userMedicalName = userProfile.medicalName || companyName || "-";
   const userPhone = userProfile.phone;
   const userAddress = userProfile.address;
-  const userSignature = userProfile.signature;
+  const userSignature = userProfile.signature || (bill as any)?.signature || "";
   const userGstNumber = userProfile.gstNumber;
   const userPanCardNumber = userProfile.panCardNumber;
+  const companyLogoAsset = useMemo(() => {
+    const company = bill?.companyId as any;
+    return (
+      company?.logo ||
+      company?.logoUrl ||
+      company?.image ||
+      company?.companyLogo ||
+      (bill as any)?.logo ||
+      ""
+    );
+  }, [bill]);
   const logoUrl = useMemo(
-    () => getCompanyLogoUrl((bill?.companyId as any)?.logo || (bill?.companyId as any)?.logoUrl || (bill?.companyId as any)?.image),
-    [bill?.companyId]
+    () => getCompanyLogoUrl(companyLogoAsset),
+    [companyLogoAsset]
   );
   const signatureUrl = useMemo(() => getUploadFileUrl(userSignature), [userSignature]);
   const [isLogoVisible, setIsLogoVisible] = useState(true);
@@ -128,7 +153,7 @@ export default function BillView() {
     );
   }
 
-  if (isLoading) return <p>Loading...</p>;
+  if (isLoading) return <DotLoading text="Loading invoice details..." fullHeight={320} />;
   if (isError) {
     const errorMessage =
       (error as any)?.response?.data?.message ||
@@ -146,7 +171,7 @@ export default function BillView() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
-          <Typography.Title level={4} style={{ margin: 0, color: "#102A43", fontWeight: 700 }}>
+          <Typography.Title level={4} style={{ margin: 0, color: INVOICE_COLORS.textStrong, fontWeight: 700 }}>
             Invoice Details
           </Typography.Title>
           <Typography.Text type="secondary">Professional bill view for medical billing records</Typography.Text>
@@ -177,8 +202,8 @@ export default function BillView() {
             fontFamily: "Inter, Poppins, Roboto, 'Segoe UI', sans-serif",
             lineHeight: 1.5,
             letterSpacing: 0.2,
-            color: "#1f2937",
-            background: "#f8f8f5",
+            color: INVOICE_COLORS.textBody,
+            background: INVOICE_COLORS.surfaceBg,
             position: "relative",
             display: "flex",
             flexDirection: "column",
@@ -192,7 +217,7 @@ export default function BillView() {
                 top: 0,
                 bottom: 0,
                 width: compactPreview ? 12 : 18,
-                background: INVOICE_ACCENT,
+                background: INVOICE_COLORS.accent,
               }}
             />
 
@@ -213,52 +238,71 @@ export default function BillView() {
                 }}
               >
               <div style={{ minWidth: 0 }}>
-                <Typography.Text style={{ display: "block", fontWeight: 700, fontSize: 24, color: "#1f2a30" }}>
+                <Typography.Text style={{ display: "block", fontWeight: 700, fontSize: 24, color: INVOICE_COLORS.textStrong }}>
                   INVOICE
                 </Typography.Text>
-                <div style={{ width: 180, height: 2, background: INVOICE_ACCENT, margin: "6px 0 14px" }} />
+                <div
+                  style={{
+                    width: 180,
+                    height: 2,
+                    background: INVOICE_COLORS.accent,
+                    margin: "6px 0 14px",
+                  }}
+                />
                 <Typography.Text style={{ display: "block", fontWeight: 700, fontSize: 14, marginBottom: 8 }}>
                   INVOICE TO:
                 </Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#1f2a30", fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
+                <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textStrong, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
                   {userMedicalName}
                 </Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#4b5563" }}>Phone: {userPhone}</Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#4b5563" }}>Address: {userAddress}</Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#4b5563" }}>GST Number: {userGstNumber}</Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#4b5563" }}>PAN Card Number: {userPanCardNumber}</Typography.Text>
+                <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted }}>Phone: {userPhone}</Typography.Text>
+                <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted }}>Address: {userAddress}</Typography.Text>
+                <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted }}>GST Number: {userGstNumber}</Typography.Text>
+                <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted }}>PAN Card Number: {userPanCardNumber}</Typography.Text>
               </div>
 
-                <div style={{ width: "100%" }}>
-                  <div style={{ background: INVOICE_ACCENT, color: "#fff", padding: "10px 12px", marginBottom: 12 }}>
-                    <Typography.Text style={{ display: "block", color: "#fff", fontSize: 12 }}>
+                <div style={{ width: "100%", minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      background: INVOICE_COLORS.accent,
+                      color: INVOICE_COLORS.white,
+                      border: "none",
+                      borderRadius: 8,
+                      boxShadow: "0 10px 20px rgba(15, 23, 42, 0.2)",
+                      padding: "11px 12px",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Typography.Text style={{ display: "block", color: INVOICE_COLORS.white, fontSize: 12, fontWeight: 600 }}>
                       {companyPhone}
-                  </Typography.Text>
-                  <Typography.Text style={{ display: "block", color: "#fff", fontSize: 12 }}>
+                    </Typography.Text>
+                    <Typography.Text style={{ display: "block", color: "rgba(255,255,255,0.95)", fontSize: 12, marginTop: 2 }}>
                     {companyEmail}
                   </Typography.Text>
-                  <Typography.Text style={{ display: "block", color: "#fff", fontSize: 12 }}>
+                    <Typography.Text style={{ display: "block", color: "rgba(255,255,255,0.92)", fontSize: 12, marginTop: 2 }}>
                     {companyAddress}
                   </Typography.Text>
                 </div>
                   <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                     {shouldShowLogo && (
-                      <img
+                        <img
                         src={logoUrl}
                       alt="Company Logo"
-                      style={{ width: 84, height: 84, objectFit: "contain", background: "#fff", padding: 6 }}
+                      style={{ width: 84, height: 84, objectFit: "contain", background: INVOICE_COLORS.white, padding: 6, border: `1px solid ${INVOICE_COLORS.border}` }}
                       onError={() => setIsLogoVisible(false)}
                     />
                   )}
                   <div>
-                    <Typography.Text style={{ display: "block", fontWeight: 700 }}>{companyName}</Typography.Text>
-                    <Typography.Text style={{ display: "block", color: "#4b5563", fontSize: 12 }}>
+                    <Typography.Text style={{ display: "block", fontWeight: 700, color: INVOICE_COLORS.textStrong }}>{companyName}</Typography.Text>
+                    <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted, fontSize: 12 }}>
                       GST: {companyGst}
                     </Typography.Text>
-                    <Typography.Text style={{ display: "block", color: "#4b5563", fontSize: 12 }}>
+                    <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted, fontSize: 12 }}>
                       Bill No: {bill.billNo || "-"}
                     </Typography.Text>
-                    <Typography.Text style={{ display: "block", color: "#4b5563", fontSize: 12 }}>
+                    <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted, fontSize: 12 }}>
                       Date & Time: {formatDateTime(bill.createdAt)}
                     </Typography.Text>
                   </div>
@@ -267,13 +311,21 @@ export default function BillView() {
             </div>
 
             <div style={{ marginTop: 24, overflowX: compactPreview ? "auto" : "visible" }}>
-              <table style={{ width: "100%", minWidth: compactPreview ? 620 : "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <table
+                style={{
+                  width: "100%",
+                  minWidth: compactPreview ? 620 : "100%",
+                  borderCollapse: "collapse",
+                  fontSize: 13,
+                  border: `1px solid ${INVOICE_COLORS.border}`,
+                }}
+              >
                 <thead>
-                  <tr style={{ background: INVOICE_ACCENT }}>
-                    <th style={{ color: "#fff", textAlign: "left", padding: "10px 12px", fontWeight: 600 }}>DESCRIPTION</th>
-                    <th style={{ color: "#fff", textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>QTY</th>
-                    <th style={{ color: "#fff", textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>UNIT PRICE</th>
-                    <th style={{ color: "#fff", textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>LINE TOTAL</th>
+                  <tr style={{ background: INVOICE_COLORS.accent }}>
+                    <th style={{ color: INVOICE_COLORS.white, textAlign: "left", padding: "10px 12px", fontWeight: 600 }}>DESCRIPTION</th>
+                    <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>QTY</th>
+                    <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>UNIT PRICE</th>
+                    <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>LINE TOTAL</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -282,11 +334,17 @@ export default function BillView() {
                       String(item?.category || (typeof item?.productId === "object" ? item?.productId?.category : "") || "").trim();
 
                     return (
-                      <tr key={item._id || index} style={{ borderBottom: "1px solid #d1d5db" }}>
+                      <tr
+                          key={item._id || index}
+                          style={{
+                            borderBottom: `1px solid ${INVOICE_COLORS.border}`,
+                            background: index % 2 === 0 ? INVOICE_COLORS.white : "#f8fafc",
+                          }}
+                        >
                         <td style={{ padding: "11px 12px" }}>
                           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                             <span>{item.productName || "-"}</span>
-                            {category ? <span style={{ color: "#6b7280", fontSize: 11 }}>Category: {category}</span> : null}
+                            {category ? <span style={{ color: INVOICE_COLORS.textMuted, fontSize: 11 }}>Category: {category}</span> : null}
                           </div>
                         </td>
                         <td style={{ padding: "11px 12px", textAlign: "right" }}>{Number(item.qty || 0)}</td>
@@ -317,7 +375,7 @@ export default function BillView() {
                 <Typography.Text style={{ display: "block", fontWeight: 700, marginBottom: 6 }}>
                   TERMS AND CONDITIONS
                 </Typography.Text>
-                <Typography.Text style={{ display: "block", color: "#6b7280", fontSize: 12 }}>
+                <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted, fontSize: 12 }}>
                   Goods once sold will not be taken back. Keep this invoice for claim and audit.
                 </Typography.Text>
               </div>
@@ -325,7 +383,7 @@ export default function BillView() {
               <div>
                 <div
                   style={{
-                    background: INVOICE_ACCENT,
+                    background: INVOICE_COLORS.accent,
                     borderRadius: 4,
                     overflow: "hidden",
                   }}
@@ -336,12 +394,12 @@ export default function BillView() {
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1.15fr 1fr",
-                        borderBottom: index < arr.length - 1 ? "1px solid rgba(255,255,255,0.18)" : "none",
-                      }}
-                    >
+                          borderBottom: index < arr.length - 1 ? "1px solid rgba(255,255,255,0.18)" : "none",
+                        }}
+                      >
                       <div
                         style={{
-                          color: "#fff",
+                          color: INVOICE_COLORS.white,
                           padding: "10px 12px",
                           fontSize: 12,
                           minHeight: 42,
@@ -354,7 +412,7 @@ export default function BillView() {
                       </div>
                       <div
                         style={{
-                          color: "#fff",
+                          color: INVOICE_COLORS.white,
                           padding: "10px 12px",
                           fontSize: 12,
                           minHeight: 42,
@@ -372,10 +430,10 @@ export default function BillView() {
                   ))}
                 </div>
 
-                <div style={{ marginTop: 12, borderTop: "1px solid #9ca3af", paddingTop: 10 }}>
+                <div style={{ marginTop: 12, borderTop: `1px solid ${INVOICE_COLORS.border}`, paddingTop: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <Typography.Text style={{ fontWeight: 700, fontSize: 13 }}>GRAND TOTAL</Typography.Text>
-                    <Typography.Text style={{ fontWeight: 800, fontSize: 16, color: "#111827" }}>
+                    <Typography.Text style={{ fontWeight: 700, fontSize: 13, color: INVOICE_COLORS.textStrong }}>GRAND TOTAL</Typography.Text>
+                    <Typography.Text style={{ fontWeight: 800, fontSize: 16, color: INVOICE_COLORS.accent }}>
                       {formatBillCurrency(grandTotal)}
                     </Typography.Text>
                   </div>
@@ -390,8 +448,8 @@ export default function BillView() {
                       onError={() => setIsSignatureVisible(false)}
                     />
                   ) : null}
-                  <div style={{ borderTop: "1px solid #9ca3af", width: "80%", margin: "0 auto 10px" }} />
-                  <Typography.Text style={{ color: "#6b7280", fontSize: 12 }}>SIGNATURE</Typography.Text>
+                  <div style={{ borderTop: `1px solid ${INVOICE_COLORS.border}`, width: "80%", margin: "0 auto 10px" }} />
+                  <Typography.Text style={{ color: INVOICE_COLORS.textMuted, fontSize: 12 }}>SIGNATURE</Typography.Text>
                 </div>
               </div>
             </div>
@@ -400,15 +458,15 @@ export default function BillView() {
           <div
             style={{
               marginTop: 8,
-              background: INVOICE_ACCENT,
-              color: "#fff",
+              background: INVOICE_COLORS.accent,
+              color: INVOICE_COLORS.white,
               padding: compactPreview ? "10px 12px 10px 20px" : "12px 24px 12px 34px",
             }}
           >
-            <Typography.Text style={{ display: "block", color: "#fff", fontWeight: 600 }}>
+            <Typography.Text style={{ display: "block", color: INVOICE_COLORS.white, fontWeight: 600 }}>
               Thank you for your business.
             </Typography.Text>
-            <Typography.Text style={{ color: "#d1d5db", fontSize: 12 }}>
+            <Typography.Text style={{ color: "rgba(255,255,255,0.88)", fontSize: 12 }}>
               This is a computer generated medical invoice.
             </Typography.Text>
           </div>

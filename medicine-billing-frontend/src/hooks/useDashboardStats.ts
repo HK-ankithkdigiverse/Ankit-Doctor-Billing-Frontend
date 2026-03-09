@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { DashboardTotals } from "../api/resourceApi";
 
 type DashboardStatsInput = {
   isAdmin: boolean;
@@ -15,6 +16,7 @@ type DashboardStatsInput = {
   usersTotal?: number;
   billsTotal?: number;
   medicalStoresTotal?: number;
+  dashboardTotals?: Partial<DashboardTotals>;
 };
 
 export const useDashboardStats = ({
@@ -32,25 +34,47 @@ export const useDashboardStats = ({
   usersTotal,
   billsTotal,
   medicalStoresTotal,
+  dashboardTotals,
 }: DashboardStatsInput) => {
   return useMemo(() => {
     const resolveScopedTotal = (filteredCount: number, total?: number) =>
       isScoped ? filteredCount : total && total > 0 ? total : filteredCount;
 
-    const totalCompanies = resolveScopedTotal(filteredCompanies.length, companiesTotal);
-    const totalProducts = resolveScopedTotal(filteredProducts.length, productsTotal);
-    const totalCategories = resolveScopedTotal(filteredCategories.length, categoriesTotal);
-    const totalBills = resolveScopedTotal(filteredBillsForStore.length, billsTotal);
+    const totalCompanies =
+      typeof dashboardTotals?.totalCompanies === "number"
+        ? dashboardTotals.totalCompanies
+        : resolveScopedTotal(filteredCompanies.length, companiesTotal);
+    const totalProducts =
+      typeof dashboardTotals?.totalMedicines === "number"
+        ? dashboardTotals.totalMedicines
+        : resolveScopedTotal(filteredProducts.length, productsTotal);
+    const totalCategories =
+      typeof dashboardTotals?.totalCategories === "number"
+        ? dashboardTotals.totalCategories
+        : resolveScopedTotal(filteredCategories.length, categoriesTotal);
+    const totalBills =
+      typeof dashboardTotals?.totalBills === "number"
+        ? dashboardTotals.totalBills
+        : resolveScopedTotal(filteredBillsForStore.length, billsTotal);
     const totalUsers = isAdmin
-      ? resolveScopedTotal(filteredUsers.length, usersTotal)
+      ? typeof dashboardTotals?.totalUsers === "number"
+        ? dashboardTotals.totalUsers
+        : resolveScopedTotal(filteredUsers.length, usersTotal)
       : 0;
     const totalMedicalStores = isAdmin
-      ? resolveScopedTotal(scopedMedicalStores.length, medicalStoresTotal)
+      ? typeof dashboardTotals?.totalMedicalStores === "number"
+        ? dashboardTotals.totalMedicalStores
+        : resolveScopedTotal(scopedMedicalStores.length, medicalStoresTotal)
       : 0;
-    const totalBillAmount = filteredBillsForStore.reduce(
-      (sum: number, bill: any) => sum + Number(bill?.grandTotal || 0),
+    const filteredBillAmount = filteredBillsForStore.reduce(
+      (sum: number, bill: any) =>
+        sum + Number(bill?.totalAmount ?? bill?.grandTotal ?? 0),
       0
     );
+    const totalBillAmount =
+      typeof dashboardTotals?.totalBillAmount === "number"
+        ? dashboardTotals.totalBillAmount
+        : filteredBillAmount;
 
     const cards = isAdmin
       ? [
@@ -94,5 +118,6 @@ export const useDashboardStats = ({
     usersTotal,
     billsTotal,
     medicalStoresTotal,
+    dashboardTotals,
   ]);
 };

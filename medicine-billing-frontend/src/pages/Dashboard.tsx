@@ -24,6 +24,9 @@ import type { DateFilterType } from "../types/bill";
 import "./dashboard/dashboard.css";
 
 type DashboardBillRow = Record<string, any>;
+type DashboardContentProps = ReturnType<typeof useDashboardData> & {
+  isMobile: boolean;
+};
 
 const formatCurrency = (value: number) => `Rs ${value.toFixed(2)}`;
 
@@ -41,44 +44,44 @@ const getCardIcon = (title: string) => {
   return <FileTextOutlined style={iconStyle} />;
 };
 
-export default function DashboardPage() {
+function DashboardContent({
+  isMobile,
+  isAdmin,
+  medicalStoreFilter,
+  setMedicalStoreFilter,
+  dateFilter,
+  customRange,
+  setDateFilter,
+  setCustomRange,
+  dateFilterOptions,
+  page,
+  limit,
+  setDashboardPagination,
+  effectiveMedicalStoreId,
+  currentUserMedicalStoreName,
+  medicalStoreOptions,
+  filteredCompanies,
+  filteredProducts,
+  filteredCategories,
+  filteredUsers,
+  filteredBillsForStore,
+  sortedBillsForStore,
+  scopedMedicalStores,
+  companiesData,
+  productsData,
+  categoriesData,
+  usersData,
+  billsData,
+  medicalStoresData,
+  selectedBillsTotal,
+  dashboardTotals,
+  isDashboardFetching,
+}: DashboardContentProps) {
   const { RangePicker } = DatePicker;
-  const screens = Grid.useBreakpoint();
-  const isMobile = !screens.md;
-
-  const {
-    user,
-    isLoading,
-    isAdmin,
-    medicalStoreFilter,
-    setMedicalStoreFilter,
-    dateFilter,
-    customRange,
-    setDateFilter,
-    setCustomRange,
-    dateFilterOptions,
-    effectiveMedicalStoreId,
-    currentUserMedicalStoreName,
-    medicalStoreOptions,
-    filteredCompanies,
-    filteredProducts,
-    filteredCategories,
-    filteredUsers,
-    filteredBillsForStore,
-    sortedBillsForStore,
-    scopedMedicalStores,
-    companiesData,
-    productsData,
-    categoriesData,
-    usersData,
-    billsData,
-    medicalStoresData,
-    isDashboardFetching,
-  } = useDashboardData();
 
   const { cards } = useDashboardStats({
     isAdmin,
-    isScoped: !!effectiveMedicalStoreId,
+    isScoped: isAdmin && !!effectiveMedicalStoreId,
     filteredCompanies,
     filteredProducts,
     filteredCategories,
@@ -91,6 +94,7 @@ export default function DashboardPage() {
     usersTotal: usersData?.pagination?.total,
     billsTotal: billsData?.pagination?.total,
     medicalStoresTotal: medicalStoresData?.pagination?.total,
+    dashboardTotals,
   });
 
   const selectedStoreLabel = useMemo(() => {
@@ -118,14 +122,16 @@ export default function DashboardPage() {
       {
         title: "Company",
         key: "company",
-        render: (_value, bill) => getBillCompanyName(bill),
+        render: (_value, bill) => bill?.company || getBillCompanyName(bill),
       },
       {
         title: "Total Amount",
         key: "total",
         align: "right",
         render: (_value, bill) =>
-          formatCurrency(Number(bill?.totals?.finalPayableAmount ?? bill?.grandTotal ?? 0)),
+          formatCurrency(
+            Number(bill?.totalAmount ?? bill?.totals?.finalPayableAmount ?? bill?.grandTotal ?? 0)
+          ),
       },
       {
         title: "Created At",
@@ -151,9 +157,6 @@ export default function DashboardPage() {
     return columns;
   }, [isAdmin, medicalStoreLabelById]);
 
-  if (isLoading) return <div>Loading...</div>;
-  if (!user) return null;
-
   return (
     <div className="dashboard-page">
       <div className="dashboard-toolbar">
@@ -164,7 +167,7 @@ export default function DashboardPage() {
           <Typography.Text type="secondary">Scope: {selectedStoreLabel}</Typography.Text>
         </div>
         <div className="dashboard-controls">
-          {isAdmin ? (
+          {isAdmin && medicalStoreOptions.length > 0 ? (
             <Select
               allowClear
               showSearch
@@ -218,11 +221,29 @@ export default function DashboardPage() {
           dataSource={sortedBillsForStore}
           columns={billColumns}
           loading={isDashboardFetching}
-          pagination={{ pageSize: 8, showSizeChanger: false }}
+          pagination={{
+            current: page,
+            pageSize: limit,
+            total: selectedBillsTotal,
+            showSizeChanger: true,
+            onChange: (nextPage, nextPageSize) =>
+              setDashboardPagination(nextPage, nextPageSize || limit),
+          }}
           scroll={{ x: "max-content" }}
           locale={{ emptyText: "No bills found for selected filters" }}
         />
       </Card>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
+  const dashboardData = useDashboardData();
+
+  if (dashboardData.isLoading) return <div>Loading...</div>;
+  if (!dashboardData.user) return null;
+
+  return <DashboardContent {...dashboardData} isMobile={isMobile} />;
 }
