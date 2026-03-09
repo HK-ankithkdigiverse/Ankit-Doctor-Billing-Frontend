@@ -8,7 +8,7 @@ import {
   ShopOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Card, Col, DatePicker, Grid, Row, Select, Table, Typography } from "antd";
+import { Card, Col, DatePicker, Grid, Pagination, Row, Select, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import StatCard from "../components/StatCard";
 import { useDashboardData } from "../hooks/useDashboardData";
@@ -74,6 +74,7 @@ function DashboardContent({
   billsData,
   medicalStoresData,
   selectedBillsTotal,
+  pageSizeSelectOptions,
   dashboardTotals,
   isDashboardFetching,
 }: DashboardContentProps) {
@@ -221,17 +222,19 @@ function DashboardContent({
           dataSource={sortedBillsForStore}
           columns={billColumns}
           loading={isDashboardFetching}
-          pagination={{
-            current: page,
-            pageSize: limit,
-            total: selectedBillsTotal,
-            showSizeChanger: true,
-            onChange: (nextPage, nextPageSize) =>
-              setDashboardPagination(nextPage, nextPageSize || limit),
-          }}
+          pagination={false}
           scroll={{ x: "max-content" }}
           locale={{ emptyText: "No bills found for selected filters" }}
         />
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
+          <Pagination
+            current={page}
+            pageSize={limit}
+            total={selectedBillsTotal}
+            onChange={(nextPage, pageSize) => setDashboardPagination(nextPage, pageSize)}
+            showSizeChanger={{ options: pageSizeSelectOptions }}
+          />
+        </div>
       </Card>
     </div>
   );
