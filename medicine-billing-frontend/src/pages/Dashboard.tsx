@@ -20,6 +20,7 @@ import {
   getBillMedicalStoreName,
   type BillingDateRange,
 } from "../utils/billing";
+import { resolvePaginationPageSize } from "../utils/pagination";
 import type { DateFilterType } from "../types/bill";
 import "./dashboard/dashboard.css";
 
@@ -118,7 +119,10 @@ function DashboardContent({
         title: "Bill No",
         dataIndex: "billNo",
         key: "billNo",
-        render: (value: string) => value || "-",
+        render: (value: unknown) => {
+          const billNo = typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+          return billNo || "-";
+        },
       },
       {
         title: "Company",
@@ -229,7 +233,7 @@ function DashboardContent({
         <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
           <Pagination
             current={page}
-            pageSize={limit}
+            pageSize={resolvePaginationPageSize(limit, selectedBillsTotal)}
             total={selectedBillsTotal}
             onChange={(nextPage, pageSize) => setDashboardPagination(nextPage, pageSize)}
             showSizeChanger={{ options: pageSizeSelectOptions }}

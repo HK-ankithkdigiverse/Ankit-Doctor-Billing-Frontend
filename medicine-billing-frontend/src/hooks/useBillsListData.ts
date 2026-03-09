@@ -15,7 +15,12 @@ import { useDebouncedValue } from "./useDebouncedValue";
 import { useViewState } from "./useViewState";
 import { useAllMedicalStores } from "./useMedicalStores";
 import { buildMedicalStoreNameById, buildMedicalStoreOptions } from "../utils/medicalStore";
-import { buildPageSizeSelectOptions, paginateByPage } from "../utils/pagination";
+import {
+  ALL_PAGE_SIZE,
+  buildPageSizeSelectOptions,
+  isAllPageLimit,
+  paginateByPage,
+} from "../utils/pagination";
 import {
   applyTableSort,
   createDateSorter,
@@ -40,8 +45,9 @@ export const useBillsListData = () => {
   const canLoadMedicalStores = isAdmin;
   const hasDateFilter = dateFilter !== "all";
   const hasLocalFilter = hasAdminMedicalStoreFilter || hasDateFilter;
-  const queryPage = hasLocalFilter ? 1 : page;
-  const queryLimit = hasLocalFilter ? 1000 : limit;
+  const allSelected = isAllPageLimit(limit);
+  const queryPage = hasLocalFilter && !allSelected ? 1 : page;
+  const queryLimit = allSelected ? ALL_PAGE_SIZE : hasLocalFilter ? 1000 : limit;
 
   const { data, isLoading, isFetching } = useBills(queryPage, queryLimit, debouncedSearch);
   const { data: medicalStoresData } = useAllMedicalStores({
@@ -80,9 +86,11 @@ export const useBillsListData = () => {
       }),
     [filteredRows, medicalStoreNameById, sortField, sortOrder]
   );
-  const rows = hasLocalFilter ? paginateByPage(sortedRows, page, limit) : sortedRows;
+  const rows =
+    hasLocalFilter && !allSelected ? paginateByPage(sortedRows, page, limit) : sortedRows;
   const pagination = data?.pagination;
-  const totalRecords = hasLocalFilter ? filteredRows.length : pagination?.total || 0;
+  const totalRecords =
+    hasLocalFilter || allSelected ? filteredRows.length : pagination?.total || 0;
   const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
   const medicalStoreOptions = useMemo(
     () =>

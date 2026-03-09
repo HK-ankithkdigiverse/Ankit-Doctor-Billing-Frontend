@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { App, Card, Col, Form, Input, Row, Typography } from "antd";
 import { ROUTES } from "../../constants";
 import { useProfile, useUpdateProfile } from "../../hooks/useProfile";
-import { emailRule, requiredRule } from "../../utils/formRules";
+import { emailRule, optionalPhoneRule, requiredRule } from "../../utils/formRules";
 import { uploadSingleFileApi } from "../../api/uploadApi";
 import { getUploadFileUrl } from "../../utils/company";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
@@ -13,6 +13,7 @@ import { nonWhitespaceRule, trimIfString } from "../../utils/userForm";
 interface EditProfileFormValues {
   name: string;
   email: string;
+  phoneNumber?: string;
   signature?: string;
 }
 
@@ -30,6 +31,7 @@ export default function EditProfile() {
     form.setFieldsValue({
       name: user.name,
       email: user.email,
+      phoneNumber: user.phoneNumber || user.phone || "",
       signature: user.signature || "",
     });
   }, [user, form]);
@@ -44,6 +46,10 @@ export default function EditProfile() {
         name: trimIfString(values.name) || "",
         email: (trimIfString(values.email) || "").toLowerCase(),
       };
+      const phoneNumber = trimIfString(values.phoneNumber);
+      if (phoneNumber) {
+        payload.phoneNumber = phoneNumber;
+      }
 
       if (signatureFile) {
         payload.signature = await uploadSingleFileApi(signatureFile);
@@ -75,9 +81,23 @@ export default function EditProfile() {
           </Col>
         </Row>
 
-        <Form.Item name="email" label="Email" rules={[requiredRule("Email"), nonWhitespaceRule("Email"), emailRule]}>
-          <Input />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} md={12}>
+            <Form.Item name="email" label="Email" rules={[requiredRule("Email"), nonWhitespaceRule("Email"), emailRule]}>
+              <Input />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="phoneNumber"
+              label="Phone Number (Optional)"
+              rules={[optionalPhoneRule]}
+              normalize={(value?: string) => (value || "").replace(/\D/g, "").slice(0, 10)}
+            >
+              <Input maxLength={10} inputMode="numeric" />
+            </Form.Item>
+          </Col>
+        </Row>
 
         <SignatureUploadField
           signatureUrl={existingSignatureUrl}

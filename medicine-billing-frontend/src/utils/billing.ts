@@ -31,7 +31,7 @@ export type BillFormInitialValues = {
   initialUserId: string;
   initialCompanyId: string;
   initialCompanyName: string;
-  initialDiscount: number;
+  initialDiscountAmount: number;
   initialGstPercent: number;
   initialItems: BillFormItem[];
 };
@@ -93,54 +93,59 @@ export const getBillCompanyId = (bill: BillLike) => toEntityId(bill?.companyId);
 
 export const getBillAssignedUserId = (bill: BillLike) => toEntityId(bill?.userId || getBillCreator(bill));
 
+export const resolveBillDiscountAmount = (bill: BillLike) => {
+  const billRecord = (bill as Record<string, any> | undefined) || {};
+  const totals = billRecord?.totals;
+  const subTotal = toNumber(totals?.subtotal ?? bill?.subTotal);
+  const totalTax = getBillTotalTax(bill);
+  const totalBeforeDiscount = subTotal + totalTax;
+  const maxAllowedDiscount = Math.max(0, totalBeforeDiscount);
+  const normalizeAmount = (amount: number) => {
+    const safeAmount = Math.max(0, amount);
+    return maxAllowedDiscount > 0 ? Math.min(maxAllowedDiscount, safeAmount) : safeAmount;
+  };
+
+  const totalsAmount = toNumber(totals?.discountAmount, -1);
+  if (totalsAmount >= 0) return normalizeAmount(totalsAmount);
+
+  const totalsPercent = toNumber(totals?.discountPercent, -1);
+  if (totalsPercent >= 0) {
+    return normalizeAmount((totalBeforeDiscount * clampPercent(totalsPercent)) / 100);
+  }
+
+  const explicitPercent = toNumber(billRecord.discountPercent, -1);
+  if (explicitPercent >= 0) {
+    return normalizeAmount((totalBeforeDiscount * clampPercent(explicitPercent)) / 100);
+  }
+
+  const rawDiscount = toNumber(billRecord.discount, -1);
+  if (rawDiscount < 0) return 0;
+
+  const amountCandidate = normalizeAmount(rawDiscount);
+  if (totalBeforeDiscount <= 0) return amountCandidate;
+
+  const percentCandidate = normalizeAmount((totalBeforeDiscount * clampPercent(rawDiscount)) / 100);
+  const persistedGrandTotal = toNumber(totals?.finalPayableAmount ?? bill?.grandTotal, Number.NaN);
+  if (Number.isFinite(persistedGrandTotal)) {
+    const amountGrandTotal = Math.max(0, totalBeforeDiscount - amountCandidate);
+    const percentGrandTotal = Math.max(0, totalBeforeDiscount - percentCandidate);
+    const amountDelta = Math.abs(amountGrandTotal - persistedGrandTotal);
+    const percentDelta = Math.abs(percentGrandTotal - persistedGrandTotal);
+    return amountDelta <= percentDelta ? amountCandidate : percentCandidate;
+  }
+
+  // Default to fixed amount interpretation for current bill flow.
+  return amountCandidate;
+};
+
 export const resolveBillDiscountPercent = (bill: BillLike) => {
   const totals = (bill as Record<string, any> | undefined)?.totals;
   const subTotal = toNumber(totals?.subtotal ?? bill?.subTotal);
   const totalTax = getBillTotalTax(bill);
   const totalBeforeDiscount = subTotal + totalTax;
-
-  const totalsPercent = toNumber(totals?.discountPercent, -1);
-  if (totalsPercent >= 0) return clampPercent(totalsPercent);
-
-  const explicitPercent = toNumber((bill as Record<string, any> | undefined)?.discountPercent, -1);
-  if (explicitPercent >= 0) return clampPercent(explicitPercent);
-
-  const totalsAmount = toNumber(totals?.discountAmount, -1);
-  if (totalsAmount >= 0 && totalBeforeDiscount > 0) {
-    return clampPercent((totalsAmount * 100) / totalBeforeDiscount);
-  }
-
-  const rawDiscount = toNumber((bill as Record<string, any> | undefined)?.discount, 0);
-  if (rawDiscount > 100 && totalBeforeDiscount > 0) {
-    return clampPercent((rawDiscount * 100) / totalBeforeDiscount);
-  }
-
-  return clampPercent(rawDiscount);
-};
-
-export const resolveBillDiscountAmount = (bill: BillLike) => {
-  const totals = (bill as Record<string, any> | undefined)?.totals;
-  const subTotal = toNumber(totals?.subtotal ?? bill?.subTotal);
-  const totalTax = getBillTotalTax(bill);
-  const totalBeforeDiscount = subTotal + totalTax;
-
-  const totalsPercent = toNumber(totals?.discountPercent, -1);
-  if (totalsPercent >= 0) {
-    return (totalBeforeDiscount * clampPercent(totalsPercent)) / 100;
-  }
-
-  const explicitPercent = toNumber((bill as Record<string, any> | undefined)?.discountPercent, -1);
-  if (explicitPercent >= 0) {
-    return (totalBeforeDiscount * clampPercent(explicitPercent)) / 100;
-  }
-
-  const totalsAmount = toNumber(totals?.discountAmount, -1);
-  if (totalsAmount >= 0) return Math.max(0, totalsAmount);
-
-  const rawDiscount = toNumber((bill as Record<string, any> | undefined)?.discount, 0);
-  if (rawDiscount > 100) return Math.max(0, rawDiscount);
-
-  return (totalBeforeDiscount * clampPercent(rawDiscount)) / 100;
+  if (totalBeforeDiscount <= 0) return 0;
+  const discountAmount = resolveBillDiscountAmount(bill);
+  return clampPercent((discountAmount * 100) / totalBeforeDiscount);
 };
 
 export const getBillAmountSummary = (bill: BillLike): BillAmountSummary => {
@@ -215,9 +220,11 @@ export const getBillInvoiceBreakdown = (
   const igstTotal = taxType === "IGST" ? totalTax : 0;
   const cgstTotal = taxType === "IGST" ? 0 : totalTax / 2;
   const sgstTotal = taxType === "IGST" ? 0 : totalTax / 2;
-  const discountPercent = Math.floor(clampPercent(resolveBillDiscountPercent({ ...(bill as any), totals })));
   const totalBeforeDiscount = subTotal + totalTax;
-  const discountAmount = (totalBeforeDiscount * discountPercent) / 100;
+  const rawDiscountAmount = resolveBillDiscountAmount({ ...(bill as any), totals });
+  const discountAmount = Math.min(Math.max(0, rawDiscountAmount), Math.max(0, totalBeforeDiscount));
+  const discountPercent =
+    totalBeforeDiscount > 0 ? clampPercent((discountAmount * 100) / totalBeforeDiscount) : 0;
   const grandTotal = Math.max(0, totalBeforeDiscount - discountAmount);
 
   return {
@@ -313,7 +320,7 @@ export const getBillUserProfile = (bill: Bill | Record<string, any> | undefined 
     name: creator?.name || "-",
     medicalName: creator?.medicalName || medicalStore?.name || "",
     email: creator?.email || "-",
-    phone: creator?.phone || medicalStore?.phone || "-",
+    phone: creator?.phoneNumber || creator?.phone || medicalStore?.phone || "-",
     address: creator?.address || medicalStore?.address || "-",
     signature: creator?.signature || "",
     gstNumber: creator?.gstNumber || medicalStore?.gstNumber || "-",
@@ -519,7 +526,7 @@ export const getBillFormInitialValues = (billData?: {
   initialUserId: getBillAssignedUserId(billData?.bill),
   initialCompanyId: getBillCompanyId(billData?.bill),
   initialCompanyName: getBillCompanyName(billData?.bill),
-  initialDiscount: resolveBillDiscountPercent(billData?.bill),
+  initialDiscountAmount: resolveBillDiscountAmount(billData?.bill),
   initialGstPercent: resolveBillGstPercent(billData?.bill, billData?.items ?? []),
   initialItems: normalizeBillItemsForForm(billData?.items ?? []),
 });
@@ -580,8 +587,9 @@ export const getBillSummary = (
   const totalCgst = config.taxMode === "IGST" ? 0 : totalTax / 2;
   const totalSgst = config.taxMode === "IGST" ? 0 : totalTax / 2;
   const totalBeforeDiscount = subTotal + totalTax;
-  const discountPercent = clampPercent(discount);
-  const discountAmount = (totalBeforeDiscount * discountPercent) / 100;
+  const discountAmount = Math.min(Math.max(0, toNumber(discount)), Math.max(0, totalBeforeDiscount));
+  const discountPercent =
+    totalBeforeDiscount > 0 ? clampPercent((discountAmount * 100) / totalBeforeDiscount) : 0;
   const taxableAmount = Math.max(0, totalBeforeDiscount - discountAmount);
   const grandTotal = taxableAmount;
 
@@ -606,6 +614,7 @@ export const validateBillForm = ({
   companyId,
   gstPercent,
   discount,
+  totalBeforeDiscount,
   items,
 }: {
   isAdmin: boolean;
@@ -613,12 +622,16 @@ export const validateBillForm = ({
   companyId: string;
   gstPercent: number;
   discount: number;
+  totalBeforeDiscount: number;
   items: BillFormRow[];
 }) => {
   if (!companyId) return "Company is required";
   if (isAdmin && !userId) return "Store is required";
   if (toNumber(gstPercent) < 0 || toNumber(gstPercent) > 100) return "GST % must be between 0 and 100";
-  if (toNumber(discount) < 0 || toNumber(discount) > 100) return "Discount % must be between 0 and 100";
+  if (toNumber(discount) < 0) return "Discount amount cannot be negative";
+  if (toNumber(discount) > Math.max(0, toNumber(totalBeforeDiscount))) {
+    return "Discount amount cannot exceed total amount";
+  }
   if (!items.length) return "At least one bill item is required";
 
   const invalidItemIndex = items.findIndex((item) => {

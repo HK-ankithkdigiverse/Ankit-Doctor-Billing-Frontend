@@ -70,6 +70,7 @@ export const useProducts = (
             medicalStoreId: filters?.medicalStoreId,
           })
         : getAllProductsApi({
+            search: search || undefined,
             category: filters?.category,
             productType: filters?.productType,
             companyId: filters?.companyId,

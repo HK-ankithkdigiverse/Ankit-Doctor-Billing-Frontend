@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
-import { getBillsApi, getDashboardApi } from "../api/resourceApi";
+import { getAllBillsApi, getBillsApi, getDashboardApi } from "../api/resourceApi";
 import { QUERY_KEYS, ROLE, ROUTES } from "../constants";
 import { DATE_FILTER_OPTIONS, filterBills } from "../utils/billing";
 import { toEntityId } from "../utils/id";
-import { buildPageSizeSelectOptions, paginateByPage } from "../utils/pagination";
+import {
+  ALL_PAGE_SIZE,
+  buildPageSizeSelectOptions,
+  isAllPageLimit,
+  paginateByPage,
+} from "../utils/pagination";
 import { useMe } from "./useMe";
 import { useViewState } from "./useViewState";
 
@@ -34,8 +39,9 @@ export const useDashboardData = () => {
   const hasDateFilter = dateFilter !== "all";
   const hasAdminMedicalStoreFilter = isAdmin && !!medicalStoreFilter;
   const hasLocalFilter = hasDateFilter || hasAdminMedicalStoreFilter;
-  const queryPage = hasLocalFilter ? 1 : page;
-  const queryLimit = hasLocalFilter ? 1000 : limit;
+  const allSelected = isAllPageLimit(limit);
+  const queryPage = hasLocalFilter && !allSelected ? 1 : page;
+  const queryLimit = allSelected ? ALL_PAGE_SIZE : hasLocalFilter ? 1000 : limit;
 
   const {
     data: dashboardData,
@@ -56,15 +62,19 @@ export const useDashboardData = () => {
       QUERY_KEYS.BILLS,
       "dashboard",
       isAdmin ? medicalStoreFilter || "all" : "self",
-      queryPage,
-      queryLimit,
+      allSelected ? "all" : queryPage,
+      allSelected ? "all" : queryLimit,
     ],
     queryFn: () =>
-      getBillsApi({
-        page: queryPage,
-        limit: queryLimit,
-        medicalStoreId: isAdmin ? medicalStoreFilter || undefined : undefined,
-      }),
+      allSelected
+        ? getAllBillsApi({
+            medicalStoreId: isAdmin ? medicalStoreFilter || undefined : undefined,
+          })
+        : getBillsApi({
+            page: queryPage,
+            limit: queryLimit,
+            medicalStoreId: isAdmin ? medicalStoreFilter || undefined : undefined,
+          }),
     enabled: canLoadDashboardData,
   });
 
@@ -113,11 +123,14 @@ export const useDashboardData = () => {
   );
 
   const sortedBillsForStore = useMemo(
-    () => (hasLocalFilter ? paginateByPage(sortedBillsAll, page, limit) : sortedBillsAll),
-    [hasLocalFilter, sortedBillsAll, page, limit]
+    () =>
+      hasLocalFilter && !allSelected
+        ? paginateByPage(sortedBillsAll, page, limit)
+        : sortedBillsAll,
+    [hasLocalFilter, allSelected, sortedBillsAll, page, limit]
   );
 
-  const selectedBillsTotal = hasLocalFilter
+  const selectedBillsTotal = hasLocalFilter || allSelected
     ? sortedBillsAll.length
     : billsDataQuery?.pagination?.total || 0;
   const pageSizeSelectOptions = useMemo(
@@ -126,7 +139,7 @@ export const useDashboardData = () => {
   );
 
   useEffect(() => {
-    if (!hasLocalFilter) return;
+    if (!hasLocalFilter || allSelected) return;
     const maxDashboardPage = Math.max(
       1,
       Math.ceil(selectedBillsTotal / Math.max(limit, 1))
@@ -134,7 +147,7 @@ export const useDashboardData = () => {
     if (page > maxDashboardPage) {
       setPagination(maxDashboardPage, limit);
     }
-  }, [hasLocalFilter, page, selectedBillsTotal, limit, setPagination]);
+  }, [hasLocalFilter, allSelected, page, selectedBillsTotal, limit, setPagination]);
 
   const isDashboardFetching = isDashboardTotalsFetching || isBillsFetching;
 

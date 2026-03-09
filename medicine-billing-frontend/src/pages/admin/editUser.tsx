@@ -7,7 +7,7 @@ import { useAllMedicalStores } from "../../hooks/useMedicalStores";
 import { uploadSingleFileApi } from "../../api/uploadApi";
 import type { UpdateUserPayload } from "../../api/userApi";
 import type { User } from "../../types";
-import { emailRule, requiredRule } from "../../utils/formRules";
+import { emailRule, optionalPhoneRule, requiredRule } from "../../utils/formRules";
 import { getUploadFileUrl } from "../../utils/company";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
 import FormActionButtons from "../../components/forms/FormActionButtons";
@@ -21,6 +21,7 @@ interface EditUserLocationState {
 const toInitialValues = (user: User): EditUserFormValues => ({
   name: user.name || "",
   email: user.email || "",
+  phoneNumber: user.phoneNumber || user.phone || "",
   medicalStoreId:
     (typeof user.medicalStoreId === "string"
       ? trimIfString(user.medicalStoreId)
@@ -32,6 +33,7 @@ const normalizeForCompare = (
 ): NormalizedEditUserValues => ({
   name: trimIfString(values?.name) ?? "",
   email: (trimIfString(values?.email) ?? "").toLowerCase(),
+  phoneNumber: trimIfString(values?.phoneNumber) ?? "",
   medicalStoreId: trimIfString(values?.medicalStoreId) ?? "",
 });
 
@@ -40,6 +42,8 @@ const buildPayload = (values: EditUserFormValues): UpdateUserPayload => {
     name: trimIfString(values.name) || "",
     email: (trimIfString(values.email) || "").toLowerCase(),
   };
+  const phoneNumber = trimIfString(values.phoneNumber);
+  if (phoneNumber) payload.phoneNumber = phoneNumber;
 
   const medicalStoreId = trimIfString(values.medicalStoreId);
   if (medicalStoreId) payload.medicalStoreId = medicalStoreId;
@@ -202,6 +206,18 @@ export default function EditUser() {
               rules={[requiredRule("Email"), nonWhitespaceRule("Email"), emailRule]}
             >
               <Input disabled={isPending} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col xs={24}>
+            <Form.Item
+              name="phoneNumber"
+              label="Phone Number (Optional)"
+              rules={[optionalPhoneRule]}
+              normalize={(value?: string) => (value || "").replace(/\D/g, "").slice(0, 10)}
+            >
+              <Input maxLength={10} inputMode="numeric" disabled={isPending} />
             </Form.Item>
           </Col>
         </Row>

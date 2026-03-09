@@ -4,6 +4,9 @@ export type PageSizeOption = {
 };
 
 const DEFAULT_PAGE_SIZES = [10, 30, 50, 100];
+export const ALL_PAGE_SIZE = Number.MAX_SAFE_INTEGER;
+
+export const isAllPageLimit = (limit: unknown) => Number(limit) === ALL_PAGE_SIZE;
 
 export const getSerialNumber = (page: number, limit: number, index: number) =>
   (Math.max(page, 1) - 1) * Math.max(limit, 1) + index + 1;
@@ -24,7 +27,7 @@ export const buildPageSizeSelectOptions = (
   }));
   const options =
     totalRecords > 0
-      ? [...baseOptions, { label: "All / page", value: totalRecords }]
+      ? [...baseOptions, { label: "All", value: ALL_PAGE_SIZE }]
       : baseOptions;
   const seen = new Set<number>();
   return options.filter((option) => {
@@ -32,4 +35,14 @@ export const buildPageSizeSelectOptions = (
     seen.add(option.value);
     return true;
   });
+};
+
+export const resolvePaginationPageSize = (
+  limit: number,
+  totalRecords: number,
+  fallback = 10
+) => {
+  if (isAllPageLimit(limit)) return ALL_PAGE_SIZE;
+  const safeFallback = Math.max(fallback, 1);
+  return Math.max(limit || totalRecords || safeFallback, 1);
 };

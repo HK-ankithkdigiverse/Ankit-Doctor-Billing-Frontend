@@ -19,7 +19,12 @@ import { useMe } from "../../hooks/useMe";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
 import { getUserMedicalStoreId } from "../../utils/medicalStore";
-import { buildPageSizeSelectOptions, getSerialNumber } from "../../utils/pagination";
+import {
+  buildPageSizeSelectOptions,
+  getSerialNumber,
+  isAllPageLimit,
+  resolvePaginationPageSize,
+} from "../../utils/pagination";
 import {
   applyTableSort,
   createDateSorter,
@@ -88,10 +93,13 @@ export default function Users() {
     medicalStore: createNameSorter((row: User) => getMedicalStoreName(row)),
     createdUpdatedAt: createDateSorter((row: User) => row.updatedAt || row.createdAt),
   });
+  const allSelected = isAllPageLimit(limit);
   const totalRecords = query
       ? filteredUsers.length
       : backendAlreadyFiltered
-        ? pagination?.total || 0
+        ? allSelected
+          ? users.length
+          : pagination?.total || users.length
         : users.length;
   const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
 
@@ -237,7 +245,7 @@ export default function Users() {
         >
           <Space wrap align="center" style={{ justifyContent: "flex-start" }}>
             <Input
-              placeholder="Search by name, email, medical store..."
+              placeholder="Search by name, email, phone, medical store..."
               allowClear
               prefix={<SearchOutlined />}
               suffix={searchLoading ? <LoadingOutlined spin /> : null}
@@ -290,7 +298,7 @@ export default function Users() {
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
           current={page}
-          pageSize={limit}
+          pageSize={resolvePaginationPageSize(limit, totalRecords)}
           total={totalRecords}
           onChange={(nextPage: number, pageSize: number) => {
             setPagination(nextPage, pageSize);

@@ -36,7 +36,7 @@ export const useCompanies = (
   return useQuery({
     queryKey: isPaginated
       ? [QUERY_KEYS.COMPANIES, pageNumber, limit, search]
-      : [QUERY_KEYS.COMPANIES, "all"],
+      : [QUERY_KEYS.COMPANIES, "all", search],
     queryFn: () =>
       isPaginated
         ? getCompaniesApi({
@@ -44,7 +44,9 @@ export const useCompanies = (
             limit,
             search: search || undefined,
           })
-        : getAllCompaniesApi(),
+        : getAllCompaniesApi({
+            search: search || undefined,
+          }),
     enabled: options?.enabled ?? true,
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,

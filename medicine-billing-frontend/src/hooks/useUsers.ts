@@ -15,6 +15,7 @@ import {
 import { QUERY_KEYS } from "../constants/queryKeys";
 import { useMe } from "./useMe";
 import { invalidateQueryKeys } from "./queryHelpers";
+import { isAllPageLimit } from "../utils/pagination";
 
 type UserStatus = "all" | "active" | "inactive";
 type UsersQueryOptions = { enabled?: boolean; sortBy?: string; sortOrder?: "asc" | "desc" };
@@ -34,9 +35,8 @@ export const useUsers = (
 ) => {
   const { data: me } = useMe();
   const isAdmin = me?.role === "ADMIN";
-  const isPaginated = typeof page === "number";
-
   const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
+  const isPaginated = typeof page === "number" && !isAllPageLimit(limit);
   const search =
     typeof limitOrSearch === "string"
       ? limitOrSearch
@@ -61,7 +61,7 @@ export const useUsers = (
   return useQuery({
     queryKey: isPaginated
       ? [QUERY_KEYS.USERS, page, limit, search, status]
-      : [QUERY_KEYS.USERS, "all", status],
+      : [QUERY_KEYS.USERS, "all", status, search],
     queryFn: () =>
       isPaginated
         ? getUsersApi({
@@ -73,7 +73,8 @@ export const useUsers = (
             sortOrder: options?.sortOrder,
           })
         : getAllUsersApi({
-      
+            search: search || undefined,
+            isActive: status === "all" || !status ? undefined : status === "active",
           }),
     enabled: (options?.enabled ?? true) && isAdmin,
     placeholderData: keepPreviousData,

@@ -11,7 +11,12 @@ import {
   buildMedicalStoreOptions,
   getProductMedicalStoreId,
 } from "../utils/medicalStore";
-import { buildPageSizeSelectOptions, paginateByPage } from "../utils/pagination";
+import {
+  ALL_PAGE_SIZE,
+  buildPageSizeSelectOptions,
+  isAllPageLimit,
+  paginateByPage,
+} from "../utils/pagination";
 import {
   applyTableSort,
   createDateSorter,
@@ -31,8 +36,9 @@ export const useProductsListData = () => {
   const isAdmin = me?.role === ROLE.ADMIN;
   const hasAdminFilter = isAdmin && !!medicalStoreId;
   const canLoadMedicalStores = isAdmin;
-  const queryPage = hasAdminFilter ? 1 : page;
-  const queryLimit = hasAdminFilter ? 1000 : limit;
+  const allSelected = isAllPageLimit(limit);
+  const queryPage = hasAdminFilter && !allSelected ? 1 : page;
+  const queryLimit = allSelected ? ALL_PAGE_SIZE : hasAdminFilter ? 1000 : limit;
 
   const { data, isPending, isFetching } = useProducts(queryPage, queryLimit, debouncedSearch);
   const { data: medicalStoresData } = useAllMedicalStores({
@@ -105,11 +111,12 @@ export const useProductsListData = () => {
     [filteredProducts, medicalStoreNameById, sortField, sortOrder]
   );
 
-  const products: Product[] = hasAdminFilter
+  const products: Product[] = hasAdminFilter && !allSelected
     ? paginateByPage(sortedProducts, page, limit)
     : sortedProducts;
   const pagination = data?.pagination;
-  const totalRecords = hasAdminFilter ? filteredProducts.length : pagination?.total || 0;
+  const totalRecords =
+    hasAdminFilter || allSelected ? filteredProducts.length : pagination?.total || 0;
   const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
   const medicalStoreOptions = useMemo(
     () =>

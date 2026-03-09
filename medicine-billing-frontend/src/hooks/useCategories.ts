@@ -36,7 +36,7 @@ export const useCategories = (
   return useQuery({
     queryKey: isPaginated
       ? [QUERY_KEYS.CATEGORIES, pageNumber, limit, search]
-      : [QUERY_KEYS.CATEGORIES, "all"],
+      : [QUERY_KEYS.CATEGORIES, "all", search],
     queryFn: () =>
       isPaginated
         ? getCategoriesApi({
@@ -44,7 +44,9 @@ export const useCategories = (
             limit,
             search: search || undefined,
           })
-        : getAllCategoriesApi(),
+        : getAllCategoriesApi({
+            search: search || undefined,
+          }),
     enabled: options?.enabled ?? true,
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,

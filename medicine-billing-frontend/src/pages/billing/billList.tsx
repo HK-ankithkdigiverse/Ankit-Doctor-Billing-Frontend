@@ -20,7 +20,7 @@ import {
 } from "../../hooks/useBillsListData";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
-import { getSerialNumber } from "../../utils/pagination";
+import { getSerialNumber, resolvePaginationPageSize } from "../../utils/pagination";
 import {
   getColumnSortOrder,
   resolveTableSort,
@@ -57,7 +57,6 @@ export default function BillList() {
     DATE_FILTER_OPTIONS,
   } = useBillsListData();
   const confirmDialog = useConfirmDialog();
-
   const columns = [
     {
       title: "S.No",
@@ -69,6 +68,10 @@ export default function BillList() {
       title: "Bill No",
       dataIndex: "billNo",
       key: "billNo",
+      render: (value: unknown) => {
+        const billNo = typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+        return billNo || "-";
+      },
     },
     {
       title: "Company",
@@ -232,7 +235,7 @@ export default function BillList() {
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
           current={page}
-          pageSize={limit}
+          pageSize={resolvePaginationPageSize(limit, totalRecords)}
           total={totalRecords}
           onChange={(nextPage: number, pageSize: number) =>
             setPagination(nextPage, pageSize)

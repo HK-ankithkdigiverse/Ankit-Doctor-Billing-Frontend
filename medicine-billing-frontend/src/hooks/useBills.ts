@@ -37,7 +37,7 @@ export const useBills = (
   return useQuery({
     queryKey: isPaginated
       ? [QUERY_KEYS.BILLS, pageNumber, limit, search]
-      : [QUERY_KEYS.BILLS, "all"],
+      : [QUERY_KEYS.BILLS, "all", search],
     queryFn: () =>
       isPaginated
         ? getBillsApi({
@@ -45,7 +45,9 @@ export const useBills = (
             limit,
             search: search || undefined,
           })
-        : getAllBillsApi(),
+        : getAllBillsApi({
+            search: search || undefined,
+          }),
     enabled: options?.enabled ?? true,
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,

@@ -18,7 +18,7 @@ export type GetUsersParams = {
 
 export type GetAllUsersParams = Omit<
   GetUsersParams,
-  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+  "page" | "limit" | "sortBy" | "sortOrder"
 >;
 
 const toUsersResponse = (raw: any) => {
@@ -54,11 +54,13 @@ export const createUserApi = async (payload: CreateUserPayload) => {
   if (!medicalStoreId && payload.role?.toUpperCase() !== "ADMIN") {
     throw new Error("Medical Store ID required.");
   }
+  const phoneNumber = clean(payload.phoneNumber);
 
   const requestData = {
     name: clean(payload.name) || "",
     email: lower(payload.email) || "",
     password: clean(payload.password) || "",
+    ...(phoneNumber && { phoneNumber }),
     role: clean(payload.role),
     isActive: payload.isActive,
     signature: clean(payload.signature),
@@ -71,9 +73,11 @@ export const createUserApi = async (payload: CreateUserPayload) => {
 
 export const updateUserApi = async (id: string, payload: UpdateUserPayload) => {
   const medicalStoreId = extractMedicalStoreId(payload);
+  const phoneNumber = clean(payload.phoneNumber);
   const requestData = {
     ...(clean(payload.name) && { name: clean(payload.name) }),
     ...(clean(payload.email) && { email: lower(payload.email) }),
+    ...(phoneNumber && { phoneNumber }),
     ...(clean(payload.role) && { role: clean(payload.role) }),
     ...(typeof payload.isActive === "boolean" && { isActive: payload.isActive }),
     ...(payload.signature !== undefined && { signature: clean(payload.signature) || "" }),
@@ -97,11 +101,14 @@ export const getProfileApi = async () => {
 export const updateProfileApi = async (payload: {
   name: string;
   email: string;
+  phoneNumber?: string;
   signature?: string;
 }) => {
+  const phoneNumber = clean(payload.phoneNumber);
   const requestData = {
     name: clean(payload.name) || "",
     email: lower(payload.email) || "",
+    ...(phoneNumber && { phoneNumber }),
     ...(payload.signature !== undefined && { signature: clean(payload.signature) || "" }),
   };
 

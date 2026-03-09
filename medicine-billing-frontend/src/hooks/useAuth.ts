@@ -19,6 +19,8 @@ const buildOptimisticUser = (
     role: apiUser.role,
     email,
     name: fallbackName,
+    phoneNumber: apiUser.phoneNumber,
+    phone: apiUser.phoneNumber,
     medicineId: apiUser.medicineId,
     medicalStoreId: apiUser.medicalStoreId ?? null,
   };

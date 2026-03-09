@@ -17,6 +17,15 @@ export const phoneRule = {
   message: "Phone number must be 10 digits",
 };
 
+export const optionalPhoneRule = {
+  validator: (_: unknown, value: string | undefined) => {
+    const phone = typeof value === "string" ? value.trim() : "";
+    if (!phone) return Promise.resolve();
+    if (PHONE_REGEX.test(phone)) return Promise.resolve();
+    return Promise.reject(new Error("Phone number must be 10 digits"));
+  },
+};
+
 export const gstRule = {
   pattern: GST_REGEX,
   message: "GST number must be 15 uppercase alphanumeric characters",
@@ -31,4 +40,3 @@ export const passwordMinRule = {
   min: 6,
   message: "Password must be at least 6 characters",
 };
-

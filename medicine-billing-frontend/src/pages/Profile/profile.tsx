@@ -71,17 +71,18 @@ export default function Profile() {
   const roleLabel = formatRoleLabel(resolvedUser.role);
   const subtitle =
     isAdmin ? "System Administrator" : resolvedUser.medicalName || "Medicine Billing User";
+  const phoneNumber = resolvedUser.phoneNumber || resolvedUser.phone || "-";
 
   const adminFields: InfoItem[] = [
     { key: "name", label: "Name", value: resolvedUser.name || "-", icon: <UserOutlined /> },
     { key: "email", label: "Email", value: resolvedUser.email || "-", icon: <MailOutlined /> },
-    { key: "phone", label: "Phone", value: resolvedUser.phone || "-", icon: <PhoneOutlined /> },
+    { key: "phone", label: "Phone", value: phoneNumber, icon: <PhoneOutlined /> },
   ];
 
   const userPersonalFields: InfoItem[] = [
     { key: "name", label: "Name", value: resolvedUser.name || "-", icon: <UserOutlined /> },
     { key: "email", label: "Email", value: resolvedUser.email || "-", icon: <MailOutlined /> },
-    { key: "phone", label: "Phone", value: resolvedUser.phone || "-", icon: <PhoneOutlined /> },
+    { key: "phone", label: "Phone", value: phoneNumber, icon: <PhoneOutlined /> },
   ];
 
   const userProfessionalFields: InfoItem[] = [

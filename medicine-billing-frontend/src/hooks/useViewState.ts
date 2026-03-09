@@ -12,6 +12,7 @@ import {
 } from "../store";
 import type { BillSortType, DateFilterType } from "../types/bill";
 import type { BillingDateRange } from "../utils/billing";
+import { isAllPageLimit } from "../utils/pagination";
 
 export const useViewState = (key: ViewKey) => {
   const dispatch = useAppDispatch();
@@ -24,9 +25,10 @@ export const useViewState = (key: ViewKey) => {
   return {
     view,
     customRange: deserializeBillingDateRange(view.customRange),
-    setPage: (page: number) => patch({ page }),
-    setLimit: (limit: number) => patch({ limit }),
-    setPagination: (page: number, limit: number) => patch({ page, limit }),
+    setPage: (page: number) => patch({ page: isAllPageLimit(view.limit) ? 1 : page }),
+    setLimit: (limit: number) => patch({ limit, page: 1 }),
+    setPagination: (page: number, limit: number) =>
+      patch({ page: isAllPageLimit(limit) ? 1 : page, limit }),
     setSearch: (search: string) => patch({ search, page: 1 }),
     setMedicalStoreId: (medicalStoreId: string) => patch({ medicalStoreId, page: 1 }),
     setStoreStatus: (storeStatus: ViewState["storeStatus"]) => patch({ storeStatus, page: 1 }),

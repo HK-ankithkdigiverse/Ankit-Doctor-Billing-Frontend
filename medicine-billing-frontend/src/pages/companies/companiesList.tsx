@@ -8,7 +8,7 @@ import { useCompaniesListData } from "../../hooks/useCompaniesListData";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { getCompanyDisplayName } from "../../utils/company";
 import { formatDateTime } from "../../utils/dateTime";
-import { getSerialNumber } from "../../utils/pagination";
+import { getSerialNumber, resolvePaginationPageSize } from "../../utils/pagination";
 import {
   getColumnSortOrder,
   resolveTableSort,
@@ -203,7 +203,7 @@ export default function CompaniesList() {
         <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
           <Pagination
             current={page}
-            pageSize={limit}
+            pageSize={resolvePaginationPageSize(limit, totalRecords)}
             total={totalRecords}
             onChange={(nextPage: number, pageSize: number) =>
               setPagination(nextPage, pageSize)

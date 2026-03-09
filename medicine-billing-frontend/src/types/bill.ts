@@ -61,6 +61,7 @@ export interface BillUser {
   medicalStoreId?: string | BillMedicalStore;
   email?: string;
   signature?: string;
+  phoneNumber?: string;
   phone?: string;
   address?: string;
   gstNumber?: string;
@@ -147,18 +148,12 @@ export interface BillPayload {
   userId?: string;
   companyId: string;
   discount?: number;
-  discountPercent?: number;
-  gstType?: BillTaxMode;
-  taxType?: "INTER" | "INTRA";
   gstPercent?: number;
   items: BillPayloadItem[];
 }
 
 export interface BillUpdatePayload {
   discount?: number;
-  discountPercent?: number;
-  gstType?: BillTaxMode;
-  taxType?: "INTER" | "INTRA";
   gstPercent?: number;
   userId?: string;
   companyId?: string;

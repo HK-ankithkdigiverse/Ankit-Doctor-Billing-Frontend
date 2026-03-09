@@ -4,7 +4,7 @@ import { App, Card, Col, Form, Input, Row, Select, Typography } from "antd";
 import { ROLE, ROUTES } from "../../constants";
 import { useCreateUser } from "../../hooks/useUsers";
 import { useAllMedicalStores } from "../../hooks/useMedicalStores";
-import { emailRule, passwordMinRule, requiredRule } from "../../utils/formRules";
+import { emailRule, optionalPhoneRule, passwordMinRule, requiredRule } from "../../utils/formRules";
 import { uploadSingleFileApi } from "../../api/uploadApi";
 import type { CreateUserPayload } from "../../api/userApi";
 import SignatureUploadField from "../../components/forms/SignatureUploadField";
@@ -14,12 +14,14 @@ import { getErrorMessage, isDuplicateEmailError, nonWhitespaceRule, trimIfString
 interface CreateUserFormValues {
   name: string;
   email: string;
+  phoneNumber?: string;
   password: string;
   medicalStoreId: string;
 }
 
 const buildPayload = (values: CreateUserFormValues): CreateUserPayload => {
   const medicalStoreId = trimIfString(values.medicalStoreId);
+  const phoneNumber = trimIfString(values.phoneNumber);
 
   const payload: CreateUserPayload = {
     name: trimIfString(values.name) || "",
@@ -31,6 +33,9 @@ const buildPayload = (values: CreateUserFormValues): CreateUserPayload => {
 
   if (medicalStoreId) {
     payload.medicalStoreId = medicalStoreId;
+  }
+  if (phoneNumber) {
+    payload.phoneNumber = phoneNumber;
   }
 
   return payload;
@@ -139,13 +144,23 @@ export default function CreateUser() {
         </Row>
 
         <Row gutter={16}>
-          <Col xs={24}>
+          <Col xs={24} md={12}>
             <Form.Item
               name="email"
               label="Email"
               rules={[requiredRule("Email"), nonWhitespaceRule("Email"), emailRule]}
             >
               <Input disabled={isPending} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="phoneNumber"
+              label="Phone Number (Optional)"
+              rules={[optionalPhoneRule]}
+              normalize={(value?: string) => (value || "").replace(/\D/g, "").slice(0, 10)}
+            >
+              <Input maxLength={10} inputMode="numeric" disabled={isPending} />
             </Form.Item>
           </Col>
         </Row>

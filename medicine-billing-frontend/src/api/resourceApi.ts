@@ -47,27 +47,27 @@ export type GetBillsParams = {
 
 export type GetAllBillsParams = Omit<
   GetBillsParams,
-  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+  "page" | "limit" | "sortBy" | "sortOrder"
 >;
 
 type GetAllCategoriesParams = Omit<
   GetCategoriesParams,
-  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+  "page" | "limit" | "sortBy" | "sortOrder"
 >;
 
 type GetAllCompaniesParams = Omit<
   GetCompaniesParams,
-  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+  "page" | "limit" | "sortBy" | "sortOrder"
 >;
 
 type GetAllMedicalStoresParams = Omit<
   GetMedicalStoresParams,
-  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+  "page" | "limit" | "sortBy" | "sortOrder"
 >;
 
 type GetAllProductsParams = Omit<
   GetProductsParams,
-  "page" | "limit" | "search" | "sortBy" | "sortOrder"
+  "page" | "limit" | "sortBy" | "sortOrder"
 >;
 
 const toBillsResponse = (raw: any) => {

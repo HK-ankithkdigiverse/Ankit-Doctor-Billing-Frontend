@@ -52,6 +52,7 @@ export interface User {
   name: string;
   medicalName?: string;
   email: string;
+  phoneNumber?: string;
   medicineId?: string;
   medicalStoreId?: string | MedicalStore | null;
   medicalStore?: MedicalStore | null;
@@ -77,7 +78,7 @@ export interface LoginResponse {
 export interface VerifyOtpResponse {
   message: string;
   token: string;
-  user?: Pick<User, "_id" | "role" | "medicineId" | "medicalStoreId">;
+  user?: Pick<User, "_id" | "role" | "medicineId" | "medicalStoreId" | "phoneNumber">;
 }
 
 export interface SignupResponse {

@@ -37,7 +37,7 @@ export const useMedicalStores = (
   return useQuery({
     queryKey: isPaginated
       ? [QUERY_KEYS.MEDICAL_STORES, pageNumber, limit, search]
-      : [QUERY_KEYS.MEDICAL_STORES, "all"],
+      : [QUERY_KEYS.MEDICAL_STORES, "all", search],
     queryFn: () =>
       isPaginated
         ? getMedicalStoresApi({
@@ -45,8 +45,10 @@ export const useMedicalStores = (
             limit,
             search: search || undefined,
           })
-        : getAllMedicalStoresApi(),
-    enabled: options?.enabled ?? true, // ✅ removed role check
+        : getAllMedicalStoresApi({
+            search: search || undefined,
+          }),
+    enabled: options?.enabled ?? true,
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
   });

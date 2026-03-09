@@ -1,4 +1,4 @@
-import { type ClipboardEvent, type FocusEvent, type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   App,
   Button,
@@ -23,7 +23,7 @@ import {
   validateBillForm,
 } from "../../utils/billing";
 import { createNameSorter } from "../../utils/tableSort";
-import { normalizePercent, resolveBillTaxMode, resolveStoreGstPercent, toBackendTaxType } from "../../utils/tax";
+import { normalizePercent, resolveBillTaxMode, resolveStoreGstPercent } from "../../utils/tax";
 
 type BillFormProps = {
   title: string;
@@ -35,7 +35,7 @@ type BillFormProps = {
   companies: any[];
   initialCompanyId?: string;
   initialCompanyName?: string;
-  initialDiscount?: number;
+  initialDiscountAmount?: number;
   initialGstPercent?: number;
   initialItems?: BillFormItem[];
   autoApplyStoreGstPercent?: boolean;
@@ -50,16 +50,6 @@ const normalizeWholePercent = (value: number) => {
   return Math.floor(clamped);
 };
 
-const parseWholePercentInput = (input: string | undefined) => {
-  const digitsOnly = String(input ?? "").replace(/[^\d]/g, "");
-  return normalizeWholePercent(digitsOnly === "" ? 0 : Number(digitsOnly));
-};
-const PERCENT_CONTROL_KEYS = new Set(["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End", "Enter"]);
-const hasInvalidPercentText = (input: string | undefined) => {
-  const trimmed = String(input ?? "").trim();
-  if (!trimmed) return false;
-  return /[^0-9]/.test(trimmed);
-};
 const getCompanyMedicalStoreId = (company: any) =>
   typeof company?.medicalStoreId === "object" ? company?.medicalStoreId?._id : company?.medicalStoreId;
 const DEFAULT_BILL_GST_PERCENT = 18;
@@ -81,7 +71,7 @@ export default function BillForm({
   companies,
   initialCompanyId = "",
   initialCompanyName = "",
-  initialDiscount = 0,
+  initialDiscountAmount = 0,
   initialGstPercent = DEFAULT_BILL_GST_PERCENT,
   initialItems,
   autoApplyStoreGstPercent = true,
@@ -91,13 +81,12 @@ export default function BillForm({
   const { message } = App.useApp();
   const [userId, setUserId] = useState(initialUserId);
   const [companyId, setCompanyId] = useState(initialCompanyId);
-  const [discountPercent, setDiscountPercent] = useState(normalizeWholePercent(initialDiscount));
+  const [discountAmountInput, setDiscountAmountInput] = useState(Math.max(0, Number(initialDiscountAmount || 0)));
   const [gstPercent, setGstPercent] = useState(normalizeWholePercent(initialGstPercent));
   const [items, setItems] = useState<BillFormRow[]>(normalizeBillFormRows(initialItems));
   const { data: me } = useMe();
-  // Ensure medical stores are loaded so we can resolve GST data
-  // even when the current user is not an admin (me.medicalStoreId may be an ID string).
-  const { data: medicalStoresData } = useAllMedicalStores({ enabled: true });
+  // Non-admin users may not have permission for full medical store listing.
+  const { data: medicalStoresData } = useAllMedicalStores({ enabled: isAdmin });
 
   const { data: productData, isLoading: productsLoading } = useAllProducts({
     companyId: companyId || undefined,
@@ -108,10 +97,10 @@ export default function BillForm({
   useEffect(() => {
     setUserId(initialUserId || "");
     setCompanyId(initialCompanyId || "");
-    setDiscountPercent(normalizeWholePercent(initialDiscount));
+    setDiscountAmountInput(Math.max(0, Number(initialDiscountAmount || 0)));
     setGstPercent(normalizeWholePercent(initialGstPercent));
     setItems(normalizeBillFormRows(initialItems));
-  }, [initialUserId, initialCompanyId, initialDiscount, initialGstPercent, initialItems]);
+  }, [initialUserId, initialCompanyId, initialDiscountAmount, initialGstPercent, initialItems]);
 
   const storeNameById = useMemo(() => {
     const storeMap = new Map<string, string>();
@@ -190,7 +179,6 @@ export default function BillForm({
 
   const getProduct = (id: string) => products.find((product: any) => product._id === id);
   const getProductName = (id: string) => getProduct(id)?.name || "";
-  const getProductCategory = (id: string) => getProduct(id)?.category || "";
   const selectedUserOption = storeOptions.find((option) => option.value === userId);
   const selectedUserMedicalStoreId = selectedUserOption?.medicalStoreId || "";
   const selectedMedicalStoreId = isAdmin ? selectedUserMedicalStoreId : meMedicalStoreId;
@@ -218,10 +206,6 @@ export default function BillForm({
     selectedUserOption?.medicalStoreState ||
     (typeof me?.state === "string" ? me.state : "") ||
     (typeof me?.medicalStoreId === "object" ? (me.medicalStoreId as any)?.state || "" : "");
-    useEffect(() => {
-  console.log("Selected Store ID", selectedMedicalStoreId);
-  console.log("Selected Store Data", selectedMedicalStore);
-}, [selectedMedicalStoreId, selectedMedicalStore]);
 
   const handleCompanyChange = (value: string) => {
     setCompanyId(value);
@@ -289,50 +273,30 @@ export default function BillForm({
   const addRow = () => setItems((prev) => [...prev, toBillFormRow()]);
   const removeRow = (rowId: string) =>
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.rowId !== rowId)));
-
-  const handlePercentBlur = (
-    label: "GST" | "Discount",
-    setValue: (next: number) => void
-  ) => (event: FocusEvent<HTMLInputElement>) => {
-    const rawValue = event.target.value;
-    if (hasInvalidPercentText(rawValue)) {
-      message.error(`${label} % accepts only numbers`);
-    }
-    setValue(parseWholePercentInput(rawValue));
-  };
-
-  const handlePercentKeyDown = (label: "GST" | "Discount") => (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    if (/^\d$/.test(event.key) || PERCENT_CONTROL_KEYS.has(event.key)) return;
-    event.preventDefault();
-    message.error(`${label} % accepts only numbers`);
-  };
-
-  const handlePercentPaste = (label: "GST" | "Discount") => (event: ClipboardEvent<HTMLInputElement>) => {
-    const pastedText = event.clipboardData.getData("text");
-    if (!hasInvalidPercentText(pastedText)) return;
-    event.preventDefault();
-    message.error(`${label} % accepts only numbers`);
-  };
   const effectiveGstPercent = Number(gstPercent) > 0 ? Number(gstPercent) : Number(selectedStoreGstPercent || 0);
 
   const {
     subTotal,
-    totalTax,
     totalCgst,
     totalSgst,
     totalIgst,
     totalBeforeDiscount,
-    discountAmount,
-    grandTotal,
   } = useMemo(
     () =>
-      getBillSummary(items, discountPercent, {
+      getBillSummary(items, 0, {
         taxMode: resolvedTaxMode,
         gstPercent: effectiveGstPercent,
       }),
-    [discountPercent, effectiveGstPercent, items, resolvedTaxMode]
+    [effectiveGstPercent, items, resolvedTaxMode]
   );
+  const effectiveDiscountAmount = useMemo(() => {
+    const normalized = Number(discountAmountInput || 0);
+    if (!Number.isFinite(normalized)) return 0;
+    const maxAllowed = Math.max(0, Number(totalBeforeDiscount || 0));
+    return Math.min(maxAllowed, Math.max(0, normalized));
+  }, [discountAmountInput, totalBeforeDiscount]);
+  const payloadDiscountAmount = Number(effectiveDiscountAmount.toFixed(2));
+  const grandTotal = Math.max(0, totalBeforeDiscount - effectiveDiscountAmount);
   const displayGstPercent = effectiveGstPercent;
   const splitDisplayGstPercent = displayGstPercent / 2;
 
@@ -341,21 +305,6 @@ export default function BillForm({
       message.error("Selected store is invalid");
       return;
     }
-
-    // Debug info to trace why GST might be missing
-    // Logs: selectedMedicalStoreId, selectedMedicalStore object, resolvedTaxMode, selectedStoreGstPercent
-    // and currently computed gstPercent before submit.
-    // This will help identify if store data is not loaded or lacks GST fields.
-    // eslint-disable-next-line no-console
-    console.log("Bill submit debug", {
-      selectedMedicalStoreId,
-      selectedMedicalStore,
-      resolvedTaxMode,
-      selectedStoreGstPercent,
-      gstPercent,
-      companyId,
-      company: companies.find((c: any) => String(c._id) === String(companyId)),
-    });
 
     if (isAdmin && userId && selectedUserMedicalStoreId && companyId) {
       const selectedCompany = companies.find((company: any) => String(company?._id || "") === String(companyId));
@@ -368,14 +317,13 @@ export default function BillForm({
 
     // derive payload GST values: prefer user-edited `gstPercent`, else store's configured percent
     const payloadGstPercent = effectiveGstPercent;
-    const payloadGstType: BillTaxMode = resolvedTaxMode || (selectedMedicalStore as any)?.gstType || "CGST_SGST";
-
     const validationMessage = validateBillForm({
       isAdmin,
       userId,
       companyId,
       gstPercent: payloadGstPercent,
-      discount: discountPercent,
+      discount: payloadDiscountAmount,
+      totalBeforeDiscount,
       items,
     });
 
@@ -387,13 +335,9 @@ export default function BillForm({
     await onSubmit({
       userId: isAdmin ? userId : undefined,
       companyId,
-      // Backend currently persists `discount` as amount.
-      discount: discountAmount,
-      gstType: payloadGstType,
-      taxType: toBackendTaxType(payloadGstType),
+      discount: payloadDiscountAmount,
       gstPercent: payloadGstPercent,
       items: toBillPayloadItems(items),
-      ...(selectedMedicalStoreId ? { medicalStoreId: selectedMedicalStoreId } : {}),
     });
   };
 
@@ -422,12 +366,6 @@ export default function BillForm({
           loading={productsLoading}
         />
       ),
-    },
-    {
-      title: "Category",
-      key: "category",
-      sorter: createNameSorter((row: BillFormRow) => getProductCategory(row.productId)),
-      render: (_: unknown, item: BillFormRow) => getProductCategory(item.productId) || "-",
     },
     {
       title: "Qty",
@@ -548,18 +486,13 @@ export default function BillForm({
               max={100}
               value={gstPercent}
               disabled
-              onChange={(value: number | null) => setGstPercent(normalizeWholePercent(value || 0))}
-              onBlur={handlePercentBlur("GST", setGstPercent)}
-              onKeyDown={handlePercentKeyDown("GST")}
-              onPaste={handlePercentPaste("GST")}
-              parser={parseWholePercentInput}
-              step={1}
-              precision={0}
               addonAfter="%"
             />
             <div className="bill-summary-note" style={{ marginTop: 6 }}>
               {selectedStoreGstPercent > 0 && gstPercent === 0 ? (
-                <Typography.Text type="secondary">Store GST available: {selectedStoreGstPercent}% — it will be applied automatically.</Typography.Text>
+                <Typography.Text type="secondary">
+                  Store GST available: {selectedStoreGstPercent}% - it will be applied automatically.
+                </Typography.Text>
               ) : null}
               {selectedStoreGstPercent === 0 && subTotal === 0 ? (
                 <Typography.Text type="secondary">GST is 0 because there are no priced items yet.</Typography.Text>
@@ -584,35 +517,35 @@ export default function BillForm({
               </Typography.Text>
             </div>
           )}
-          <div className="bill-summary-row">
-            <Typography.Text className="bill-summary-label">Total GST ({formatTaxPercent(displayGstPercent)}%)</Typography.Text>
-
-            <Typography.Text className="bill-summary-value">Rs {totalTax.toFixed(2)}</Typography.Text>
-          </div>
+          
           <div className="bill-summary-row">
             <Typography.Text className="bill-summary-label">Total Amount</Typography.Text>
             <Typography.Text className="bill-summary-value">Rs {totalBeforeDiscount.toFixed(2)}</Typography.Text>
           </div>
           <div className="bill-summary-row">
-            <Typography.Text className="bill-summary-label">Discount (%)</Typography.Text>
+            <Typography.Text className="bill-summary-label">Discount Amount</Typography.Text>
             <InputNumber
-              className="bill-summary-input app-percent-input"
+              className="bill-summary-input"
               min={0}
-              max={100}
-              value={discountPercent}
-              onChange={(value: number | null) => setDiscountPercent(normalizeWholePercent(value || 0))}
-              onBlur={handlePercentBlur("Discount", setDiscountPercent)}
-              onKeyDown={handlePercentKeyDown("Discount")}
-              onPaste={handlePercentPaste("Discount")}
-              parser={parseWholePercentInput}
-              step={1}
-              precision={0}
-              addonAfter="%"
+              max={Math.max(0, Number(totalBeforeDiscount || 0))}
+              value={discountAmountInput}
+              onChange={(value: number | null) => setDiscountAmountInput(Math.max(0, Number(value || 0)))}
+              onBlur={() => {
+                const normalized = Number(discountAmountInput || 0);
+                const clamped = Math.min(Math.max(0, normalized), Math.max(0, Number(totalBeforeDiscount || 0)));
+                if (normalized > Number(totalBeforeDiscount || 0)) {
+                  message.error("Discount amount cannot exceed total amount");
+                }
+                setDiscountAmountInput(Number(clamped.toFixed(2)));
+              }}
+              step={0.01}
+              precision={2}
+              addonBefore="Rs"
             />
           </div>
           <div className="bill-summary-row">
-            <Typography.Text className="bill-summary-label">Discount Amount</Typography.Text>
-            <Typography.Text className="bill-summary-value">Rs {discountAmount.toFixed(2)}</Typography.Text>
+            <Typography.Text className="bill-summary-label">Applied Discount</Typography.Text>
+            <Typography.Text className="bill-summary-value">Rs {effectiveDiscountAmount.toFixed(2)}</Typography.Text>
           </div>
           <div className="bill-summary-row bill-summary-row-grand">
             <Typography.Text className="bill-summary-label">Grand Total</Typography.Text>

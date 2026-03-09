@@ -5,7 +5,7 @@ import { useMe } from "./useMe";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { useViewState } from "./useViewState";
 import { buildMedicalStoreNameById, getCategoryMedicalStoreId } from "../utils/medicalStore";
-import { buildPageSizeSelectOptions } from "../utils/pagination";
+import { buildPageSizeSelectOptions, isAllPageLimit } from "../utils/pagination";
 import {
   applyTableSort,
   createDateSorter,
@@ -32,10 +32,11 @@ export const useCategoriesListData = () => {
   const { data, isLoading, isFetching, error } = useCategories(page, limit, debouncedSearch);
   const searchLoading = search !== debouncedSearch || isFetching;
   const { mutateAsync: deleteCategory, isPending } = useDeleteCategory();
+  const allSelected = isAllPageLimit(limit);
 
   const categories = data?.categories ?? [];
   const pagination = data?.pagination;
-  const totalRecords = pagination?.total || 0;
+  const totalRecords = allSelected ? categories.length : pagination?.total || 0;
   const pageSizeSelectOptions = buildPageSizeSelectOptions(totalRecords);
   const sortState = { field: sortField, order: sortOrder };
 

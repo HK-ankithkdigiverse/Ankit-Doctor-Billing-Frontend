@@ -7,7 +7,7 @@ import { useBillFormMeta } from "../../hooks/useBillFormMeta";
 import type { BillPayload } from "../../types/bill";
 import {
   normalizeBillItemsForForm,
-  resolveBillDiscountPercent,
+  resolveBillDiscountAmount,
   resolveBillGstPercent,
 } from "../../utils/billing";
 
@@ -21,7 +21,7 @@ export default function EditBill() {
   const { mutateAsync, isPending } = useUpdateBill();
 
   const initialItems = normalizeBillItemsForForm(billData?.items);
-  const initialDiscountPercent = resolveBillDiscountPercent(billData?.bill);
+  const initialDiscountAmount = resolveBillDiscountAmount(billData?.bill);
   const initialGstPercent = resolveBillGstPercent(billData?.bill, billData?.items ?? []);
 
   if (isLoading) return <p>Loading...</p>;
@@ -36,7 +36,8 @@ export default function EditBill() {
       message.success("Bill updated successfully");
       navigate(ROUTES.BILL_DETAILS(id));
     } catch (error: any) {
-      message.error(error?.response?.data?.message || "Failed to update bill");
+      const serverMsg = error?.response?.data?.message || error?.response?.data || error?.message;
+      message.error(serverMsg || "Failed to update bill");
     }
   };
 
@@ -51,7 +52,7 @@ export default function EditBill() {
       companies={companies}
       initialCompanyId={(billData.bill.companyId as any)?._id || ""}
       initialCompanyName={(billData.bill.companyId as any)?.companyName || (billData.bill.companyId as any)?.name || ""}
-      initialDiscount={initialDiscountPercent}
+      initialDiscountAmount={initialDiscountAmount}
       initialGstPercent={initialGstPercent}
       initialItems={initialItems}
       autoApplyStoreGstPercent={false}

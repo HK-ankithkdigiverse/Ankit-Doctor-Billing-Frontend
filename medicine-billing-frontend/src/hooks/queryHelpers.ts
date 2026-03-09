@@ -1,4 +1,5 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import { isAllPageLimit } from "../utils/pagination";
 
 export type QueryHookOptions = { enabled?: boolean };
 
@@ -11,7 +12,9 @@ export const parsePaginatedListArgs = <TOptions extends QueryHookOptions>(
   searchOrOptions: string | TOptions = "",
   optionsArg?: TOptions
 ) => {
-  const limit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
+  const rawLimit = typeof limitOrSearch === "number" ? limitOrSearch : undefined;
+  const isAllSelected = isAllPageLimit(rawLimit);
+  const limit = isAllSelected ? undefined : rawLimit;
   const search =
     typeof limitOrSearch === "string"
       ? limitOrSearch
@@ -24,7 +27,8 @@ export const parsePaginatedListArgs = <TOptions extends QueryHookOptions>(
       : optionsArg;
 
   return {
-    isPaginated: typeof page === "number",
+    isPaginated: typeof page === "number" && !isAllSelected,
+    isAllSelected,
     limit,
     search,
     options,

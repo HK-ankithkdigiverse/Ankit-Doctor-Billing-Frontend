@@ -18,7 +18,7 @@ import { ROUTES } from "../../constants";
 import { useMedicalStoresListData } from "../../hooks/useMedicalStoresListData";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
-import { getSerialNumber } from "../../utils/pagination";
+import { getSerialNumber, resolvePaginationPageSize } from "../../utils/pagination";
 import { getColumnSortOrder, resolveTableSort } from "../../utils/tableSort";
 import { getErrorMessage } from "../../utils/userForm";
 
@@ -233,7 +233,7 @@ export default function MedicalStoresList() {
         <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
           <Pagination
             current={page}
-            pageSize={limit}
+            pageSize={resolvePaginationPageSize(limit, totalRecords)}
             total={totalRecords}
             onChange={(nextPage, pageSize) =>
               setPagination(nextPage, pageSize)

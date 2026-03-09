@@ -7,7 +7,7 @@ import { useCategoriesListData } from "../../hooks/useCategoriesListData";
 import type { Category } from "../../types/category";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
-import { getSerialNumber } from "../../utils/pagination";
+import { getSerialNumber, resolvePaginationPageSize } from "../../utils/pagination";
 import { getColumnSortOrder, resolveTableSort } from "../../utils/tableSort";
 
 export default function CategoriesList() {
@@ -151,7 +151,7 @@ export default function CategoriesList() {
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
           current={page}
-          pageSize={limit}
+          pageSize={resolvePaginationPageSize(limit, totalRecords)}
           total={totalRecords}
           onChange={(nextPage: number, pageSize: number) =>
             setPagination(nextPage, pageSize)

@@ -6,7 +6,7 @@ import { ROUTES } from "../../constants";
 import { useProductsListData } from "../../hooks/useProductsListData";
 import { useConfirmDialog } from "../../utils/confirmDialog";
 import { formatDateTime } from "../../utils/dateTime";
-import { getSerialNumber } from "../../utils/pagination";
+import { getSerialNumber, resolvePaginationPageSize } from "../../utils/pagination";
 import { getColumnSortOrder, resolveTableSort } from "../../utils/tableSort";
 import type { Product } from "../../types/product";
 
@@ -192,7 +192,7 @@ export default function ProductsList() {
       <div style={{ marginTop: 16, display: "flex", justifyContent: "end" }}>
         <Pagination
           current={page}
-          pageSize={limit}
+          pageSize={resolvePaginationPageSize(limit, totalRecords)}
           total={totalRecords}
           onChange={(nextPage: number, pageSize: number) =>
             setPagination(nextPage, pageSize)

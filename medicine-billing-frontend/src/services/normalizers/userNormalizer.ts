@@ -37,6 +37,7 @@ export const toMedicalStore = (value: any): MedicalStore | undefined => {
 export const normalizeUser = (user: any): UserWithMedical => {
   const medicalStore = toMedicalStore(user?.medicalStoreId) || toMedicalStore(user?.medicalStore);
   const medicalStoreId = medicalStore?._id || extractMedicalStoreId(user);
+  const phoneNumber = clean(user?.phoneNumber) || clean(user?.phone) || medicalStore?.phone || "";
 
   return {
     ...user,
@@ -48,7 +49,8 @@ export const normalizeUser = (user: any): UserWithMedical => {
     medicineId: medicalStoreId || "",
     medicalStore: medicalStore || null,
     medicalName: clean(user?.medicalName) || medicalStore?.name || "",
-    phone: clean(user?.phone) || medicalStore?.phone || "",
+    phoneNumber,
+    phone: phoneNumber,
     address: clean(user?.address) || medicalStore?.address || "",
     state: clean(user?.state) || medicalStore?.state || "",
     city: clean(user?.city) || medicalStore?.city || "",

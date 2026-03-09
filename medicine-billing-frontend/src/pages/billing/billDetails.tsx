@@ -41,6 +41,10 @@ export default function BillView() {
   const autoDownloadTriggered = useRef(false);
   const bill = data?.bill;
   const items = data?.items ?? [];
+  const displayBillNo =
+    typeof bill?.billNo === "string" || typeof bill?.billNo === "number"
+      ? String(bill.billNo).trim()
+      : "";
   const companyName = getCompanyDisplayName(bill?.companyId) || "Company";
   const companyGst = bill?.companyId?.gstNumber || (bill?.companyId as any)?.gstNo || "-";
   const companyAddress = bill?.companyId?.address || "-";
@@ -83,7 +87,6 @@ export default function BillView() {
     igstTotal,
     cgstTotal,
     sgstTotal,
-    discountPercent,
     totalBeforeDiscount,
     discountAmount,
     grandTotal,
@@ -98,7 +101,6 @@ export default function BillView() {
           { label: "SGST", value: formatBillCurrency(sgstTotal) },
         ]),
     { label: "TOTAL AMOUNT", value: formatBillCurrency(totalBeforeDiscount) },
-    { label: "DISCOUNT (%)", value: `${discountPercent}%` },
     { label: "DISCOUNT AMOUNT", value: formatBillCurrency(discountAmount) },
   ];
 
@@ -120,7 +122,7 @@ export default function BillView() {
       await html2pdf()
         .set({
           margin: 0,
-          filename: `${bill.billNo || "invoice"}.pdf`,
+          filename: `${displayBillNo || "invoice"}.pdf`,
           image: { type: "jpeg", quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
@@ -131,7 +133,7 @@ export default function BillView() {
     } finally {
       setIsPreparingPdf(false);
     }
-  }, [bill]);
+  }, [bill, displayBillNo]);
 
   useEffect(() => {
     const shouldAutoDownload =
@@ -300,7 +302,7 @@ export default function BillView() {
                       GST: {companyGst}
                     </Typography.Text>
                     <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted, fontSize: 12 }}>
-                      Bill No: {bill.billNo || "-"}
+                      Bill No: {displayBillNo || "-"}
                     </Typography.Text>
                     <Typography.Text style={{ display: "block", color: INVOICE_COLORS.textMuted, fontSize: 12 }}>
                       Date & Time: {formatDateTime(bill.createdAt)}
@@ -314,7 +316,7 @@ export default function BillView() {
               <table
                 style={{
                   width: "100%",
-                  minWidth: compactPreview ? 620 : "100%",
+                  minWidth: compactPreview ? 900 : "100%",
                   borderCollapse: "collapse",
                   fontSize: 13,
                   border: `1px solid ${INVOICE_COLORS.border}`,
@@ -323,8 +325,11 @@ export default function BillView() {
                 <thead>
                   <tr style={{ background: INVOICE_COLORS.accent }}>
                     <th style={{ color: INVOICE_COLORS.white, textAlign: "left", padding: "10px 12px", fontWeight: 600 }}>DESCRIPTION</th>
+                    <th style={{ color: INVOICE_COLORS.white, textAlign: "left", padding: "10px 12px", fontWeight: 600 }}>CATEGORY</th>
                     <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>QTY</th>
-                    <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>UNIT PRICE</th>
+                    <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>FREE QTY</th>
+                    <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>MRP</th>
+                    <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>USER RATE</th>
                     <th style={{ color: INVOICE_COLORS.white, textAlign: "right", padding: "10px 12px", fontWeight: 600 }}>LINE TOTAL</th>
                   </tr>
                 </thead>
@@ -332,6 +337,12 @@ export default function BillView() {
                   {items.map((item: any, index: number) => {
                     const category =
                       String(item?.category || (typeof item?.productId === "object" ? item?.productId?.category : "") || "").trim();
+                    const qty = Number(item?.qty || 0);
+                    const freeQty = Number(item?.freeQty || 0);
+                    const mrp = Number(
+                      item?.mrp || (typeof item?.productId === "object" ? item?.productId?.mrp : 0) || 0
+                    );
+                    const userRate = Number(item?.rate || 0);
 
                     return (
                       <tr
@@ -342,17 +353,23 @@ export default function BillView() {
                           }}
                         >
                         <td style={{ padding: "11px 12px" }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            <span>{item.productName || "-"}</span>
-                            {category ? <span style={{ color: INVOICE_COLORS.textMuted, fontSize: 11 }}>Category: {category}</span> : null}
-                          </div>
+                          {item.productName || "-"}
                         </td>
-                        <td style={{ padding: "11px 12px", textAlign: "right" }}>{Number(item.qty || 0)}</td>
+                        <td style={{ padding: "11px 12px" }}>
+                          {category || "-"}
+                        </td>
+                        <td style={{ padding: "11px 12px", textAlign: "right" }}>{qty}</td>
                         <td style={{ padding: "11px 12px", textAlign: "right" }}>
-                          {formatBillCurrency(Number(item.rate || 0))}
+                          {freeQty}
+                        </td>
+                        <td style={{ padding: "11px 12px", textAlign: "right" }}>
+                          {formatBillCurrency(mrp)}
+                        </td>
+                        <td style={{ padding: "11px 12px", textAlign: "right" }}>
+                          {formatBillCurrency(userRate)}
                         </td>
                         <td style={{ padding: "11px 12px", textAlign: "right", fontWeight: 600 }}>
-                          {formatBillCurrency(Number(item.rate || 0) * Number(item.qty || 0))}
+                          {formatBillCurrency(userRate * qty)}
                         </td>
                       </tr>
                     );

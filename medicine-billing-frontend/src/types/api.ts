@@ -83,6 +83,7 @@ export interface CreateUserPayload {
   name: string;
   email: string;
   password: string;
+  phoneNumber?: string;
   medicalStoreId?: string;
   role?: string;
   isActive?: boolean;
