@@ -1,47 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  App,
-  Button,
-  Card,
-  Form,
-  InputNumber,
-  Select,
-  Space,
-  Table,
-  Typography,
-} from "antd";
+import { App, Button, Card, Form, InputNumber, Select, Space, Table, Typography, } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useAllProducts } from "../../hooks/useProducts";
 import type { BillFormItem, BillFormRow, BillPayload, BillTaxMode, BillUserOption } from "../../types/bill";
 import { useAllMedicalStores } from "../../hooks/useMedicalStores";
 import { useMe } from "../../hooks/useMe";
-import {
-  getBillSummary,
-  normalizeBillFormRows,
-  toBillFormRow,
-  toBillPayloadItems,
-  validateBillForm,
-} from "../../utils/billing";
+import { getBillSummary, normalizeBillFormRows, toBillFormRow, toBillPayloadItems, validateBillForm, } from "../../utils/billing";
 import { createNameSorter } from "../../utils/tableSort";
 import { normalizePercent, resolveBillTaxMode, resolveStoreGstPercent } from "../../utils/tax";
 
-type BillFormProps = {
-  title: string;
-  submitText: string;
-  submitLoading?: boolean;
-  isAdmin?: boolean;
-  users?: BillUserOption[];
-  initialUserId?: string;
-  companies: any[];
-  initialCompanyId?: string;
-  initialCompanyName?: string;
-  initialDiscountAmount?: number;
-  initialGstPercent?: number;
-  initialItems?: BillFormItem[];
-  autoApplyStoreGstPercent?: boolean;
-  onSubmit: (payload: BillPayload) => Promise<void>;
-  onCancel: () => void;
-};
+type BillFormProps = { title: string; submitText: string; submitLoading?: boolean; isAdmin?: boolean; users?: BillUserOption[]; initialUserId?: string; companies: any[]; initialCompanyId?: string; initialCompanyName?: string; initialDiscountAmount?: number; initialGstPercent?: number; initialItems?: BillFormItem[]; autoApplyStoreGstPercent?: boolean; onSubmit: (payload: BillPayload) => Promise<void>; onCancel: () => void; };
 
 const normalizeWholePercent = (value: number) => {
   const numeric = Number(value);
@@ -61,23 +29,7 @@ const formatTaxPercent = (value: number) => {
   return rounded.toFixed(2).replace(/\.?0+$/, "");
 };
 
-export default function BillForm({
-  title,
-  submitText,
-  submitLoading,
-  isAdmin = false,
-  users = [],
-  initialUserId = "",
-  companies,
-  initialCompanyId = "",
-  initialCompanyName = "",
-  initialDiscountAmount = 0,
-  initialGstPercent = DEFAULT_BILL_GST_PERCENT,
-  initialItems,
-  autoApplyStoreGstPercent = true,
-  onSubmit,
-  onCancel,
-}: BillFormProps) {
+export default function BillForm({ title, submitText, submitLoading, isAdmin = false, users = [], initialUserId = "", companies, initialCompanyId = "", initialCompanyName = "", initialDiscountAmount = 0, initialGstPercent = DEFAULT_BILL_GST_PERCENT, initialItems, autoApplyStoreGstPercent = true, onSubmit, onCancel }: BillFormProps) {
   const { message } = App.useApp();
   const [userId, setUserId] = useState(initialUserId);
   const [companyId, setCompanyId] = useState(initialCompanyId);
@@ -161,19 +113,9 @@ export default function BillForm({
       return String(companyStoreId || "") === String(targetMedicalStoreId);
     };
 
-    const options = companies.filter(isVisibleForSelectedUser).map((company: any) => ({
-      value: company._id,
-      label: company.companyName || company.name || company.email || company._id,
-    }));
+    const options = companies.filter(isVisibleForSelectedUser).map((company: any) => ({ value: company._id, label: company.companyName || company.name || company.email || company._id, }));
 
-    if (
-      initialCompanyId &&
-      initialCompanyName &&
-      !options.some((option: { value: string }) => option.value === initialCompanyId)
-    ) {
-      options.push({ value: initialCompanyId, label: initialCompanyName });
-    }
-
+    if (initialCompanyId && initialCompanyName && !options.some((option: { value: string }) => option.value === initialCompanyId)) { options.push({ value: initialCompanyId, label: initialCompanyName }); }
     return options;
   }, [companies, initialCompanyId, initialCompanyName, isAdmin, meMedicalStoreId, storeOptions, userId]);
 
@@ -207,10 +149,7 @@ export default function BillForm({
     (typeof me?.state === "string" ? me.state : "") ||
     (typeof me?.medicalStoreId === "object" ? (me.medicalStoreId as any)?.state || "" : "");
 
-  const handleCompanyChange = (value: string) => {
-    setCompanyId(value);
-    setItems([toBillFormRow()]);
-  };
+  const handleCompanyChange = (value: string) => { setCompanyId(value); setItems([toBillFormRow()]); };
 
   const handleUserChange = (value: string) => {
     setUserId(value);
@@ -275,18 +214,7 @@ export default function BillForm({
     setItems((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.rowId !== rowId)));
   const effectiveGstPercent = Number(gstPercent) > 0 ? Number(gstPercent) : Number(selectedStoreGstPercent || 0);
 
-  const {
-    subTotal,
-    totalCgst,
-    totalSgst,
-    totalIgst,
-    totalBeforeDiscount,
-  } = useMemo(
-    () =>
-      getBillSummary(items, 0, {
-        taxMode: resolvedTaxMode,
-        gstPercent: effectiveGstPercent,
-      }),
+  const { subTotal, totalCgst, totalSgst, totalIgst, totalBeforeDiscount, } = useMemo(() => getBillSummary(items, 0, { taxMode: resolvedTaxMode, gstPercent: effectiveGstPercent, }),
     [effectiveGstPercent, items, resolvedTaxMode]
   );
   const effectiveDiscountAmount = useMemo(() => {
@@ -317,106 +245,20 @@ export default function BillForm({
 
     // derive payload GST values: prefer user-edited `gstPercent`, else store's configured percent
     const payloadGstPercent = effectiveGstPercent;
-    const validationMessage = validateBillForm({
-      isAdmin,
-      userId,
-      companyId,
-      gstPercent: payloadGstPercent,
-      discount: payloadDiscountAmount,
-      totalBeforeDiscount,
-      items,
-    });
-
-    if (validationMessage) {
-      message.error(validationMessage);
-      return;
-    }
-
-    await onSubmit({
-      userId: isAdmin ? userId : undefined,
-      companyId,
-      discount: payloadDiscountAmount,
-      gstPercent: payloadGstPercent,
-      items: toBillPayloadItems(items),
-    });
+    const validationMessage = validateBillForm({ isAdmin, userId, companyId, gstPercent: payloadGstPercent, discount: payloadDiscountAmount, totalBeforeDiscount, items, });
+    if (validationMessage) { message.error(validationMessage); return; }
+    await onSubmit({ userId: isAdmin ? userId : undefined, companyId, discount: payloadDiscountAmount, gstPercent: payloadGstPercent, items: toBillPayloadItems(items), });
   };
 
   const columns = [
-    {
-      title: "S.No",
-      key: "serial",
-      width: 80,
-      render: (_: unknown, __: BillFormRow, index: number) => index + 1,
-    },
-    {
-      title: "Product",
-      key: "product",
-      sorter: createNameSorter((row: BillFormRow) => getProductName(row.productId)),
-      render: (_: unknown, item: BillFormRow) => (
-        <Select
-          value={item.productId || undefined}
-          style={{ width: 220 }}
-          placeholder={companyId ? "Select product" : "Select company first"}
-          onChange={(value: string) => updateItem(item.rowId, "productId", value)}
-          options={products.map((product: any) => ({
-            value: product._id,
-            label: product.category ? `${product.name} (${product.category})` : product.name,
-          }))}
-          disabled={!companyId}
-          loading={productsLoading}
-        />
-      ),
-    },
-    {
-      title: "Qty",
-      key: "qty",
-      render: (_: unknown, item: BillFormRow) => (
-        <InputNumber
-          min={1}
-          value={item.qty}
-          onChange={(value: number | null) => updateItem(item.rowId, "qty", value || 1)}
-        />
-      ),
-    },
-    {
-      title: "Free",
-      key: "freeQty",
-      render: (_: unknown, item: BillFormRow) => (
-        <InputNumber
-          min={0}
-          value={item.freeQty}
-          onChange={(value: number | null) => updateItem(item.rowId, "freeQty", value || 0)}
-        />
-      ),
-    },
-    {
-      title: "Rate",
-      key: "rate",
-      render: (_: unknown, item: BillFormRow) => Number(item.rate || 0).toFixed(2),
-    },
-    {
-      title: "MRP",
-      key: "mrp",
-      render: (_: unknown, item: BillFormRow) => Number(item.mrp || 0).toFixed(2),
-    },
-    {
-      title: "Line Total",
-      key: "total",
-      render: (_: unknown, item: BillFormRow) =>
-        `Rs ${(Number(item.rate || 0) * Number(item.qty || 0)).toFixed(2)}`,
-    },
-    {
-      title: "",
-      key: "remove",
-      render: (_: unknown, item: BillFormRow) => (
-        <Button
-          danger
-          icon={<MinusCircleOutlined />}
-          onClick={() => removeRow(item.rowId)}
-          disabled={items.length === 1}
-        />
-      ),
-    },
+    { title: "S.No", key: "serial", width: 80, render: (_: unknown, __: BillFormRow, index: number) => index + 1, },
+    { title: "Product", key: "product", sorter: createNameSorter((row: BillFormRow) => getProductName(row.productId)), render: (_: unknown, item: BillFormRow) => (<Select value={item.productId || undefined} style={{ width: 220 }} placeholder={companyId ? "Select product" : "Select company first"} onChange={(value: string) => updateItem(item.rowId, "productId", value)} options={products.map((product: any) => ({ value: product._id, label: product.category ? `${product.name} (${product.category})` : product.name, }))} disabled={!companyId} loading={productsLoading} />), },
+    { title: "Qty", key: "qty", render: (_: unknown, item: BillFormRow) => (<InputNumber min={1} value={item.qty} onChange={(value: number | null) => updateItem(item.rowId, "qty", value || 1)} />), },
+    { title: "Free", key: "freeQty", render: (_: unknown, item: BillFormRow) => (<InputNumber min={0} value={item.freeQty} onChange={(value: number | null) => updateItem(item.rowId, "freeQty", value || 0)} />), },
+    { title: "Rate", key: "rate", render: (_: unknown, item: BillFormRow) => Number(item.rate || 0).toFixed(2), },
+    { title: "MRP", key: "mrp", render: (_: unknown, item: BillFormRow) => Number(item.mrp || 0).toFixed(2), },
+    { title: "Line Total", key: "total", render: (_: unknown, item: BillFormRow) => `Rs ${(Number(item.rate || 0) * Number(item.qty || 0)).toFixed(2)}`, },
+    { title: "", key: "remove", render: (_: unknown, item: BillFormRow) => (<Button danger icon={<MinusCircleOutlined />} onClick={() => removeRow(item.rowId)} disabled={items.length === 1} />), },
   ];
 
   return (
@@ -426,45 +268,17 @@ export default function BillForm({
       <Form layout="vertical">
         {isAdmin && (
           <Form.Item label="Store" required>
-            <Select
-              value={userId || undefined}
-              placeholder="Select store"
-              onChange={handleUserChange}
-              options={storeOptions}
-              showSearch
-              optionFilterProp="label"
-            />
+            <Select value={userId || undefined} placeholder="Select store" onChange={handleUserChange} options={storeOptions} showSearch optionFilterProp="label" />
           </Form.Item>
         )}
         <Form.Item label="Company" required>
-          <Select
-            value={companyId || undefined}
-            placeholder={isAdmin && !userId ? "Select store first" : "Select company"}
-            onChange={handleCompanyChange}
-            options={companyOptions}
-            className="bill-company-select"
-            disabled={isAdmin && !userId}
-          />
+          <Select value={companyId || undefined} placeholder={isAdmin && !userId ? "Select store first" : "Select company"} onChange={handleCompanyChange} options={companyOptions} className="bill-company-select" disabled={isAdmin && !userId} />
         </Form.Item>
-        <Typography.Text type="secondary">
-          GST Type:{" "}
-          {resolvedTaxMode === "IGST" ? "IGST" : "CGST & SGST"}
-        </Typography.Text>
+        <Typography.Text type="secondary">GST Type:{" "}{resolvedTaxMode === "IGST" ? "IGST" : "CGST & SGST"}</Typography.Text>
         <br />
-        <Typography.Text type="secondary">
-          Store State: {resolvedStoreState || "-"}
-        </Typography.Text>
+        <Typography.Text type="secondary">Store State: {resolvedStoreState || "-"}</Typography.Text>
       </Form>
-
-      <Table
-        className="bill-items-table"
-        rowKey="rowId"
-        columns={columns}
-        dataSource={items}
-        sortDirections={["ascend", "descend"]}
-        pagination={false}
-        scroll={{ x: "max-content" }}
-      />
+      <Table className="bill-items-table" rowKey="rowId" columns={columns} dataSource={items} sortDirections={["ascend", "descend"]} pagination={false} scroll={{ x: "max-content" }} />
 
       <Space style={{ marginTop: 16 }}>
         <Button className="bill-add-btn" icon={<PlusOutlined />} onClick={addRow} disabled={!companyId}>
@@ -480,26 +294,12 @@ export default function BillForm({
           </div>
           <div className="bill-summary-row bill-summary-row-gst">
             <Typography.Text className="bill-summary-label">GST (%)</Typography.Text>
-            <InputNumber
-              className="bill-summary-input app-percent-input"
-              min={0}
-              max={100}
-              value={gstPercent}
-              disabled
-              addonAfter="%"
-            />
+            <InputNumber className="bill-summary-input app-percent-input" min={0} max={100} value={gstPercent} disabled addonAfter="%" />
             <div className="bill-summary-note" style={{ marginTop: 6 }}>
               {selectedStoreGstPercent > 0 && gstPercent === 0 ? (
-                <Typography.Text type="secondary">
-                  Store GST available: {selectedStoreGstPercent}% - it will be applied automatically.
-                </Typography.Text>
-              ) : null}
-              {selectedStoreGstPercent === 0 && subTotal === 0 ? (
-                <Typography.Text type="secondary">GST is 0 because there are no priced items yet.</Typography.Text>
-              ) : null}
-              {selectedStoreGstPercent === 0 && subTotal > 0 && gstPercent === 0 ? (
-                <Typography.Text type="secondary">Selected store has no GST configured.</Typography.Text>
-              ) : null}
+                <Typography.Text type="secondary">Store GST available: {selectedStoreGstPercent}% - it will be applied automatically.</Typography.Text>) : null}
+              {selectedStoreGstPercent === 0 && subTotal === 0 ? (<Typography.Text type="secondary">GST is 0 because there are no priced items yet.</Typography.Text>) : null}
+              {selectedStoreGstPercent === 0 && subTotal > 0 && gstPercent === 0 ? (<Typography.Text type="secondary">Selected store has no GST configured.</Typography.Text>) : null}
             </div>
           </div>
           {resolvedTaxMode === "IGST" ? (
@@ -517,31 +317,14 @@ export default function BillForm({
               </Typography.Text>
             </div>
           )}
-          
+
           <div className="bill-summary-row">
             <Typography.Text className="bill-summary-label">Total Amount</Typography.Text>
             <Typography.Text className="bill-summary-value">Rs {totalBeforeDiscount.toFixed(2)}</Typography.Text>
           </div>
           <div className="bill-summary-row">
             <Typography.Text className="bill-summary-label">Discount Amount</Typography.Text>
-            <InputNumber
-              className="bill-summary-input"
-              min={0}
-              max={Math.max(0, Number(totalBeforeDiscount || 0))}
-              value={discountAmountInput}
-              onChange={(value: number | null) => setDiscountAmountInput(Math.max(0, Number(value || 0)))}
-              onBlur={() => {
-                const normalized = Number(discountAmountInput || 0);
-                const clamped = Math.min(Math.max(0, normalized), Math.max(0, Number(totalBeforeDiscount || 0)));
-                if (normalized > Number(totalBeforeDiscount || 0)) {
-                  message.error("Discount amount cannot exceed total amount");
-                }
-                setDiscountAmountInput(Number(clamped.toFixed(2)));
-              }}
-              step={0.01}
-              precision={2}
-              addonBefore="Rs"
-            />
+            <InputNumber className="bill-summary-input" min={0} max={Math.max(0, Number(totalBeforeDiscount || 0))} value={discountAmountInput} onChange={(value: number | null) => setDiscountAmountInput(Math.max(0, Number(value || 0)))} onBlur={() => { const normalized = Number(discountAmountInput || 0); const clamped = Math.min(Math.max(0, normalized), Math.max(0, Number(totalBeforeDiscount || 0))); if (normalized > Number(totalBeforeDiscount || 0)) { message.error("Discount amount cannot exceed total amount"); } setDiscountAmountInput(Number(clamped.toFixed(2))); }} step={0.01} precision={2} addonBefore="Rs" />
           </div>
           <div className="bill-summary-row">
             <Typography.Text className="bill-summary-label">Applied Discount</Typography.Text>
@@ -556,9 +339,7 @@ export default function BillForm({
 
       <Space style={{ marginTop: 20 }}>
         <Button className="bill-cancel-btn" onClick={onCancel}>Cancel</Button>
-        <Button type="primary" loading={submitLoading} onClick={submit}>
-          {submitText}
-        </Button>
+        <Button type="primary" loading={submitLoading} onClick={submit}>{submitText}</Button>
       </Space>
     </Card>
   );
